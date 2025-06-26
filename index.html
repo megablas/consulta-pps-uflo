@@ -1,633 +1,790 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-T">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consulta de PPS y Prácticas</title>
+    <!--
+      This is a self-contained HTML file for easy deployment on platforms like GitHub Pages.
+      - Tailwind CSS is loaded from a CDN.
+      - React and ReactDOM are loaded from a CDN.
+      - Babel Standalone is loaded to transpile JSX directly in the browser.
+      - All application source code is bundled into the <script type="text/babel"> tag below.
+    -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #eef2f7; 
-            color: #374151; 
-        }
-        .container {
-            max-width: 800px;
-            margin: 3rem auto; 
-            padding: 2.5rem; 
-            background-color: white;
-            border-radius: 16px; 
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08); 
-        }
-        .header-title {
-            font-size: 2.25rem; 
-            font-weight: 700;
-            color: #2c5282; 
-            margin-bottom: 0.75rem;
-        }
-        .header-subtitle {
-            color: #4a5568; 
-            font-size: 1.125rem;
-            margin-bottom: 2.5rem;
-        }
-        .input-label {
-            display: block;
-            text-align: left; 
-            font-weight: 500;
-            color: #374151; 
-            margin-bottom: 0.5rem;
-        }
-        .input-field, .select-field {
-            border-radius: 10px; 
-            border: 1px solid #d2d6dc; 
-            padding: 0.875rem 1.125rem; 
-            transition: border-color 0.3s, box-shadow 0.3s;
-            width: 100%;
-            font-size: 1rem;
-            background-color: white;
-        }
-        .input-field:focus, .select-field:focus {
-            border-color: #3b82f6; 
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
-            outline: none;
-        }
-        .btn-primary {
-            background-color: #38a169; 
-            color: white;
-            font-weight: 600; 
-            font-size: 1.125rem; 
-            padding: 0.875rem 1.75rem; 
-            border-radius: 10px; 
-            transition: background-color 0.3s, transform 0.1s;
-            width: 100%;
-            box-shadow: 0 4px 15px rgba(56, 161, 105, 0.2); 
-        }
-        .btn-primary:hover {
-            background-color: #2f855a; 
-            transform: translateY(-1px); 
-        }
-        .student-info-header {
-            background-color: #f0f4f8;
-            padding: 1rem 1.5rem;
-            border-radius: 10px;
-            margin-bottom: 1.5rem; 
-            text-align: center;
-            border: 1px solid #d2d6dc;
-        }
-        .student-info-header h2 { font-size: 1.25rem; font-weight: 600; color: #2c5282; margin: 0; }
-        .student-info-header p { font-size: 1rem; color: #4a5568; margin: 0.25rem 0 0 0; }
-
-        .criterios-panel {
-            background-color: #f9fafb; 
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        }
-        .criterios-panel h3 {
-            font-size: 1.375rem;
-            font-weight: 600;
-            color: #2c5282;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid #d2d6dc;
-        }
-        .criterios-panel p, .criterios-panel div { margin-bottom: 0.75rem; }
-        .criterios-panel p:last-child, .criterios-panel div:last-child { margin-bottom: 0; }
-        .criterios-panel strong { color: #2d3748; }
-        .criterios-panel .select-field { 
-            font-size: 0.95rem;
-            padding: 0.6rem 1rem;
-            max-width: 300px; 
-        }
-        .check-mark {
-            color: #38a169;
-            font-weight: bold;
-            margin-left: 8px;
-        }
-        
-        .section-title {
-            font-size: 1.75rem;
-            font-weight: 600;
-            color: #2c5282;
-            margin-top: 2.5rem;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid #38a169;
-        }
-        .results-card { 
-            background-color: #ffffff; 
-            border: 1px solid #e2e8f0; 
-            border-radius: 12px; 
-            padding: 0; 
-            margin-top: 1rem; 
-            margin-bottom: 1.5rem; 
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); 
-            overflow-x: auto; 
-        }
-        .practicas-table {
-            width: 100%;
-            border-collapse: collapse; 
-        }
-        .practicas-table th, .practicas-table td {
-            text-align: left;
-            padding: 0.75rem 1rem; 
-            border-bottom: 1px solid #e2e8f0; 
-            font-size: 0.95rem;
-        }
-        .practicas-table th {
-            background-color: #f8fafc; 
-            font-weight: 600;
-            color: #374151;
-        }
-        .practicas-table td { color: #4a5568; }
-        .practicas-table tr:last-child td { border-bottom: none; }
-
-        .solicitud-card { 
-            background-color: #ffffff; 
-            border: 1px solid #e2e8f0; 
-            border-radius: 12px; 
-            padding: 1.75rem; 
-            margin-top: 1rem; 
-            margin-bottom: 1.5rem; 
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); 
-        }
-        .solicitud-card h3 { 
-            font-size: 1.25rem; 
-            font-weight: 600;
-            color: #2d3748; 
-            margin-bottom: 1rem;
-            border-bottom: 1px solid #e2e8f0; 
-            padding-bottom: 0.75rem;
-        }
-        .solicitud-card p { color: #4a5568; font-size: 1rem; line-height: 1.6; word-wrap: break-word; }
-        .solicitud-card p strong { color: #2d3748; font-weight: 600; }
-
-        .badge { padding: 0.3em 0.9em; border-radius: 20px; font-size: 0.875rem; font-weight: 600; text-transform: capitalize; }
-        .badge-green { background-color: #c6f6d5; color: #2f855a; }
-        .badge-yellow { background-color: #fefcbf; color: #b7791f; }
-        .badge-red { background-color: #fed7d7; color: #c53030; }
-        .badge-blue { background-color: #bee3f8; color: #2b6cb0; }
-        .badge-gray { background-color: #e2e8f0; color: #4a5568; }
-
-        .especialidad-tag { font-weight: 500; padding: 0.1em 0.5em; border-radius: 4px; font-size: 0.9em; }
-        .especialidad-clinica { background-color: #c6f6d5; color: #22543d; border: 1px solid #9ae6b4;}
-        .especialidad-educacional { background-color: #bee3f8; color: #2c5282; border: 1px solid #90cdf4;}
-        .especialidad-laboral { background-color: #fed7d7; color: #9b2c2c; border: 1px solid #fbb6ce;}
-        .especialidad-comunitaria { background-color: #e9d8fd; color: #553c9a; border: 1px solid #d6bcfa;}
-        .especialidad-default { background-color: #e2e8f0; color: #4a5568; border: 1px solid #cbd5e0;}
-
-        .loader { border: 4px solid #e2e8f0; border-top: 4px solid #38a169; border-radius: 50%; width: 36px; height: 36px; animation: spin 1s linear infinite; margin: 2rem auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); }
-        .modal-content { background-color: #ffffff; margin: 10% auto; padding: 2rem; border: none; border-radius: 12px; width: 90%; max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); text-align: center; }
-        .modal-header { font-size: 1.375rem; font-weight: 600; color: #2d3748; margin-bottom: 1rem; }
-        .modal-body { font-size: 1rem; color: #4a5568; margin-bottom: 1.75rem; line-height: 1.6; }
-        .modal-footer button { background-color: #38a169; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 500; transition: background-color 0.2s; }
-        .modal-footer button:hover { background-color: #2f855a; }
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      html, body {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      #root {
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+      }
     </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.1.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+    "react/": "https://esm.sh/react@^19.1.0/"
+  }
+}
+</script>
 </head>
-<body>
-    <div class="container">
-        <header class="text-center">
-            <h1 class="header-title">Consulta de PPS y Prácticas</h1>
-            <p class="header-subtitle">Ingresa tu número de legajo para ver tus solicitudes y prácticas realizadas.</p>
-        </header>
+<body class="bg-gradient-to-br from-sky-50 via-slate-50 to-indigo-100">
+    <div id="root"></div>
 
-        <div class="mb-8">
-            <label for="legajo" class="input-label">Número de Legajo:</label>
-            <input type="text" id="legajo" name="legajo" class="input-field" placeholder="Ej: 12345">
-        </div>
+    <script type="text/babel">
+      // All application code is bundled here.
+      // Original files: constants.ts, types.ts, utils/*.ts, services/*.ts, components/*.tsx, App.tsx, index.tsx
+      
+      // --- From constants.ts ---
+      const AIRTABLE_PAT = 'patEjnXqyKnMwEUw5.19a19b12ad3c23b36888b9e228c2c9db1cbc923e9a29d7357e4103bb286d4bd1';
+      const AIRTABLE_BASE_ID = 'appBY8PYhPZ1X2ka1';
+      const AIRTABLE_TABLE_NAME_PPS = 'Solicitud de PPS';
+      const AIRTABLE_TABLE_NAME_PRACTICAS = 'Prácticas';
+      const AIRTABLE_TABLE_NAME_ESTUDIANTES = 'Estudiantes';
+      const FIELD_LEGAJO_PPS = 'Legajo';
+      const FIELD_ESTADO_PPS = 'Estado de seguimiento';
+      const FIELD_EMPRESA_PPS_SOLICITUD = 'Nombre de la Institución';
+      const FIELD_NOMBRE_ESTUDIANTE_LOOKUP_PPS = 'Nombre Busqueda';
+      const FIELD_NOTAS_PPS = 'Notas';
+      const FIELD_ULTIMA_ACTUALIZACION_PPS = 'Actualización';
+      const FIELD_NOMBRE_BUSQUEDA_PRACTICAS = 'Nombre busqueda';
+      const FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS = 'Nombre (de Institución)';
+      const FIELD_HORAS_PRACTICAS = 'Horas Realizadas';
+      const FIELD_FECHA_INICIO_PRACTICAS = 'Fecha de Inicio';
+      const FIELD_FECHA_FIN_PRACTICAS = 'Fecha de Finalización';
+      const FIELD_ESTADO_PRACTICA = 'Estado';
+      const FIELD_ESPECIALIDAD_PRACTICAS = 'Especialidad';
+      const FIELD_LEGAJO_ESTUDIANTES = 'Legajo';
+      const FIELD_NOMBRE_ESTUDIANTES = 'Nombre';
+      const HORAS_OBJETIVO_TOTAL = 250;
+      const HORAS_OBJETIVO_ORIENTACION = 70;
+      const ROTACION_OBJETIVO_ORIENTACIONES = 3;
+      const ALERT_DISCLAIMER_TITLE = "Importante";
+      const ALERT_DISCLAIMER_TEXT_1 = "Esta información es una vista preliminar y puede no ser 100% precisa o estar actualizada. No tiene carácter de certificado oficial.";
+      const ALERT_DISCLAIMER_TEXT_2 = "Si detectas alguna omisión o error, por favor mandar un correo con la documentación correspondiente (planilla de seguimiento, informes, etc.) para su corrección.";
 
-        <button id="searchButton" class="btn-primary">
+      // --- From types.ts ---
+      const Orientacion = {
+          CLINICA: "Clinica",
+          LABORAL: "Laboral",
+          EDUCACIONAL: "Educacional",
+          COMUNITARIA: "Comunitaria",
+          OTRA: "Otra"
+      };
+      const ALL_ORIENTACIONES = [
+          Orientacion.CLINICA,
+          Orientacion.LABORAL,
+          Orientacion.EDUCACIONAL,
+          Orientacion.COMUNITARIA
+      ];
+
+      // --- From utils/formatters.ts ---
+      function formatDate(dateString) {
+          if (!dateString) return 'N/A';
+          try {
+              const date = new Date(dateString);
+              if (isNaN(date.getTime())) {
+                  return 'Fecha inválida';
+              }
+              return date.toLocaleDateString('es-ES', {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit'
+              });
+          } catch (e) {
+              return 'Fecha inválida';
+          }
+      }
+
+      function getEspecialidadClasses(especialidad) {
+          if (!especialidad) return 'bg-gray-200 text-gray-700 border border-gray-300';
+          const baseClasses = "font-medium py-0.5 px-2 rounded text-xs border";
+          const normalizedEspecialidad = especialidad.toLowerCase().trim();
+          switch (normalizedEspecialidad) {
+              case 'clínica':
+              case 'clinica':
+                  return `${baseClasses} bg-green-100 text-green-700 border-green-300`;
+              case 'educacional':
+                  return `${baseClasses} bg-blue-100 text-blue-700 border-blue-300`;
+              case 'laboral':
+                  return `${baseClasses} bg-red-100 text-red-700 border-red-300`;
+              case 'comunitaria':
+                  return `${baseClasses} bg-purple-100 text-purple-700 border-purple-300`;
+              default:
+                  return `${baseClasses} bg-gray-100 text-gray-700 border-gray-300`;
+          }
+      }
+
+      function getStatusBadgeClasses(status) {
+          if (!status) return 'bg-gray-200 text-gray-700';
+          const baseClasses = "py-1 px-3 rounded-full text-xs font-semibold capitalize";
+          switch (status.toLowerCase().trim()) {
+              case 'aprobada':
+              case 'finalizada':
+              case 'completa':
+                  return `${baseClasses} bg-green-100 text-green-700`;
+              case 'en curso':
+              case 'pendiente':
+              case 'en revisión':
+                   return `${baseClasses} bg-yellow-100 text-yellow-700`;
+              case 'rechazada':
+              case 'cancelada':
+                   return `${baseClasses} bg-red-100 text-red-700`;
+              case 'presentada':
+              case 'iniciada':
+                   return `${baseClasses} bg-blue-100 text-blue-700`;
+              default:
+                  return `${baseClasses} bg-gray-200 text-gray-700`;
+          }
+      }
+
+      function normalizeStringForComparison(str) {
+        if (!str) return "";
+        return str
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .trim();
+      }
+
+      // --- From services/airtableService.ts ---
+      async function fetchDataGeneric(url) {
+          try {
+              const response = await fetch(url, {
+                  headers: { 'Authorization': `Bearer ${AIRTABLE_PAT}` }
+              });
+
+              if (!response.ok) {
+                  let errorData;
+                  try {
+                      const jsonError = await response.json();
+                      errorData = jsonError; 
+                      if (typeof errorData.error !== 'object' && typeof errorData.error !== 'string') {
+                           errorData = { error: { type: `HTTP_ERROR_${response.status}`, message: `Error ${response.status}: ${response.statusText}. Response not a valid error JSON.` }};
+                      }
+                  } catch (e) {
+                      const textError = await response.text().catch(() => "Could not read error response body.");
+                      errorData = { error: { type: `HTTP_ERROR_${response.status}`, message: `Error ${response.status}: ${textError}` } };
+                  }
+                  console.error('[fetchDataGeneric] Airtable API Error:', response.status, JSON.stringify(errorData), "URL:", url);
+                  return { data: null, error: errorData };
+              }
+              
+              const textResponse = await response.text();
+              if (!textResponse) {
+                  return { data: { records: [] }, error: null };
+              }
+
+              try {
+                  const jsonData = JSON.parse(textResponse);
+                  return { data: { records: jsonData.records || [], offset: jsonData.offset }, error: null };
+              } catch (jsonParseError) {
+                  console.error('[fetchDataGeneric] JSON Parse Error:', jsonParseError, "Response Text:", textResponse);
+                  return { data: null, error: { error: { type: 'JSON_PARSE_ERROR', message: 'La respuesta del servidor no pudo ser procesada (JSON inválido).' } } };
+              }
+
+          } catch (networkError) {
+              console.error('[fetchDataGeneric] Network or Fetch Error:', networkError, "URL:", url);
+              return { data: null, error: { error: { type: 'NETWORK_ERROR', message: 'No se pudo conectar con el servidor. Revisa tu conexión a internet.' } } };
+          }
+      }
+
+      async function fetchAirtableData(tableName, fields = [], filterByFormula, maxRecords) {
+          let url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(tableName)}`;
+          const params = new URLSearchParams();
+
+          fields.forEach(field => params.append('fields[]', field));
+          if (filterByFormula) {
+              params.set('filterByFormula', filterByFormula);
+          }
+          if (maxRecords) {
+              params.set('maxRecords', maxRecords.toString());
+          }
+          
+          const queryString = params.toString();
+          if (queryString) {
+              url += `?${queryString}`;
+          }
+
+          const { data, error } = await fetchDataGeneric(url);
+          if (error || !data) {
+              return { records: [], error: error || { error: { type: 'UNKNOWN_ERROR', message: 'An unknown error occurred.'}} };
+          }
+          return { records: data.records, error: null };
+      }
+
+      // --- Components ---
+      const Modal = ({ title, message, isOpen, onClose }) => {
+        if (!isOpen) return null;
+
+        return (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+            <div className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-md text-center">
+              <h2 className="text-xl sm:text-2xl font-semibold text-sky-700 mb-4">{title}</h2>
+              <p className="text-slate-600 text-sm sm:text-base mb-6 sm:mb-8 leading-relaxed whitespace-pre-wrap">{message}</p>
+              <button
+                onClick={onClose}
+                className="bg-sky-600 hover:bg-sky-700 text-white font-medium py-2.5 px-6 rounded-lg text-sm sm:text-base 
+                           transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-opacity-50"
+                aria-label="Cerrar modal"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        );
+      };
+      
+      const Loader = () => {
+        return (
+          <div className="flex justify-center items-center my-10 sm:my-12">
+            <div className="border-4 border-slate-200 border-t-sky-500 rounded-full w-10 h-10 animate-spin"></div>
+            <span className="sr-only">Cargando...</span>
+          </div>
+        );
+      };
+      
+      const AppHeader = () => {
+        return (
+          <header className="text-center mb-10 sm:mb-12">
+            <h1 className="text-3xl sm:text-4xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-cyan-500">
+              Consulta de PPS y Prácticas
+            </h1>
+            <p className="text-slate-600 text-base sm:text-lg">
+              Ingresa tu número de legajo para ver tus solicitudes y prácticas realizadas.
+            </p>
+          </header>
+        );
+      };
+      
+      const LegajoInput = ({ value, onChange, onKeyPress, disabled }) => {
+        return (
+          <div className="mb-8">
+            <label htmlFor="legajo" className="block text-left font-medium text-slate-800 mb-2 text-sm sm:text-base">
+              Número de Legajo:
+            </label>
+            <input
+              type="text"
+              id="legajo"
+              name="legajo"
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              onKeyPress={onKeyPress}
+              disabled={disabled}
+              className="w-full rounded-lg border border-slate-300/80 p-3 sm:p-3.5 text-base text-slate-800 bg-white shadow-sm
+                         placeholder-slate-400/80
+                         focus:border-sky-500 focus:ring-2 focus:ring-sky-500/50 outline-none transition-all
+                         disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
+              placeholder="Ej: 12345"
+              aria-label="Número de Legajo"
+            />
+          </div>
+        );
+      };
+      
+      const SearchButton = ({ onClick, disabled }) => {
+        return (
+          <button
+            onClick={onClick}
+            disabled={disabled}
+            className="w-full bg-gradient-to-r from-sky-500 to-cyan-500 text-white font-semibold text-base sm:text-lg py-3 sm:py-3.5 px-8 rounded-lg 
+                       transition-all duration-300 ease-in-out shadow-md
+                       hover:from-sky-600 hover:to-cyan-600 hover:shadow-lg hover:-translate-y-0.5
+                       active:from-sky-700 active:to-cyan-700 active:translate-y-0
+                       focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-400
+                       disabled:from-slate-400 disabled:to-slate-500 disabled:text-slate-100 disabled:cursor-not-allowed disabled:shadow-none disabled:transform-none"
+          >
             Consultar Información
-        </button>
+          </button>
+        );
+      };
+      
+      const StudentInfoHeader = ({ studentName, legajo }) => {
+        return (
+          <div className="bg-sky-50/70 p-4 sm:p-5 rounded-xl mb-8 text-center border border-sky-200/80 shadow-sm">
+            <h2 className="text-lg sm:text-xl font-semibold text-sky-800">
+              Información para: {studentName}
+            </h2>
+            <p className="text-sm sm:text-base text-sky-700 mt-1">
+              (Legajo: {legajo})
+            </p>
+          </div>
+        );
+      };
 
-        <div id="loader" class="loader" style="display: none;"></div>
-        
-        <div id="all-results-container" class="mt-8">
-            <div id="student-info-header-container" style="display: none;"></div>
-            <div id="criterios-finalizacion-panel" class="criterios-panel" style="display: none;">
-                <h3>Criterios de Finalización de PPS</h3>
-                <div class="space-y-3 mt-3">
-                    <p><strong>Horas Totales (Objetivo 250):</strong> <span id="horas-totales-calculadas">Calculando...</span> (<span id="horas-faltantes-250">Calculando...</span> faltantes)<span id="check-horas-totales" class="check-mark" style="display:none;">✔️</span></p>
-                    <div>
-                        <label for="orientacion-elegida-select" class="input-label !mb-1 !text-base"><strong>Progreso en Orientación Principal (Objetivo 70hs):</strong></label>
-                        <select id="orientacion-elegida-select" class="select-field mt-1">
-                            <option value="">Seleccione una orientación...</option>
-                            <option value="Clinica">Clínica</option>
-                            <option value="Laboral">Laboral</option>
-                            <option value="Educacional">Educacional</option>
-                        </select>
-                        <p class="mt-2"><strong>Horas en Orientación Seleccionada:</strong> <span id="horas-orientacion-elegida">Seleccione una orientación</span><span id="check-horas-orientacion" class="check-mark" style="display:none;">✔️</span></p>
-                    </div>
-                    <p><strong>Rotación por Orientaciones (Objetivo 3 de 4):</strong> <span id="rotacion-orientaciones">Calculando...</span><span id="check-rotacion" class="check-mark" style="display:none;">✔️</span></p>
-                </div>
+      const Disclaimer = () => {
+        return (
+          <div className="mt-10 sm:mt-12 p-4 sm:p-5 bg-amber-50/80 border-l-4 border-amber-400 text-amber-800 text-sm rounded-r-lg shadow-sm">
+            <p>
+              <strong className="font-semibold">{ALERT_DISCLAIMER_TITLE}:</strong> {ALERT_DISCLAIMER_TEXT_1}
+            </p>
+            <p className="mt-2">{ALERT_DISCLAIMER_TEXT_2}</p>
+          </div>
+        );
+      };
+      
+      const PracticasTable = ({ practicas }) => {
+        if (practicas.length === 0) {
+          return (
+            <div className="mt-10 sm:mt-12">
+              <h2 className="text-xl sm:text-2xl font-semibold text-sky-700 mb-4 sm:mb-6 pb-2 sm:pb-3 border-b-2 border-sky-300">
+                Prácticas Realizadas
+              </h2>
+              <p className="text-center text-slate-500 p-4">No se encontraron prácticas realizadas para este estudiante.</p>
             </div>
-            <div id="practicas-realizadas-results" class="mt-0"></div> 
-            
-            <div id="disclaimer-container" class="mt-4" style="display: none;">
-                <div class="p-4 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 text-sm rounded-r-lg">
-                     <p><strong>Importante:</strong> Esta información puede contener errores y no es de carácter oficial.</p>
-                     <p class="mt-2">Si deseas indicar alguna práctica faltante u error, puedes enviar un correo con la planilla de seguimiento e informe para actualizarlo.</p>
-                </div>
-            </div>
-            
-            <div id="solicitudes-pps-results" class="mt-6"></div>
-        </div>
-    </div>
-    <div id="messageModal" class="modal">
-        <div class="modal-content">
-            <div id="modalHeader" class="modal-header">Mensaje</div>
-            <div id="modalBody" class="modal-body"></div>
-            <div class="modal-footer">
-                <button id="closeModalButton">Cerrar</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const AIRTABLE_BASE_ID = 'appBY8PYhPZ1X2ka1';
-        const AIRTABLE_PAT = 'patEjnXqyKnMwEUw5.19a19b12ad3c23b36888b9e228c2c9db1cbc923e9a29d7357e4103bb286d4bd1';
-        
-        const AIRTABLE_TABLE_NAME_PPS = 'Solicitud de PPS';
-        const AIRTABLE_TABLE_NAME_PRACTICAS = 'Prácticas';
-        const AIRTABLE_TABLE_NAME_ESTUDIANTES = 'Estudiantes'; 
-
-        const FIELD_LEGAJO_PPS = 'Legajo';
-        const FIELD_ESTADO_PPS = 'Estado de seguimiento';
-        const FIELD_EMPRESA_PPS_SOLICITUD = 'Nombre de la Institución';
-        const FIELD_NOMBRE_ESTUDIANTE_LOOKUP_PPS = 'Nombre Busqueda'; 
-        const FIELD_NOTAS_PPS = 'Notas';
-        const FIELD_ULTIMA_ACTUALIZACION_PPS = 'Actualización';
-        
-        const FIELD_NOMBRE_BUSQUEDA_PRACTICAS = 'Nombre busqueda'; 
-        const FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS = 'Nombre (de Institución)'; 
-        const FIELD_HORAS_PRACTICAS = 'Horas Realizadas'; 
-        const FIELD_FECHA_INICIO_PRACTICAS = 'Fecha de Inicio'; 
-        const FIELD_FECHA_FIN_PRACTICAS = 'Fecha de Finalización'; 
-        const FIELD_ESTADO_PRACTICA = 'Estado'; 
-        const FIELD_ESPECIALIDAD_PRACTICAS = 'Especialidad'; 
-
-        const FIELD_LEGAJO_ESTUDIANTES = 'Legajo'; 
-        const FIELD_NOMBRE_ESTUDIANTES = 'Nombre'; 
-        
-        let todasLasPracticasDelEstudiante = []; 
-        
-        const legajoInput = document.getElementById('legajo');
-        const searchButton = document.getElementById('searchButton');
-        const studentInfoHeaderContainer = document.getElementById('student-info-header-container');
-        const solicitudesPpsResultsDiv = document.getElementById('solicitudes-pps-results');
-        const practicasRealizadasResultsDiv = document.getElementById('practicas-realizadas-results');
-        const criteriosPanel = document.getElementById('criterios-finalizacion-panel');
-        const horasTotalesCalculadasSpan = document.getElementById('horas-totales-calculadas');
-        const horasFaltantes250Span = document.getElementById('horas-faltantes-250');
-        const checkHorasTotalesSpan = document.getElementById('check-horas-totales');
-        const orientacionElegidaSelect = document.getElementById('orientacion-elegida-select');
-        const horasOrientacionElegidaSpan = document.getElementById('horas-orientacion-elegida');
-        const checkHorasOrientacionSpan = document.getElementById('check-horas-orientacion');
-        const rotacionOrientacionesSpan = document.getElementById('rotacion-orientaciones');
-        const checkRotacionSpan = document.getElementById('check-rotacion');
-        
-        const loader = document.getElementById('loader');
-        const messageModal = document.getElementById('messageModal');
-        const modalHeader = document.getElementById('modalHeader');
-        const modalBody = document.getElementById('modalBody');
-        const closeModalButton = document.getElementById('closeModalButton');
-
-        function showModal(title, message) { /* ... (sin cambios) ... */ }
-        closeModalButton.onclick = function() { /* ... (sin cambios) ... */ }
-        window.onclick = function(event) { /* ... (sin cambios) ... */ }
-        
-        async function fetchData(url) {
-            let response;
-            try {
-                response = await fetch(url, { headers: { 'Authorization': `Bearer ${AIRTABLE_PAT}` } });
-            } catch (networkError) {
-                console.error('[fetchData] Error de Red o Fetch:', networkError, "URL:", url);
-                return { error: { type: 'NETWORK_ERROR', message: `Error de red o fetch: ${networkError.message}` }, records: [] };
-            }
-
-            if (!response.ok) {
-                let errorData;
-                let responseTextForError = '';
-                try {
-                    const clonedResponse = response.clone();
-                    errorData = await response.json().catch(async () => {
-                        responseTextForError = await clonedResponse.text().catch(() => "No se pudo leer el cuerpo del error.");
-                        return { error: { type: 'UNPARSABLE_ERROR_RESPONSE', message: `No se pudo parsear la respuesta de error como JSON. Status: ${response.status} ${response.statusText}. Cuerpo: ${responseTextForError}` } };
-                    });
-                } catch (e) { 
-                     responseTextForError = await response.text().catch(() => "No se pudo leer el cuerpo del error tras fallo de .json().");
-                     errorData = { error: { type: 'UNPARSABLE_ERROR_RESPONSE', message: `Error crítico al intentar parsear error. Status: ${response.status} ${response.statusText}. Cuerpo: ${responseTextForError}` } };
-                }
-                console.error('[fetchData] Error Airtable (Respuesta no OK):', response.status, JSON.stringify(errorData), "URL:", url); 
-                return { error: errorData.error || {type: "UNKNOWN_API_ERROR", message: "Error desconocido de API"}, records: [] };
-            }
-
-            const textResponse = await response.text(); 
-            if (!textResponse) { 
-                console.warn("[fetchData] Respuesta OK pero cuerpo vacío para URL:", url);
-                return { records: [] , error: null}; 
-            }
-            try {
-                const jsonData = JSON.parse(textResponse); 
-                return { records: jsonData.records || [], offset: jsonData.offset || null, error: null }; 
-            } catch (jsonParseError) {
-                console.error('[fetchData] Error parseando JSON (respuesta OK pero JSON inválido):', jsonParseError, "Respuesta de texto original:", textResponse , "URL:", url);
-                return { error: { type: 'JSON_PARSE_ERROR', message: `JSON inválido en respuesta: ${jsonParseError.message}. Respuesta: ${textResponse}` }, records: [] };
-            }
-        }
-        
-        function calcularYMostrarCriterios() {
-            checkHorasTotalesSpan.style.display = 'none';
-            checkRotacionSpan.style.display = 'none';
-            if (!todasLasPracticasDelEstudiante || todasLasPracticasDelEstudiante.length === 0) {
-                horasTotalesCalculadasSpan.textContent = '0';
-                horasFaltantes250Span.textContent = '250';
-                rotacionOrientacionesSpan.textContent = 'No (0 de 3)';
-            } else {
-                let horasTotalesAcumuladas = 0;
-                todasLasPracticasDelEstudiante.forEach(practica => {
-                    const horas = parseFloat(practica[FIELD_HORAS_PRACTICAS]);
-                    if (!isNaN(horas)) { horasTotalesAcumuladas += horas; }
-                });
-                horasTotalesCalculadasSpan.textContent = horasTotalesAcumuladas.toFixed(0);
-                const faltantes250 = Math.max(0, 250 - horasTotalesAcumuladas);
-                horasFaltantes250Span.textContent = faltantes250.toFixed(0);
-                if (faltantes250 === 0) {
-                    checkHorasTotalesSpan.style.display = 'inline';
-                }
-
-                const orientacionesCompletadas = new Set();
-                const orientacionesPosibles = ['clínica', 'educacional', 'laboral', 'comunitaria'];
-                todasLasPracticasDelEstudiante.forEach(practica => {
-                    const estado = String(practica[FIELD_ESTADO_PRACTICA] || '').toLowerCase();
-                    const especialidad = String(practica[FIELD_ESPECIALIDAD_PRACTICAS] || '').toLowerCase();
-                    if (estado.includes('completada') || estado.includes('finalizada')) {
-                        orientacionesPosibles.forEach(orientacion => {
-                            if (especialidad.includes(orientacion)) { orientacionesCompletadas.add(orientacion); }
-                        });
-                    }
-                });
-                const cantidadOrientacionesUnicas = orientacionesCompletadas.size;
-                rotacionOrientacionesSpan.textContent = `${cantidadOrientacionesUnicas >= 3 ? 'Sí' : 'No'} (${cantidadOrientacionesUnicas} de 3 requeridas)`;
-                if (cantidadOrientacionesUnicas >= 3) {
-                    checkRotacionSpan.style.display = 'inline';
-                }
-            }
-            actualizarHorasOrientacionElegida();
-            criteriosPanel.style.display = 'block';
+          );
         }
 
-        function actualizarHorasOrientacionElegida() {
-            checkHorasOrientacionSpan.style.display = 'none';
-            const orientacionSeleccionada = orientacionElegidaSelect.value;
-            if (!orientacionSeleccionada) {
-                horasOrientacionElegidaSpan.textContent = 'Seleccione una orientación';
-                return;
-            }
-            let horasEnOrientacion = 0;
-            if (todasLasPracticasDelEstudiante && todasLasPracticasDelEstudiante.length > 0) {
-                todasLasPracticasDelEstudiante.forEach(practica => {
-                    const estado = String(practica[FIELD_ESTADO_PRACTICA] || '').toLowerCase();
-                    const especialidad = String(practica[FIELD_ESPECIALIDAD_PRACTICAS] || '').toLowerCase();
-                    if ((estado.includes('completada') || estado.includes('finalizada')) && especialidad.includes(orientacionSeleccionada.toLowerCase())) {
-                        const horas = parseFloat(practica[FIELD_HORAS_PRACTICAS]);
-                        if (!isNaN(horas)) { horasEnOrientacion += horas; }
-                    }
-                });
-            }
-            const faltantes70 = Math.max(0, 70 - horasEnOrientacion);
-            horasOrientacionElegidaSpan.textContent = `${horasEnOrientacion.toFixed(0)} de 70 (${faltantes70.toFixed(0)} faltantes para ${orientacionSeleccionada})`;
-            if (faltantes70 === 0) {
-                checkHorasOrientacionSpan.style.display = 'inline';
-            }
+        return (
+          <div className="mt-10 sm:mt-12">
+            <h2 className="text-xl sm:text-2xl font-semibold text-sky-700 mb-4 sm:mb-6 pb-2 sm:pb-3 border-b-2 border-sky-300">
+              Prácticas Realizadas
+            </h2>
+            <div className="bg-white border border-slate-200/80 rounded-xl shadow-lg overflow-x-auto">
+              <table className="w-full min-w-[650px] border-collapse">
+                <thead>
+                  <tr>
+                    <th className="text-left p-3 sm:p-4 bg-slate-100/80 font-semibold text-slate-700 text-sm border-b border-slate-200/80">Institución</th>
+                    <th className="text-left p-3 sm:p-4 bg-slate-100/80 font-semibold text-slate-700 text-sm border-b border-slate-200/80">Especialidad</th>
+                    <th className="text-center p-3 sm:p-4 bg-slate-100/80 font-semibold text-slate-700 text-sm border-b border-slate-200/80">Horas</th>
+                    <th className="text-left p-3 sm:p-4 bg-slate-100/80 font-semibold text-slate-700 text-sm border-b border-slate-200/80">Fecha Inicio</th>
+                    <th className="text-left p-3 sm:p-4 bg-slate-100/80 font-semibold text-slate-700 text-sm border-b border-slate-200/80">Fecha Fin</th>
+                    <th className="text-left p-3 sm:p-4 bg-slate-100/80 font-semibold text-slate-700 text-sm border-b border-slate-200/80">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {practicas.map((practica, index) => (
+                    <tr 
+                      key={practica.id || index} 
+                      className={`transition-colors duration-150 ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} hover:bg-sky-50/60`}
+                    >
+                      <td className="text-left p-3 sm:p-4 text-slate-700 text-sm border-b border-slate-200/70">
+                        {Array.isArray(practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]) ? practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]?.[0] : practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS] || 'N/A'}
+                      </td>
+                      <td className="text-left p-3 sm:p-4 text-slate-700 text-sm border-b border-slate-200/70">
+                         <span className={getEspecialidadClasses(practica[FIELD_ESPECIALIDAD_PRACTICAS])}>
+                           {practica[FIELD_ESPECIALIDAD_PRACTICAS] || 'N/A'}
+                         </span>
+                      </td>
+                      <td className="text-center p-3 sm:p-4 text-slate-700 text-sm border-b border-slate-200/70">{practica[FIELD_HORAS_PRACTICAS] ?? 'N/A'}</td>
+                      <td className="text-left p-3 sm:p-4 text-slate-700 text-sm border-b border-slate-200/70">{formatDate(practica[FIELD_FECHA_INICIO_PRACTICAS])}</td>
+                      <td className="text-left p-3 sm:p-4 text-slate-700 text-sm border-b border-slate-200/70">{formatDate(practica[FIELD_FECHA_FIN_PRACTICAS])}</td>
+                      <td className="text-left p-3 sm:p-4 text-slate-700 text-sm border-b border-slate-200/70">
+                          <span className={getStatusBadgeClasses(practica[FIELD_ESTADO_PRACTICA])}>
+                              {practica[FIELD_ESTADO_PRACTICA] || 'N/A'}
+                          </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      };
+      
+      const SolicitudCard = ({ solicitud }) => {
+        const institucion = Array.isArray(solicitud[FIELD_EMPRESA_PPS_SOLICITUD]) 
+          ? solicitud[FIELD_EMPRESA_PPS_SOLICITUD]?.[0] 
+          : solicitud[FIELD_EMPRESA_PPS_SOLICITUD];
+
+        return (
+          <div className="bg-white border border-slate-200/80 rounded-xl shadow-lg p-5 sm:p-6 mb-6 hover:shadow-xl transition-shadow duration-300">
+            <h3 className="text-lg font-semibold text-sky-700 mb-3 pb-2.5 border-b border-slate-200/80">
+              {institucion || 'Institución no especificada'}
+            </h3>
+            <div className="space-y-2.5 text-sm text-slate-600">
+              <p>
+                <strong className="text-slate-700 font-medium">Estado:</strong>{' '}
+                <span className={getStatusBadgeClasses(solicitud[FIELD_ESTADO_PPS])}>
+                  {solicitud[FIELD_ESTADO_PPS] || 'N/A'}
+                </span>
+              </p>
+              {solicitud[FIELD_NOTAS_PPS] && (
+                <p className="whitespace-pre-wrap break-words"><strong className="text-slate-700 font-medium">Notas:</strong> {solicitud[FIELD_NOTAS_PPS]}</p>
+              )}
+              <p><strong className="text-slate-700 font-medium">Última Actualización:</strong> {formatDate(solicitud[FIELD_ULTIMA_ACTUALIZACION_PPS])}</p>
+            </div>
+          </div>
+        );
+      };
+      
+      const SolicitudesList = ({ solicitudes }) => {
+        if (solicitudes.length === 0) {
+          return (
+            <div className="mt-10 sm:mt-12">
+              <h2 className="text-xl sm:text-2xl font-semibold text-sky-700 mb-4 sm:mb-6 pb-2 sm:pb-3 border-b-2 border-sky-300">
+                Solicitudes de PPS
+              </h2>
+              <p className="text-center text-slate-500 p-4">No se encontraron solicitudes de PPS para este legajo.</p>
+            </div>
+          );
         }
-        orientacionElegidaSelect.addEventListener('change', actualizarHorasOrientacionElegida);
 
-        searchButton.addEventListener('click', async () => {
-             const legajo = legajoInput.value.trim();
-            if (!legajo) { showModal('Error', 'Por favor, ingresa tu número de legajo.'); return; }
-            
-            studentInfoHeaderContainer.innerHTML = '';
-            studentInfoHeaderContainer.style.display = 'none';
-            criteriosPanel.style.display = 'none'; 
-            solicitudesPpsResultsDiv.innerHTML = ''; 
-            practicasRealizadasResultsDiv.innerHTML = '';
-            loader.style.display = 'block'; 
-            
-            todasLasPracticasDelEstudiante = []; 
-            let nombreEstudianteGlobal = ''; 
-            let foundAnyData = false;
+        return (
+          <div className="mt-10 sm:mt-12">
+            <h2 className="text-xl sm:text-2xl font-semibold text-sky-700 mb-4 sm:mb-6 pb-2 sm:pb-3 border-b-2 border-sky-300">
+              Solicitudes de PPS
+            </h2>
+            {solicitudes.map((solicitud) => (
+              <SolicitudCard key={solicitud.id} solicitud={solicitud} />
+            ))}
+          </div>
+        );
+      };
+      
+      const CheckMark = ({ visible }) => (
+        visible ? <span className="text-green-600 font-bold ml-1.5 sm:ml-2">✔️</span> : null
+      );
 
-            try {
-                // 1. Obtener nombre del estudiante
-                const fieldsToRequestPPSForStudentName = [FIELD_LEGAJO_PPS, FIELD_NOMBRE_ESTUDIANTE_LOOKUP_PPS];
-                const filterFormulaPPSForStudentName = encodeURIComponent(`{${FIELD_LEGAJO_PPS}} = '${legajo}'`);
-                const urlPPSForStudentName = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE_NAME_PPS)}?fields[]=${fieldsToRequestPPSForStudentName.map(encodeURIComponent).join('&fields[]=')}&filterByFormula=${filterFormulaPPSForStudentName}&maxRecords=1`;
-                let dataPPSStudent = { records: [] }; 
-                try {
-                    dataPPSStudent = await fetchData(urlPPSForStudentName);
-                    if (dataPPSStudent && !dataPPSStudent.error && dataPPSStudent.records && dataPPSStudent.records.length > 0 && dataPPSStudent.records[0].fields[FIELD_NOMBRE_ESTUDIANTE_LOOKUP_PPS]) {
-                        nombreEstudianteGlobal = dataPPSStudent.records[0].fields[FIELD_NOMBRE_ESTUDIANTE_LOOKUP_PPS];
-                    } else if (dataPPSStudent.error) {
-                        console.warn("Error al obtener nombre de Solicitudes PPS:", dataPPSStudent.error.type, dataPPSStudent.error.message);
-                    }
-                } catch (ppsError) { console.warn("Excepción al obtener nombre de Solicitudes PPS:", ppsError); }
+      const CriteriosPanel = ({ criterios, selectedOrientacion, onOrientacionChange, hasPracticas }) => {
+        if (!hasPracticas) return null;
 
-                if (!nombreEstudianteGlobal || nombreEstudianteGlobal === legajo) {
-                    const filterFormulaEstudiantes = encodeURIComponent(`{${FIELD_LEGAJO_ESTUDIANTES}} = '${legajo}'`);
-                    const urlEstudiantes = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE_NAME_ESTUDIANTES)}?fields[]=${encodeURIComponent(FIELD_NOMBRE_ESTUDIANTES)}&filterByFormula=${filterFormulaEstudiantes}&maxRecords=1`;
-                    let dataEstudiantePorLegajo = { records: [] }; 
-                    try {
-                        dataEstudiantePorLegajo = await fetchData(urlEstudiantes);
-                        if (dataEstudiantePorLegajo && !dataEstudiantePorLegajo.error && dataEstudiantePorLegajo.records && dataEstudiantePorLegajo.records.length > 0 && dataEstudiantePorLegajo.records[0].fields[FIELD_NOMBRE_ESTUDIANTES]) {
-                            nombreEstudianteGlobal = dataEstudiantePorLegajo.records[0].fields[FIELD_NOMBRE_ESTUDIANTES];
-                        } else { 
-                            if(dataEstudiantePorLegajo.error) console.warn("Error buscando estudiante por legajo:", dataEstudiantePorLegajo.error.type, dataEstudiantePorLegajo.error.message);
-                            nombreEstudianteGlobal = legajo; 
-                        }
-                    } catch (estError) { console.warn(`Excepción buscando estudiante por legajo (${legajo}):`, estError); nombreEstudianteGlobal = legajo; }
-                }
-                
-                if (nombreEstudianteGlobal) {
-                    studentInfoHeaderContainer.innerHTML = `<div class="student-info-header"><h2>Información para: ${nombreEstudianteGlobal}</h2><p>(Legajo: ${legajo})</p></div>`;
-                    studentInfoHeaderContainer.style.display = 'block';
-                }
+        return (
+          <div className="bg-white border border-slate-200/80 rounded-xl p-5 sm:p-6 mb-8 shadow-lg">
+            <h3 className="text-xl sm:text-2xl font-semibold text-sky-700 mb-5 sm:mb-6 pb-3 border-b-2 border-sky-300">
+              Criterios de Finalización de PPS
+            </h3>
+            <div className="space-y-4 sm:space-y-5 text-sm sm:text-base">
+              <div>
+                <p className="text-slate-700">
+                  <strong className="font-medium text-slate-800">Horas Totales (Objetivo {HORAS_OBJETIVO_TOTAL}):</strong>{' '}
+                  {criterios.horasTotales} hs
+                  {criterios.horasTotales < HORAS_OBJETIVO_TOTAL && <span className="text-slate-500"> ({criterios.horasFaltantes250} faltantes)</span>}
+                  <CheckMark visible={criterios.cumpleHorasTotales} />
+                </p>
+              </div>
+              
+              <div>
+                <label htmlFor="orientacion-elegida-select" className="block font-medium text-slate-800 mb-1.5 sm:mb-2">
+                  Progreso en Orientación Principal (Objetivo {HORAS_OBJETIVO_ORIENTACION}hs):
+                </label>
+                <select 
+                  id="orientacion-elegida-select" 
+                  value={selectedOrientacion}
+                  onChange={(e) => onOrientacionChange(e.target.value)}
+                  className="w-full max-w-sm rounded-lg border border-slate-300/80 p-2.5 sm:p-3 text-sm sm:text-base text-slate-800 bg-white shadow-sm
+                             focus:border-sky-500 focus:ring-2 focus:ring-sky-500/50 outline-none transition-colors"
+                  aria-label="Seleccionar orientación principal"
+                >
+                  <option value="">Seleccione una orientación...</option>
+                  {ALL_ORIENTACIONES.map(o => <option key={o} value={o} className="text-slate-800">{o}</option>)}
+                </select>
+                {selectedOrientacion && (
+                  <p className="mt-2 text-slate-700">
+                    <strong className="font-medium text-slate-800">Horas en {selectedOrientacion}:</strong> {criterios.horasOrientacionElegida} hs
+                    <CheckMark visible={criterios.cumpleHorasOrientacion} />
+                  </p>
+                )}
+              </div>
 
-                // 2. Fetch Prácticas Realizadas
-                let dataPracticas = { records: [], error: null }; 
-                if (nombreEstudianteGlobal && nombreEstudianteGlobal !== legajo) { 
-                    const fieldsToRequestPracticas = [
-                        FIELD_NOMBRE_BUSQUEDA_PRACTICAS, 
-                        FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS, 
-                        FIELD_HORAS_PRACTICAS, 
-                        FIELD_FECHA_INICIO_PRACTICAS, 
-                        FIELD_FECHA_FIN_PRACTICAS, 
-                        FIELD_ESTADO_PRACTICA,
-                        FIELD_ESPECIALIDAD_PRACTICAS
-                    ];
-                    const filterFormulaPracticas = encodeURIComponent(`{${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}} = '${nombreEstudianteGlobal}'`);
-                    const urlPracticas = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE_NAME_PRACTICAS)}?fields[]=${fieldsToRequestPracticas.map(encodeURIComponent).join('&fields[]=')}&filterByFormula=${filterFormulaPracticas}`;
-                    dataPracticas = await fetchData(urlPracticas); 
-                }
-                
-                if (dataPracticas.error) {
-                    console.error("Error al obtener Prácticas:", dataPracticas.error.type, dataPracticas.error.message);
-                    practicasRealizadasResultsDiv.innerHTML = `<h2 class="section-title">Prácticas Realizadas</h2><p class="text-red-600 text-center p-4 bg-red-100 border border-red-300 rounded-md">Error al cargar prácticas: ${dataPracticas.error.message}</p>`;
-                } else if (dataPracticas.records && dataPracticas.records.length > 0) {
-                    foundAnyData = true;
-                    todasLasPracticasDelEstudiante = dataPracticas.records.map(record => record.fields); 
-                    let practicasTableHtml = `<h2 class="section-title">Prácticas Realizadas</h2><div class="results-card"><table class="practicas-table"><thead><tr><th>Institución</th><th>Acredita</th><th>Fecha Inicio</th><th>Fecha Finalización</th><th>Estado</th></tr></thead><tbody>`;
-                    todasLasPracticasDelEstudiante.forEach(practicaFields => {
-                        practicasTableHtml += generatePracticaTableRowHtml(practicaFields);
-                    });
-                    practicasTableHtml += `</tbody></table></div>`;
-                    practicasRealizadasResultsDiv.innerHTML = practicasTableHtml;
-                } else {
-                    practicasRealizadasResultsDiv.innerHTML = `<h2 class="section-title">Prácticas Realizadas</h2><p class="text-center text-gray-500 p-3">No se encontraron prácticas realizadas para ${nombreEstudianteGlobal || legajo}.</p>`;
-                }
-                
-                if(foundAnyData || (nombreEstudianteGlobal && nombreEstudianteGlobal !== legajo)) { 
-                    calcularYMostrarCriterios();
-                }
+              <div>
+                 <p className="text-slate-700">
+                  <strong className="font-medium text-slate-800">Rotación por Orientaciones (Objetivo {ROTACION_OBJETIVO_ORIENTACIONES} de {ALL_ORIENTACIONES.length}):</strong>{' '}
+                  {criterios.orientacionesCursadasCount} de {ALL_ORIENTACIONES.length}
+                  <CheckMark visible={criterios.cumpleRotacion} />
+                </p>
+                {criterios.orientacionesUnicas.length > 0 && (
+                   <p className="text-xs text-slate-500 mt-1 sm:mt-1.5">Cursadas: {criterios.orientacionesUnicas.join(', ')}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      };
 
-                // 3. Fetch Solicitudes PPS
-                const fieldsToRequestPPSFull = [FIELD_LEGAJO_PPS, FIELD_EMPRESA_PPS_SOLICITUD, FIELD_ESTADO_PPS, FIELD_NOMBRE_ESTUDIANTE_LOOKUP_PPS, FIELD_NOTAS_PPS, FIELD_ULTIMA_ACTUALIZACION_PPS];
-                const filterFormulaPPSFull = encodeURIComponent(`{${FIELD_LEGAJO_PPS}} = '${legajo}'`);
-                const urlPPSFull = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE_NAME_PPS)}?fields[]=${fieldsToRequestPPSFull.map(encodeURIComponent).join('&fields[]=')}&filterByFormula=${filterFormulaPPSFull}`;
-                const dataPPSFull = await fetchData(urlPPSFull); 
+      // --- App Component ---
+      const App = () => {
+        const { useState, useEffect, useCallback } = React;
 
-                if (dataPPSFull.error) {
-                    console.error("Error al obtener Solicitudes PPS:", dataPPSFull.error.type, dataPPSFull.error.message);
-                     solicitudesPpsResultsDiv.innerHTML = `<h2 class="section-title">Solicitudes de PPS</h2><p class="text-red-600 text-center p-4 bg-red-100 border border-red-300 rounded-md">Error al cargar solicitudes: ${dataPPSFull.error.message}</p>`;
-                } else if (dataPPSFull.records && dataPPSFull.records.length > 0) {
-                    foundAnyData = true;
-                    let solicitudesHtml = `<h2 class="section-title">Solicitudes de PPS</h2>`;
-                    dataPPSFull.records.forEach(record => {
-                        solicitudesHtml += generateSolicitudHtml(record.fields);
-                    });
-                    solicitudesPpsResultsDiv.innerHTML = solicitudesHtml;
-                } else {
-                    if (!practicasRealizadasResultsDiv.querySelector('.practicas-table')) { 
-                        solicitudesPpsResultsDiv.innerHTML = `<h2 class="section-title">Solicitudes de PPS</h2><p class="text-center text-gray-500 p-3">No se encontraron solicitudes de PPS para este legajo.</p>`;
-                    }
-                }
-                
-                if (!foundAnyData) { 
-                     showModal('Información', `No se encontró información de PPS ni de prácticas para el legajo ${legajo}.`);
-                     criteriosPanel.style.display = 'none'; 
-                }
-
-            } catch (error) { 
-                console.error('Error en el proceso de búsqueda general (catch principal):', error);
-                let userErrorMessage = 'Ocurrió un error inesperado al procesar los datos.';
-                if (error && error.data && error.data.error && error.data.error.message) { 
-                    userErrorMessage = `Error ${error.status || ''} al consultar ${error.url ? new URL(error.url).pathname : 'Airtable'}: ${error.data.error.message}`;
-                } else if (error && error.message) { 
-                    userErrorMessage = error.message; 
-                }
-                showModal('Error Crítico', userErrorMessage);
-                criteriosPanel.style.display = 'none';
-            } finally {
-                loader.style.display = 'none'; 
-            }
+        const [legajo, setLegajo] = useState('');
+        const [studentName, setStudentName] = useState(null);
+        const [actualLegajoSearched, setActualLegajoSearched] = useState(null);
+        const [practicas, setPracticas] = useState([]);
+        const [solicitudes, setSolicitudes] = useState([]);
+        const [isLoading, setIsLoading] = useState(false);
+        const [modalInfo, setModalInfo] = useState(null);
+        const [showDisclaimer, setShowDisclaimer] = useState(false);
+        
+        const [selectedOrientacion, setSelectedOrientacion] = useState("");
+        const [criterios, setCriterios] = useState({
+          horasTotales: 0,
+          horasFaltantes250: HORAS_OBJETIVO_TOTAL,
+          cumpleHorasTotales: false,
+          horasOrientacionElegida: 0,
+          cumpleHorasOrientacion: false,
+          orientacionesCursadasCount: 0,
+          orientacionesUnicas: [],
+          cumpleRotacion: false,
         });
-        
-        function generateSolicitudHtml(fields) {
-            const estado = fields[FIELD_ESTADO_PPS] || 'No especificado';
-            const empresa = fields[FIELD_EMPRESA_PPS_SOLICITUD] || 'No disponible'; 
-            const notasEstudiante = fields[FIELD_NOTAS_PPS] || 'Ninguna';
-            const ultimaActualizacion = formatDate(fields[FIELD_ULTIMA_ACTUALIZACION_PPS]);
-            let estadoBadgeClass = 'badge-gray';
-            const estadoLower = String(estado).toLowerCase();
-            if (estadoLower.includes('aprobada') || estadoLower.includes('finalizada') || estadoLower.includes('completa')) estadoBadgeClass = 'badge-green';
-            else if (estadoLower.includes('pendiente') || estadoLower.includes('en revisión') || estadoLower.includes('presentada') || estadoLower.includes('en curso') || estadoLower.includes('iniciada')) estadoBadgeClass = 'badge-yellow';
-            else if (estadoLower.includes('rechazada') || estadoLower.includes('cancelada') || estadoLower.includes('vencida')) estadoBadgeClass = 'badge-red';
 
-            return `
-                <div class="solicitud-card">
-                    <h3>Detalles de Solicitud PPS</h3> 
-                    <div class="space-y-3 mt-2">
-                        <p><strong>Nombre de la Institución (Solicitud):</strong> ${empresa}</p>
-                        <p><strong>Estado de seguimiento:</strong> <span class="badge ${estadoBadgeClass}">${estado}</span></p>
-                        <p><strong>Notas:</strong> ${notasEstudiante}</p>
-                        <p><strong>Última actualización:</strong> ${ultimaActualizacion}</p> 
-                    </div>
-                </div>`;
-        }
-        
-        function getEspecialidadClass(especialidad) {
-            if (!especialidad) return 'especialidad-default';
-            const espLower = String(especialidad).toLowerCase(); 
-            if (espLower.includes('clínica') || espLower.includes('clinica')) return 'especialidad-clinica';
-            if (espLower.includes('educacional')) return 'especialidad-educacional';
-            if (espLower.includes('laboral')) return 'especialidad-laboral';
-            if (espLower.includes('comunitaria')) return 'especialidad-comunitaria';
-            return 'especialidad-default';
-        }
+        useEffect(() => {
+          if (!window.AIRTABLE_PAT_WARNING_SHOWN) {
+              console.warn("ADVERTENCIA DE SEGURIDAD: El token PAT de Airtable está expuesto en este código. Para producción, se recomienda usar un backend para proteger el token.");
+              window.AIRTABLE_PAT_WARNING_SHOWN = true;
+          }
+        }, []);
 
-        function generatePracticaTableRowHtml(fields) { 
-            const nombreInstitucionPractica = fields[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS] || 'No disponible'; 
-            const horasPracticaNum = fields[FIELD_HORAS_PRACTICAS];
-            const especialidad = fields[FIELD_ESPECIALIDAD_PRACTICAS];
-            const fechaInicioPracticaRaw = fields[FIELD_FECHA_INICIO_PRACTICAS];
-            const fechaFinPracticaRaw = fields[FIELD_FECHA_FIN_PRACTICAS];
-            const estadoPracticaRaw = fields[FIELD_ESTADO_PRACTICA];
+        const handleShowModal = (title, message) => {
+          setModalInfo({ title, message });
+        };
 
-            const displayHoras = horasPracticaNum !== undefined ? horasPracticaNum : 'N/A';
-            const displayEspecialidad = especialidad || 'No especificada';
-            const especialidadClass = getEspecialidadClass(displayEspecialidad);
-            const displayFechaInicio = formatDate(fechaInicioPracticaRaw);
-            const displayFechaFin = formatDate(fechaFinPracticaRaw);
-            const displayEstado = estadoPracticaRaw || 'No especificado';
-            
-            let estadoBadgeClass = 'badge-gray';
-            const estadoLower = String(displayEstado).toLowerCase();
-            if (estadoLower.includes('completada') || estadoLower.includes('finalizada')) estadoBadgeClass = 'badge-green';
-            else if (estadoLower.includes('en curso')) estadoBadgeClass = 'badge-blue';
-            else if (estadoLower.includes('pendiente') || estadoLower.includes('programada')) estadoBadgeClass = 'badge-yellow';
-            else if (estadoLower.includes('cancelada')) estadoBadgeClass = 'badge-red';
+        const calculateCriterios = useCallback(() => {
+          let totalHoras = 0;
+          const matchedNormalizedOrientacionesEnumSet = new Set();
 
-            let acreditaCellContent = `${displayHoras} horas de `;
-            if (displayEspecialidad !== 'No especificada') {
-                acreditaCellContent += `<span class="especialidad-tag ${especialidadClass}">${displayEspecialidad}</span>`;
-            } else {
-                acreditaCellContent += 'orientación no especificada';
+          practicas.forEach(p => {
+            totalHoras += p[FIELD_HORAS_PRACTICAS] || 0;
+            const especialidadPractica = p[FIELD_ESPECIALIDAD_PRACTICAS];
+
+            if (especialidadPractica) {
+              const normalizedEspecialidadFromPractice = normalizeStringForComparison(especialidadPractica); 
+              for (const orientacionEnumValue of ALL_ORIENTACIONES) {
+                if (normalizeStringForComparison(orientacionEnumValue) === normalizedEspecialidadFromPractice) {
+                  matchedNormalizedOrientacionesEnumSet.add(normalizeStringForComparison(orientacionEnumValue)); 
+                  break;
+                }
+              }
+            }
+          });
+
+          let horasEnOrientacion = 0;
+          if (selectedOrientacion) {
+            const normalizedSelectedActualOrientacion = normalizeStringForComparison(selectedOrientacion); 
+            practicas.forEach(p => {
+              const especialidadPractica = p[FIELD_ESPECIALIDAD_PRACTICAS];
+              if (especialidadPractica) {
+                  const normalizedEspecialidadFromPractice = normalizeStringForComparison(especialidadPractica);
+                  if (normalizedEspecialidadFromPractice === normalizedSelectedActualOrientacion) {
+                    horasEnOrientacion += p[FIELD_HORAS_PRACTICAS] || 0;
+                  }
+              }
+            });
+          }
+          
+          const newCriterios = {
+            horasTotales: totalHoras,
+            horasFaltantes250: Math.max(0, HORAS_OBJETIVO_TOTAL - totalHoras),
+            cumpleHorasTotales: totalHoras >= HORAS_OBJETIVO_TOTAL,
+            horasOrientacionElegida: horasEnOrientacion,
+            cumpleHorasOrientacion: selectedOrientacion ? horasEnOrientacion >= HORAS_OBJETIVO_ORIENTACION : false,
+            orientacionesCursadasCount: matchedNormalizedOrientacionesEnumSet.size,
+            orientacionesUnicas: Array.from(matchedNormalizedOrientacionesEnumSet).map(normalizedEnum => {
+              const originalEnumValue = ALL_ORIENTACIONES.find(o => normalizeStringForComparison(o) === normalizedEnum);
+              return originalEnumValue || (normalizedEnum.charAt(0).toUpperCase() + normalizedEnum.slice(1));
+            }),
+            cumpleRotacion: matchedNormalizedOrientacionesEnumSet.size >= ROTACION_OBJETIVO_ORIENTACIONES,
+          };
+          setCriterios(newCriterios);
+        }, [practicas, selectedOrientacion]);
+
+
+        useEffect(() => {
+          if (practicas.length > 0) {
+            calculateCriterios();
+          } else {
+              setCriterios(prev => ({
+                  ...prev,
+                  horasTotales: 0,
+                  horasFaltantes250: HORAS_OBJETIVO_TOTAL,
+                  cumpleHorasTotales: false,
+                  horasOrientacionElegida: 0,
+                  cumpleHorasOrientacion: false,
+                  orientacionesCursadasCount: 0,
+                  orientacionesUnicas: [],
+                  cumpleRotacion: false,
+              }));
+          }
+        }, [practicas, selectedOrientacion, calculateCriterios]);
+
+        const resetState = () => {
+          setStudentName(null);
+          setPracticas([]);
+          setSolicitudes([]);
+          setShowDisclaimer(false);
+          setSelectedOrientacion("");
+          setCriterios({
+            horasTotales: 0,
+            horasFaltantes250: HORAS_OBJETIVO_TOTAL,
+            cumpleHorasTotales: false,
+            horasOrientacionElegida: 0,
+            cumpleHorasOrientacion: false,
+            orientacionesCursadasCount: 0,
+            orientacionesUnicas: [],
+            cumpleRotacion: false,
+          });
+        };
+
+        const handleSearch = async () => {
+          if (!legajo.trim()) {
+            handleShowModal('Entrada Inválida', 'Por favor, ingresa tu número de legajo.');
+            return;
+          }
+          
+          setIsLoading(true);
+          resetState();
+          setActualLegajoSearched(legajo.trim());
+          let foundAnyData = false;
+          let currentStudentName = null;
+
+          try {
+            const { records: studentRecords, error: studentError } = await fetchAirtableData(
+              AIRTABLE_TABLE_NAME_ESTUDIANTES,
+              [FIELD_NOMBRE_ESTUDIANTES],
+              `{${FIELD_LEGAJO_ESTUDIANTES}} = '${legajo.trim()}'`,
+              1
+            );
+
+            if (studentError) {
+              console.warn("Error buscando en tabla Estudiantes:", studentError.error);
+            } else if (studentRecords.length > 0 && studentRecords[0].fields[FIELD_NOMBRE_ESTUDIANTES]) {
+              currentStudentName = studentRecords[0].fields[FIELD_NOMBRE_ESTUDIANTES];
+            }
+
+            if (!currentStudentName) {
+              const { records: ppsNameRecords, error: ppsNameError } = await fetchAirtableData(
+                AIRTABLE_TABLE_NAME_PPS,
+                [FIELD_NOMBRE_ESTUDIANTE_LOOKUP_PPS],
+                `{${FIELD_LEGAJO_PPS}} = '${legajo.trim()}'`,
+                1
+              );
+              if (ppsNameError) {
+                 console.warn("Error buscando nombre en tabla PPS:", ppsNameError.error);
+              } else if (ppsNameRecords.length > 0) {
+                  const nameField = ppsNameRecords[0].fields[FIELD_NOMBRE_ESTUDIANTE_LOOKUP_PPS];
+                  if (Array.isArray(nameField) && nameField.length > 0) {
+                      currentStudentName = nameField[0];
+                  } else if (typeof nameField === 'string') {
+                      currentStudentName = nameField;
+                  }
+              }
             }
             
-            return `
-                <tr>
-                    <td>${nombreInstitucionPractica}</td>
-                    <td>${acreditaCellContent}</td>
-                    <td>${displayFechaInicio}</td>
-                    <td>${displayFechaFin}</td>
-                    <td><span class="badge ${estadoBadgeClass}">${displayEstado}</span></td>
-                </tr>`;
-        }
-        
-        function formatDate(dateString) {
-            if (!dateString) return 'No especificada';
-            try {
-                const datePart = dateString.split('T')[0];
-                const [year, month, day] = datePart.split('-');
-                if (year && month && day && year.length === 4 && month.length === 2 && day.length === 2) {
-                    return `${day}/${month}/${year}`;
-                }
-                const dateObj = new Date(dateString);
-                if (isNaN(dateObj.getTime())) return dateString; 
-                return dateObj.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
-            } catch (e) { return dateString; }
-        }
+            setStudentName(currentStudentName || legajo.trim());
 
-        console.warn("ADVERTENCIA DE SEGURIDAD: El token PAT de Airtable está expuesto. Para producción, usar un backend.");
-        if (!AIRTABLE_PAT || !AIRTABLE_PAT.startsWith('pat') || AIRTABLE_PAT.length < 50) {
-            console.error("CONFIGURACIÓN INICIAL: AIRTABLE_PAT incompleto o inválido.");
-            showModal('Configuración Requerida', "El token PAT de Airtable es incorrecto.");
-        }
+            if (currentStudentName) {
+              const { records: practicasRecords, error: practicasError } = await fetchAirtableData(
+                AIRTABLE_TABLE_NAME_PRACTICAS,
+                [FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS, FIELD_HORAS_PRACTICAS, FIELD_FECHA_INICIO_PRACTICAS, FIELD_FECHA_FIN_PRACTICAS, FIELD_ESTADO_PRACTICA, FIELD_ESPECIALIDAD_PRACTICAS],
+                `{${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}} = '${currentStudentName}'`
+              );
+
+              if (practicasError) {
+                handleShowModal('Error de Carga', `Error al cargar prácticas: ${typeof practicasError.error === 'string' ? practicasError.error : practicasError.error.message}`);
+              } else if (practicasRecords.length > 0) {
+                setPracticas(practicasRecords.map(r => ({ ...r.fields, id: r.id })));
+                foundAnyData = true;
+              }
+            } else {
+               console.warn("No se pudo obtener el nombre del estudiante, no se buscarán prácticas.");
+            }
+
+            const { records: solicitudesRecords, error: solicitudesError } = await fetchAirtableData(
+              AIRTABLE_TABLE_NAME_PPS,
+              [FIELD_EMPRESA_PPS_SOLICITUD, FIELD_ESTADO_PPS, FIELD_NOTAS_PPS, FIELD_ULTIMA_ACTUALIZACION_PPS],
+              `{${FIELD_LEGAJO_PPS}} = '${legajo.trim()}'`
+            );
+
+            if (solicitudesError) {
+              handleShowModal('Error de Carga', `Error al cargar solicitudes: ${typeof solicitudesError.error === 'string' ? solicitudesError.error : solicitudesError.error.message}`);
+            } else if (solicitudesRecords.length > 0) {
+              setSolicitudes(solicitudesRecords.map(r => ({ ...r.fields, id: r.id })));
+              foundAnyData = true;
+            }
+            
+            if (foundAnyData) {
+              setShowDisclaimer(true);
+            } else {
+              setStudentName(null); 
+              handleShowModal('Sin Resultados', `No se encontró información asociada al legajo ${legajo.trim()}. Verifica que el número sea correcto.`);
+            }
+
+          } catch (error) {
+            console.error('Error en el proceso de búsqueda general:', error);
+            handleShowModal('Error Crítico', `Ocurrió un error inesperado: ${error.message || 'Por favor, intenta de nuevo más tarde.'}`);
+          } finally {
+            setIsLoading(false);
+          }
+        };
+        
+        const handleKeyPress = (event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            handleSearch();
+          }
+        };
+
+        return (
+          <div className="w-full max-w-4xl mx-auto p-6 sm:p-8 md:p-10 bg-white rounded-2xl shadow-xl border border-slate-200/80">
+            <AppHeader />
+            <LegajoInput value={legajo} onChange={setLegajo} onKeyPress={handleKeyPress} disabled={isLoading} />
+            <SearchButton onClick={handleSearch} disabled={isLoading} />
+
+            {isLoading && <Loader />}
+
+            {!isLoading && studentName && actualLegajoSearched && (
+              <div className="mt-10">
+                <StudentInfoHeader studentName={studentName} legajo={actualLegajoSearched} />
+              </div>
+            )}
+            
+            {!isLoading && practicas.length > 0 && (
+                 <CriteriosPanel 
+                  criterios={criterios} 
+                  selectedOrientacion={selectedOrientacion}
+                  onOrientacionChange={setSelectedOrientacion}
+                  hasPracticas={true}
+                />
+            )}
+            
+            {!isLoading && (studentName || practicas.length > 0 || solicitudes.length > 0) && ( 
+              <React.Fragment>
+                <PracticasTable practicas={practicas} />
+                <SolicitudesList solicitudes={solicitudes} />
+              </React.Fragment>
+            )}
+
+            {!isLoading && showDisclaimer && <Disclaimer />}
+            
+            <Modal
+              isOpen={!!modalInfo}
+              title={modalInfo?.title || ''}
+              message={modalInfo?.message || ''}
+              onClose={() => setModalInfo(null)}
+            />
+          </div>
+        );
+      };
+
+      // --- Mount the App ---
+      const rootElement = document.getElementById('root');
+      if (!rootElement) {
+        throw new Error("Could not find root element to mount to");
+      }
+      const root = ReactDOM.createRoot(rootElement);
+      root.render(
+        <React.StrictMode>
+          <App />
+        </React.StrictMode>
+      );
+
     </script>
 </body>
 </html>
