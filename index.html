@@ -4,787 +4,441 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consulta de PPS y Prácticas</title>
-    <!--
-      This is a self-contained HTML file for easy deployment on platforms like GitHub Pages.
-      - Tailwind CSS is loaded from a CDN.
-      - React and ReactDOM are loaded from a CDN.
-      - Babel Standalone is loaded to transpile JSX directly in the browser.
-      - All application source code is bundled into the <script type="text/babel"> tag below.
-    -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet">
     <style>
       body {
         font-family: 'Inter', sans-serif;
       }
       html, body {
-        height: 100%;
         width: 100%;
         margin: 0;
         padding: 0;
       }
       #root {
         min-height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: flex-start;
-        padding-top: 2rem;
-        padding-bottom: 2rem;
       }
     </style>
 <script type="importmap">
 {
   "imports": {
+    "react/": "https://esm.sh/react@^19.1.0/",
     "react": "https://esm.sh/react@^19.1.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
-    "react/": "https://esm.sh/react@^19.1.0/"
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/"
   }
 }
 </script>
 </head>
-<body class="bg-gradient-to-br from-sky-50 via-slate-50 to-indigo-100">
+<body class="bg-slate-100">
     <div id="root"></div>
 
-    <script type="text/babel">
-      // All application code is bundled here.
-      // Original files: constants.ts, types.ts, utils/*.ts, services/*.ts, components/*.tsx, App.tsx, index.tsx
-      
-      // --- From constants.ts ---
-      const AIRTABLE_PAT = 'patEjnXqyKnMwEUw5.19a19b12ad3c23b36888b9e228c2c9db1cbc923e9a29d7357e4103bb286d4bd1';
-      const AIRTABLE_BASE_ID = 'appBY8PYhPZ1X2ka1';
-      const AIRTABLE_TABLE_NAME_PPS = 'Solicitud de PPS';
-      const AIRTABLE_TABLE_NAME_PRACTICAS = 'Prácticas';
-      const AIRTABLE_TABLE_NAME_ESTUDIANTES = 'Estudiantes';
-      const FIELD_LEGAJO_PPS = 'Legajo';
-      const FIELD_ESTADO_PPS = 'Estado de seguimiento';
-      const FIELD_EMPRESA_PPS_SOLICITUD = 'Nombre de la Institución';
-      const FIELD_NOMBRE_ESTUDIANTE_LOOKUP_PPS = 'Nombre Busqueda';
-      const FIELD_NOTAS_PPS = 'Notas';
-      const FIELD_ULTIMA_ACTUALIZACION_PPS = 'Actualización';
-      const FIELD_NOMBRE_BUSQUEDA_PRACTICAS = 'Nombre busqueda';
-      const FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS = 'Nombre (de Institución)';
-      const FIELD_HORAS_PRACTICAS = 'Horas Realizadas';
-      const FIELD_FECHA_INICIO_PRACTICAS = 'Fecha de Inicio';
-      const FIELD_FECHA_FIN_PRACTICAS = 'Fecha de Finalización';
-      const FIELD_ESTADO_PRACTICA = 'Estado';
-      const FIELD_ESPECIALIDAD_PRACTICAS = 'Especialidad';
-      const FIELD_LEGAJO_ESTUDIANTES = 'Legajo';
-      const FIELD_NOMBRE_ESTUDIANTES = 'Nombre';
-      const HORAS_OBJETIVO_TOTAL = 250;
-      const HORAS_OBJETIVO_ORIENTACION = 70;
-      const ROTACION_OBJETIVO_ORIENTACIONES = 3;
-      const ALERT_DISCLAIMER_TITLE = "Importante";
-      const ALERT_DISCLAIMER_TEXT_1 = "Esta información es una vista preliminar y puede no ser 100% precisa o estar actualizada. No tiene carácter de certificado oficial.";
-      const ALERT_DISCLAIMER_TEXT_2 = "Si detectas alguna omisión o error, por favor mandar un correo con la documentación correspondiente (planilla de seguimiento, informes, etc.) para su corrección.";
+    <script type="module">
+        import React, { useState, useEffect, useCallback } from 'https://esm.sh/react';
+        import ReactDOM from 'https://esm.sh/react-dom/client';
 
-      // --- From types.ts ---
-      const Orientacion = {
-          CLINICA: "Clinica",
-          LABORAL: "Laboral",
-          EDUCACIONAL: "Educacional",
-          COMUNITARIA: "Comunitaria",
-          OTRA: "Otra"
-      };
-      const ALL_ORIENTACIONES = [
-          Orientacion.CLINICA,
-          Orientacion.LABORAL,
-          Orientacion.EDUCACIONAL,
-          Orientacion.COMUNITARIA
-      ];
+        // --- BUNDLED FROM: constants.ts ---
+        const AIRTABLE_PAT = 'patEjnXqyKnMwEUw5.19a19b12ad3c23b36888b9e228c2c9db1cbc923e9a29d7357e4103bb286d4bd1';
+        const AIRTABLE_BASE_ID = 'appBY8PYhPZ1X2ka1';
+        const AIRTABLE_TABLE_NAME_PPS = 'Solicitud de PPS';
+        const AIRTABLE_TABLE_NAME_PRACTICAS = 'Prácticas';
+        const AIRTABLE_TABLE_NAME_ESTUDIANTES = 'Estudiantes';
+        const FIELD_LEGAJO_PPS = 'Legajo';
+        const FIELD_ESTADO_PPS = 'Estado de seguimiento';
+        const FIELD_EMPRESA_PPS_SOLICITUD = 'Nombre de la Institución';
+        const FIELD_NOMBRE_ESTUDIANTE_LOOKUP_PPS = 'Nombre Busqueda';
+        const FIELD_NOTAS_PPS = 'Notas';
+        const FIELD_ULTIMA_ACTUALIZACION_PPS = 'Actualización';
+        const FIELD_NOMBRE_BUSQUEDA_PRACTICAS = 'Nombre busqueda';
+        const FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS = 'Nombre (de Institución)';
+        const FIELD_HORAS_PRACTICAS = 'Horas Realizadas';
+        const FIELD_FECHA_INICIO_PRACTICAS = 'Fecha de Inicio';
+        const FIELD_FECHA_FIN_PRACTICAS = 'Fecha de Finalización';
+        const FIELD_ESTADO_PRACTICA = 'Estado';
+        const FIELD_ESPECIALIDAD_PRACTICAS = 'Especialidad';
+        const FIELD_LEGAJO_ESTUDIANTES = 'Legajo';
+        const FIELD_NOMBRE_ESTUDIANTES = 'Nombre';
+        const HORAS_OBJETIVO_TOTAL = 250;
+        const HORAS_OBJETIVO_ORIENTACION = 70;
+        const ROTACION_OBJETIVO_ORIENTACIONES = 3;
+        const ALERT_DISCLAIMER_TITLE = "Importante";
+        const ALERT_DISCLAIMER_TEXT_1 = "Esta información es una vista preliminar y puede no ser 100% precisa o estar actualizada. No tiene carácter de certificado oficial.";
+        const ALERT_DISCLAIMER_TEXT_2 = "Para cualquier solicitud de corrección por omisión o error, es indispensable adjuntar la documentación respaldatoria correspondiente, principalmente la planilla de asistencia. No se realizarán cambios sin la documentación adecuada.";
 
-      // --- From utils/formatters.ts ---
-      function formatDate(dateString) {
-          if (!dateString) return 'N/A';
-          try {
-              const date = new Date(dateString);
-              if (isNaN(date.getTime())) {
-                  return 'Fecha inválida';
-              }
-              return date.toLocaleDateString('es-ES', {
-                  year: 'numeric',
-                  month: '2-digit',
-                  day: '2-digit'
-              });
-          } catch (e) {
-              return 'Fecha inválida';
-          }
-      }
-
-      function getEspecialidadClasses(especialidad) {
-          if (!especialidad) return 'bg-gray-200 text-gray-700 border border-gray-300';
-          const baseClasses = "font-medium py-0.5 px-2 rounded text-xs border";
-          const normalizedEspecialidad = especialidad.toLowerCase().trim();
-          switch (normalizedEspecialidad) {
-              case 'clínica':
-              case 'clinica':
-                  return `${baseClasses} bg-green-100 text-green-700 border-green-300`;
-              case 'educacional':
-                  return `${baseClasses} bg-blue-100 text-blue-700 border-blue-300`;
-              case 'laboral':
-                  return `${baseClasses} bg-red-100 text-red-700 border-red-300`;
-              case 'comunitaria':
-                  return `${baseClasses} bg-purple-100 text-purple-700 border-purple-300`;
-              default:
-                  return `${baseClasses} bg-gray-100 text-gray-700 border-gray-300`;
-          }
-      }
-
-      function getStatusBadgeClasses(status) {
-          if (!status) return 'bg-gray-200 text-gray-700';
-          const baseClasses = "py-1 px-3 rounded-full text-xs font-semibold capitalize";
-          switch (status.toLowerCase().trim()) {
-              case 'aprobada':
-              case 'finalizada':
-              case 'completa':
-                  return `${baseClasses} bg-green-100 text-green-700`;
-              case 'en curso':
-              case 'pendiente':
-              case 'en revisión':
-                   return `${baseClasses} bg-yellow-100 text-yellow-700`;
-              case 'rechazada':
-              case 'cancelada':
-                   return `${baseClasses} bg-red-100 text-red-700`;
-              case 'presentada':
-              case 'iniciada':
-                   return `${baseClasses} bg-blue-100 text-blue-700`;
-              default:
-                  return `${baseClasses} bg-gray-200 text-gray-700`;
-          }
-      }
-
-      function normalizeStringForComparison(str) {
-        if (!str) return "";
-        return str
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .toLowerCase()
-          .trim();
-      }
-
-      // --- From services/airtableService.ts ---
-      async function fetchDataGeneric(url) {
-          try {
-              const response = await fetch(url, {
-                  headers: { 'Authorization': `Bearer ${AIRTABLE_PAT}` }
-              });
-
-              if (!response.ok) {
-                  let errorData;
-                  try {
-                      const jsonError = await response.json();
-                      errorData = jsonError; 
-                      if (typeof errorData.error !== 'object' && typeof errorData.error !== 'string') {
-                           errorData = { error: { type: `HTTP_ERROR_${response.status}`, message: `Error ${response.status}: ${response.statusText}. Response not a valid error JSON.` }};
-                      }
-                  } catch (e) {
-                      const textError = await response.text().catch(() => "Could not read error response body.");
-                      errorData = { error: { type: `HTTP_ERROR_${response.status}`, message: `Error ${response.status}: ${textError}` } };
-                  }
-                  console.error('[fetchDataGeneric] Airtable API Error:', response.status, JSON.stringify(errorData), "URL:", url);
-                  return { data: null, error: errorData };
-              }
-              
-              const textResponse = await response.text();
-              if (!textResponse) {
-                  return { data: { records: [] }, error: null };
-              }
-
-              try {
-                  const jsonData = JSON.parse(textResponse);
-                  return { data: { records: jsonData.records || [], offset: jsonData.offset }, error: null };
-              } catch (jsonParseError) {
-                  console.error('[fetchDataGeneric] JSON Parse Error:', jsonParseError, "Response Text:", textResponse);
-                  return { data: null, error: { error: { type: 'JSON_PARSE_ERROR', message: 'La respuesta del servidor no pudo ser procesada (JSON inválido).' } } };
-              }
-
-          } catch (networkError) {
-              console.error('[fetchDataGeneric] Network or Fetch Error:', networkError, "URL:", url);
-              return { data: null, error: { error: { type: 'NETWORK_ERROR', message: 'No se pudo conectar con el servidor. Revisa tu conexión a internet.' } } };
-          }
-      }
-
-      async function fetchAirtableData(tableName, fields = [], filterByFormula, maxRecords) {
-          let url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(tableName)}`;
-          const params = new URLSearchParams();
-
-          fields.forEach(field => params.append('fields[]', field));
-          if (filterByFormula) {
-              params.set('filterByFormula', filterByFormula);
-          }
-          if (maxRecords) {
-              params.set('maxRecords', maxRecords.toString());
-          }
-          
-          const queryString = params.toString();
-          if (queryString) {
-              url += `?${queryString}`;
-          }
-
-          const { data, error } = await fetchDataGeneric(url);
-          if (error || !data) {
-              return { records: [], error: error || { error: { type: 'UNKNOWN_ERROR', message: 'An unknown error occurred.'}} };
-          }
-          return { records: data.records, error: null };
-      }
-
-      // --- Components ---
-      const Modal = ({ title, message, isOpen, onClose }) => {
-        if (!isOpen) return null;
-
-        return (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-            <div className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-md text-center">
-              <h2 className="text-xl sm:text-2xl font-semibold text-sky-700 mb-4">{title}</h2>
-              <p className="text-slate-600 text-sm sm:text-base mb-6 sm:mb-8 leading-relaxed whitespace-pre-wrap">{message}</p>
-              <button
-                onClick={onClose}
-                className="bg-sky-600 hover:bg-sky-700 text-white font-medium py-2.5 px-6 rounded-lg text-sm sm:text-base 
-                           transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-opacity-50"
-                aria-label="Cerrar modal"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        );
-      };
-      
-      const Loader = () => {
-        return (
-          <div className="flex justify-center items-center my-10 sm:my-12">
-            <div className="border-4 border-slate-200 border-t-sky-500 rounded-full w-10 h-10 animate-spin"></div>
-            <span className="sr-only">Cargando...</span>
-          </div>
-        );
-      };
-      
-      const AppHeader = () => {
-        return (
-          <header className="text-center mb-10 sm:mb-12">
-            <h1 className="text-3xl sm:text-4xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-cyan-500">
-              Consulta de PPS y Prácticas
-            </h1>
-            <p className="text-slate-600 text-base sm:text-lg">
-              Ingresa tu número de legajo para ver tus solicitudes y prácticas realizadas.
-            </p>
-          </header>
-        );
-      };
-      
-      const LegajoInput = ({ value, onChange, onKeyPress, disabled }) => {
-        return (
-          <div className="mb-8">
-            <label htmlFor="legajo" className="block text-left font-medium text-slate-800 mb-2 text-sm sm:text-base">
-              Número de Legajo:
-            </label>
-            <input
-              type="text"
-              id="legajo"
-              name="legajo"
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              onKeyPress={onKeyPress}
-              disabled={disabled}
-              className="w-full rounded-lg border border-slate-300/80 p-3 sm:p-3.5 text-base text-slate-800 bg-white shadow-sm
-                         placeholder-slate-400/80
-                         focus:border-sky-500 focus:ring-2 focus:ring-sky-500/50 outline-none transition-all
-                         disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
-              placeholder="Ej: 12345"
-              aria-label="Número de Legajo"
-            />
-          </div>
-        );
-      };
-      
-      const SearchButton = ({ onClick, disabled }) => {
-        return (
-          <button
-            onClick={onClick}
-            disabled={disabled}
-            className="w-full bg-gradient-to-r from-sky-500 to-cyan-500 text-white font-semibold text-base sm:text-lg py-3 sm:py-3.5 px-8 rounded-lg 
-                       transition-all duration-300 ease-in-out shadow-md
-                       hover:from-sky-600 hover:to-cyan-600 hover:shadow-lg hover:-translate-y-0.5
-                       active:from-sky-700 active:to-cyan-700 active:translate-y-0
-                       focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-400
-                       disabled:from-slate-400 disabled:to-slate-500 disabled:text-slate-100 disabled:cursor-not-allowed disabled:shadow-none disabled:transform-none"
-          >
-            Consultar Información
-          </button>
-        );
-      };
-      
-      const StudentInfoHeader = ({ studentName, legajo }) => {
-        return (
-          <div className="bg-sky-50/70 p-4 sm:p-5 rounded-xl mb-8 text-center border border-sky-200/80 shadow-sm">
-            <h2 className="text-lg sm:text-xl font-semibold text-sky-800">
-              Información para: {studentName}
-            </h2>
-            <p className="text-sm sm:text-base text-sky-700 mt-1">
-              (Legajo: {legajo})
-            </p>
-          </div>
-        );
-      };
-
-      const Disclaimer = () => {
-        return (
-          <div className="mt-10 sm:mt-12 p-4 sm:p-5 bg-amber-50/80 border-l-4 border-amber-400 text-amber-800 text-sm rounded-r-lg shadow-sm">
-            <p>
-              <strong className="font-semibold">{ALERT_DISCLAIMER_TITLE}:</strong> {ALERT_DISCLAIMER_TEXT_1}
-            </p>
-            <p className="mt-2">{ALERT_DISCLAIMER_TEXT_2}</p>
-          </div>
-        );
-      };
-      
-      const PracticasTable = ({ practicas }) => {
-        if (practicas.length === 0) {
-          return (
-            <div className="mt-10 sm:mt-12">
-              <h2 className="text-xl sm:text-2xl font-semibold text-sky-700 mb-4 sm:mb-6 pb-2 sm:pb-3 border-b-2 border-sky-300">
-                Prácticas Realizadas
-              </h2>
-              <p className="text-center text-slate-500 p-4">No se encontraron prácticas realizadas para este estudiante.</p>
-            </div>
-          );
-        }
-
-        return (
-          <div className="mt-10 sm:mt-12">
-            <h2 className="text-xl sm:text-2xl font-semibold text-sky-700 mb-4 sm:mb-6 pb-2 sm:pb-3 border-b-2 border-sky-300">
-              Prácticas Realizadas
-            </h2>
-            <div className="bg-white border border-slate-200/80 rounded-xl shadow-lg overflow-x-auto">
-              <table className="w-full min-w-[650px] border-collapse">
-                <thead>
-                  <tr>
-                    <th className="text-left p-3 sm:p-4 bg-slate-100/80 font-semibold text-slate-700 text-sm border-b border-slate-200/80">Institución</th>
-                    <th className="text-left p-3 sm:p-4 bg-slate-100/80 font-semibold text-slate-700 text-sm border-b border-slate-200/80">Especialidad</th>
-                    <th className="text-center p-3 sm:p-4 bg-slate-100/80 font-semibold text-slate-700 text-sm border-b border-slate-200/80">Horas</th>
-                    <th className="text-left p-3 sm:p-4 bg-slate-100/80 font-semibold text-slate-700 text-sm border-b border-slate-200/80">Fecha Inicio</th>
-                    <th className="text-left p-3 sm:p-4 bg-slate-100/80 font-semibold text-slate-700 text-sm border-b border-slate-200/80">Fecha Fin</th>
-                    <th className="text-left p-3 sm:p-4 bg-slate-100/80 font-semibold text-slate-700 text-sm border-b border-slate-200/80">Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {practicas.map((practica, index) => (
-                    <tr 
-                      key={practica.id || index} 
-                      className={`transition-colors duration-150 ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} hover:bg-sky-50/60`}
-                    >
-                      <td className="text-left p-3 sm:p-4 text-slate-700 text-sm border-b border-slate-200/70">
-                        {Array.isArray(practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]) ? practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]?.[0] : practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS] || 'N/A'}
-                      </td>
-                      <td className="text-left p-3 sm:p-4 text-slate-700 text-sm border-b border-slate-200/70">
-                         <span className={getEspecialidadClasses(practica[FIELD_ESPECIALIDAD_PRACTICAS])}>
-                           {practica[FIELD_ESPECIALIDAD_PRACTICAS] || 'N/A'}
-                         </span>
-                      </td>
-                      <td className="text-center p-3 sm:p-4 text-slate-700 text-sm border-b border-slate-200/70">{practica[FIELD_HORAS_PRACTICAS] ?? 'N/A'}</td>
-                      <td className="text-left p-3 sm:p-4 text-slate-700 text-sm border-b border-slate-200/70">{formatDate(practica[FIELD_FECHA_INICIO_PRACTICAS])}</td>
-                      <td className="text-left p-3 sm:p-4 text-slate-700 text-sm border-b border-slate-200/70">{formatDate(practica[FIELD_FECHA_FIN_PRACTICAS])}</td>
-                      <td className="text-left p-3 sm:p-4 text-slate-700 text-sm border-b border-slate-200/70">
-                          <span className={getStatusBadgeClasses(practica[FIELD_ESTADO_PRACTICA])}>
-                              {practica[FIELD_ESTADO_PRACTICA] || 'N/A'}
-                          </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        );
-      };
-      
-      const SolicitudCard = ({ solicitud }) => {
-        const institucion = Array.isArray(solicitud[FIELD_EMPRESA_PPS_SOLICITUD]) 
-          ? solicitud[FIELD_EMPRESA_PPS_SOLICITUD]?.[0] 
-          : solicitud[FIELD_EMPRESA_PPS_SOLICITUD];
-
-        return (
-          <div className="bg-white border border-slate-200/80 rounded-xl shadow-lg p-5 sm:p-6 mb-6 hover:shadow-xl transition-shadow duration-300">
-            <h3 className="text-lg font-semibold text-sky-700 mb-3 pb-2.5 border-b border-slate-200/80">
-              {institucion || 'Institución no especificada'}
-            </h3>
-            <div className="space-y-2.5 text-sm text-slate-600">
-              <p>
-                <strong className="text-slate-700 font-medium">Estado:</strong>{' '}
-                <span className={getStatusBadgeClasses(solicitud[FIELD_ESTADO_PPS])}>
-                  {solicitud[FIELD_ESTADO_PPS] || 'N/A'}
-                </span>
-              </p>
-              {solicitud[FIELD_NOTAS_PPS] && (
-                <p className="whitespace-pre-wrap break-words"><strong className="text-slate-700 font-medium">Notas:</strong> {solicitud[FIELD_NOTAS_PPS]}</p>
-              )}
-              <p><strong className="text-slate-700 font-medium">Última Actualización:</strong> {formatDate(solicitud[FIELD_ULTIMA_ACTUALIZACION_PPS])}</p>
-            </div>
-          </div>
-        );
-      };
-      
-      const SolicitudesList = ({ solicitudes }) => {
-        if (solicitudes.length === 0) {
-          return (
-            <div className="mt-10 sm:mt-12">
-              <h2 className="text-xl sm:text-2xl font-semibold text-sky-700 mb-4 sm:mb-6 pb-2 sm:pb-3 border-b-2 border-sky-300">
-                Solicitudes de PPS
-              </h2>
-              <p className="text-center text-slate-500 p-4">No se encontraron solicitudes de PPS para este legajo.</p>
-            </div>
-          );
-        }
-
-        return (
-          <div className="mt-10 sm:mt-12">
-            <h2 className="text-xl sm:text-2xl font-semibold text-sky-700 mb-4 sm:mb-6 pb-2 sm:pb-3 border-b-2 border-sky-300">
-              Solicitudes de PPS
-            </h2>
-            {solicitudes.map((solicitud) => (
-              <SolicitudCard key={solicitud.id} solicitud={solicitud} />
-            ))}
-          </div>
-        );
-      };
-      
-      const CheckMark = ({ visible }) => (
-        visible ? <span className="text-green-600 font-bold ml-1.5 sm:ml-2">✔️</span> : null
-      );
-
-      const CriteriosPanel = ({ criterios, selectedOrientacion, onOrientacionChange, hasPracticas }) => {
-        if (!hasPracticas) return null;
-
-        return (
-          <div className="bg-white border border-slate-200/80 rounded-xl p-5 sm:p-6 mb-8 shadow-lg">
-            <h3 className="text-xl sm:text-2xl font-semibold text-sky-700 mb-5 sm:mb-6 pb-3 border-b-2 border-sky-300">
-              Criterios de Finalización de PPS
-            </h3>
-            <div className="space-y-4 sm:space-y-5 text-sm sm:text-base">
-              <div>
-                <p className="text-slate-700">
-                  <strong className="font-medium text-slate-800">Horas Totales (Objetivo {HORAS_OBJETIVO_TOTAL}):</strong>{' '}
-                  {criterios.horasTotales} hs
-                  {criterios.horasTotales < HORAS_OBJETIVO_TOTAL && <span className="text-slate-500"> ({criterios.horasFaltantes250} faltantes)</span>}
-                  <CheckMark visible={criterios.cumpleHorasTotales} />
-                </p>
-              </div>
-              
-              <div>
-                <label htmlFor="orientacion-elegida-select" className="block font-medium text-slate-800 mb-1.5 sm:mb-2">
-                  Progreso en Orientación Principal (Objetivo {HORAS_OBJETIVO_ORIENTACION}hs):
-                </label>
-                <select 
-                  id="orientacion-elegida-select" 
-                  value={selectedOrientacion}
-                  onChange={(e) => onOrientacionChange(e.target.value)}
-                  className="w-full max-w-sm rounded-lg border border-slate-300/80 p-2.5 sm:p-3 text-sm sm:text-base text-slate-800 bg-white shadow-sm
-                             focus:border-sky-500 focus:ring-2 focus:ring-sky-500/50 outline-none transition-colors"
-                  aria-label="Seleccionar orientación principal"
-                >
-                  <option value="">Seleccione una orientación...</option>
-                  {ALL_ORIENTACIONES.map(o => <option key={o} value={o} className="text-slate-800">{o}</option>)}
-                </select>
-                {selectedOrientacion && (
-                  <p className="mt-2 text-slate-700">
-                    <strong className="font-medium text-slate-800">Horas en {selectedOrientacion}:</strong> {criterios.horasOrientacionElegida} hs
-                    <CheckMark visible={criterios.cumpleHorasOrientacion} />
-                  </p>
-                )}
-              </div>
-
-              <div>
-                 <p className="text-slate-700">
-                  <strong className="font-medium text-slate-800">Rotación por Orientaciones (Objetivo {ROTACION_OBJETIVO_ORIENTACIONES} de {ALL_ORIENTACIONES.length}):</strong>{' '}
-                  {criterios.orientacionesCursadasCount} de {ALL_ORIENTACIONES.length}
-                  <CheckMark visible={criterios.cumpleRotacion} />
-                </p>
-                {criterios.orientacionesUnicas.length > 0 && (
-                   <p className="text-xs text-slate-500 mt-1 sm:mt-1.5">Cursadas: {criterios.orientacionesUnicas.join(', ')}</p>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      };
-
-      // --- App Component ---
-      const App = () => {
-        const { useState, useEffect, useCallback } = React;
-
-        const [legajo, setLegajo] = useState('');
-        const [studentName, setStudentName] = useState(null);
-        const [actualLegajoSearched, setActualLegajoSearched] = useState(null);
-        const [practicas, setPracticas] = useState([]);
-        const [solicitudes, setSolicitudes] = useState([]);
-        const [isLoading, setIsLoading] = useState(false);
-        const [modalInfo, setModalInfo] = useState(null);
-        const [showDisclaimer, setShowDisclaimer] = useState(false);
-        
-        const [selectedOrientacion, setSelectedOrientacion] = useState("");
-        const [criterios, setCriterios] = useState({
-          horasTotales: 0,
-          horasFaltantes250: HORAS_OBJETIVO_TOTAL,
-          cumpleHorasTotales: false,
-          horasOrientacionElegida: 0,
-          cumpleHorasOrientacion: false,
-          orientacionesCursadasCount: 0,
-          orientacionesUnicas: [],
-          cumpleRotacion: false,
-        });
-
-        useEffect(() => {
-          if (!window.AIRTABLE_PAT_WARNING_SHOWN) {
-              console.warn("ADVERTENCIA DE SEGURIDAD: El token PAT de Airtable está expuesto en este código. Para producción, se recomienda usar un backend para proteger el token.");
-              window.AIRTABLE_PAT_WARNING_SHOWN = true;
-          }
-        }, []);
-
-        const handleShowModal = (title, message) => {
-          setModalInfo({ title, message });
+        // --- BUNDLED FROM: types.ts (Enums) ---
+        const Orientacion = {
+            CLINICA: "Clinica",
+            LABORAL: "Laboral",
+            EDUCACIONAL: "Educacional",
+            COMUNITARIA: "Comunitaria",
+            OTRA: "Otra"
         };
+        const ALL_ORIENTACIONES = [
+            Orientacion.CLINICA,
+            Orientacion.LABORAL,
+            Orientacion.EDUCACIONAL,
+            Orientacion.COMUNITARIA
+        ];
 
-        const calculateCriterios = useCallback(() => {
-          let totalHoras = 0;
-          const matchedNormalizedOrientacionesEnumSet = new Set();
+        // --- BUNDLED FROM: utils/formatters.ts ---
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            try {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return 'Fecha inválida';
+                return date.toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' });
+            } catch (e) {
+                return 'Fecha inválida';
+            }
+        }
+        function getEspecialidadClasses(especialidad) {
+            if (!especialidad) return 'bg-gray-100 text-gray-800 border-gray-300';
+            const baseClasses = "inline-flex items-center font-medium py-0.5 px-2.5 rounded-full text-xs border";
+            const normalizedEspecialidad = normalizeStringForComparison(especialidad);
+            switch (normalizedEspecialidad) {
+                case 'clinica': return `${baseClasses} bg-green-100 text-green-800 border-green-200`;
+                case 'educacional': return `${baseClasses} bg-blue-100 text-blue-800 border-blue-200`;
+                case 'laboral': return `${baseClasses} bg-red-100 text-red-800 border-red-200`;
+                case 'comunitaria': return `${baseClasses} bg-purple-100 text-purple-800 border-purple-200`;
+                default: return `${baseClasses} bg-gray-100 text-gray-800 border-gray-200`;
+            }
+        }
+        function getStatusVisuals(status) {
+            const normalizedStatus = normalizeStringForComparison(status);
+            const baseLabel = "inline-flex items-center font-medium px-2.5 py-0.5 rounded-full text-xs capitalize";
+            const baseIconContainer = "flex-shrink-0 size-10 rounded-lg flex items-center justify-center mr-4";
 
-          practicas.forEach(p => {
-            totalHoras += p[FIELD_HORAS_PRACTICAS] || 0;
-            const especialidadPractica = p[FIELD_ESPECIALIDAD_PRACTICAS];
+            if (normalizedStatus.includes('pps realiazada') || normalizedStatus.includes('convenio realizado') || normalizedStatus.includes('finalizada')) {
+                return { icon: 'check_circle', iconContainerClass: `${baseIconContainer} bg-green-100 text-green-600`, labelClass: `${baseLabel} bg-green-100 text-green-800` };
+            }
+            if (normalizedStatus.includes('no se pudo concretar')) {
+                return { icon: 'error', iconContainerClass: `${baseIconContainer} bg-red-100 text-red-600`, labelClass: `${baseLabel} bg-red-100 text-red-800` };
+            }
+            if (normalizedStatus.includes('en conversaciones') || normalizedStatus.includes('realizando convenio') || normalizedStatus.includes('en curso')) {
+                return { icon: 'hourglass_top', iconContainerClass: `${baseIconContainer} bg-yellow-100 text-yellow-600`, labelClass: `${baseLabel} bg-yellow-100 text-yellow-800` };
+            }
+            if (normalizedStatus.includes('puesta en contacto')) {
+                return { icon: 'rocket_launch', iconContainerClass: `${baseIconContainer} bg-blue-100 text-blue-600`, labelClass: `${baseLabel} bg-blue-100 text-blue-800` };
+            }
+            return { icon: 'help_outline', iconContainerClass: `${baseIconContainer} bg-slate-100 text-slate-500`, labelClass: `${baseLabel} bg-gray-100 text-gray-800` };
+        }
+        function normalizeStringForComparison(str) {
+            if (!str) return "";
+            return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+        }
 
-            if (especialidadPractica) {
-              const normalizedEspecialidadFromPractice = normalizeStringForComparison(especialidadPractica); 
-              for (const orientacionEnumValue of ALL_ORIENTACIONES) {
-                if (normalizeStringForComparison(orientacionEnumValue) === normalizedEspecialidadFromPractice) {
-                  matchedNormalizedOrientacionesEnumSet.add(normalizeStringForComparison(orientacionEnumValue)); 
-                  break;
+        // --- BUNDLED FROM: services/airtableService.ts ---
+        async function fetchDataGeneric(url) {
+            try {
+                const response = await fetch(url, { headers: { 'Authorization': `Bearer ${AIRTABLE_PAT}` } });
+                if (!response.ok) {
+                    let errorData;
+                    try {
+                        const jsonError = await response.json();
+                        errorData = jsonError;
+                        if (typeof errorData.error !== 'object' && typeof errorData.error !== 'string') {
+                            errorData = { error: { type: `HTTP_ERROR_${response.status}`, message: `Error ${response.status}: ${response.statusText}.` } };
+                        }
+                    } catch (e) {
+                        const textError = await response.text().catch(() => "Could not read error body.");
+                        errorData = { error: { type: `HTTP_ERROR_${response.status}`, message: `Error ${response.status}: ${textError}` } };
+                    }
+                    console.error('[Airtable API Error]', response.status, JSON.stringify(errorData), "URL:", url);
+                    return { data: null, error: errorData };
                 }
-              }
+                const textResponse = await response.text();
+                if (!textResponse) return { data: { records: [] }, error: null };
+                try {
+                    const jsonData = JSON.parse(textResponse);
+                    return { data: { records: jsonData.records || [], offset: jsonData.offset }, error: null };
+                } catch (jsonParseError) {
+                    console.error('[JSON Parse Error]', jsonParseError, "Response:", textResponse);
+                    return { data: null, error: { error: { type: 'JSON_PARSE_ERROR', message: 'Respuesta inválida del servidor.' } } };
+                }
+            } catch (networkError) {
+                console.error('[Network Error]', networkError, "URL:", url);
+                return { data: null, error: { error: { type: 'NETWORK_ERROR', message: 'No se pudo conectar. Revisa tu conexión.' } } };
             }
-          });
+        }
+        async function fetchAirtableData(tableName, fields = [], filterByFormula, maxRecords) {
+            let url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(tableName)}`;
+            const params = new URLSearchParams();
+            fields.forEach(field => params.append('fields[]', field));
+            if (filterByFormula) params.set('filterByFormula', filterByFormula);
+            if (maxRecords) params.set('maxRecords', maxRecords.toString());
+            const queryString = params.toString();
+            if (queryString) url += `?${queryString}`;
+            const { data, error } = await fetchDataGeneric(url);
+            if (error || !data) return { records: [], error: error || { error: { type: 'UNKNOWN_ERROR', message: 'Error desconocido.' } } };
+            return { records: data.records, error: null };
+        }
 
-          let horasEnOrientacion = 0;
-          if (selectedOrientacion) {
-            const normalizedSelectedActualOrientacion = normalizeStringForComparison(selectedOrientacion); 
-            practicas.forEach(p => {
-              const especialidadPractica = p[FIELD_ESPECIALIDAD_PRACTICAS];
-              if (especialidadPractica) {
-                  const normalizedEspecialidadFromPractice = normalizeStringForComparison(especialidadPractica);
-                  if (normalizedEspecialidadFromPractice === normalizedSelectedActualOrientacion) {
-                    horasEnOrientacion += p[FIELD_HORAS_PRACTICAS] || 0;
-                  }
-              }
-            });
-          }
-          
-          const newCriterios = {
-            horasTotales: totalHoras,
-            horasFaltantes250: Math.max(0, HORAS_OBJETIVO_TOTAL - totalHoras),
-            cumpleHorasTotales: totalHoras >= HORAS_OBJETIVO_TOTAL,
-            horasOrientacionElegida: horasEnOrientacion,
-            cumpleHorasOrientacion: selectedOrientacion ? horasEnOrientacion >= HORAS_OBJETIVO_ORIENTACION : false,
-            orientacionesCursadasCount: matchedNormalizedOrientacionesEnumSet.size,
-            orientacionesUnicas: Array.from(matchedNormalizedOrientacionesEnumSet).map(normalizedEnum => {
-              const originalEnumValue = ALL_ORIENTACIONES.find(o => normalizeStringForComparison(o) === normalizedEnum);
-              return originalEnumValue || (normalizedEnum.charAt(0).toUpperCase() + normalizedEnum.slice(1));
-            }),
-            cumpleRotacion: matchedNormalizedOrientacionesEnumSet.size >= ROTACION_OBJETIVO_ORIENTACIONES,
-          };
-          setCriterios(newCriterios);
-        }, [practicas, selectedOrientacion]);
-
-
-        useEffect(() => {
-          if (practicas.length > 0) {
-            calculateCriterios();
-          } else {
-              setCriterios(prev => ({
-                  ...prev,
-                  horasTotales: 0,
-                  horasFaltantes250: HORAS_OBJETIVO_TOTAL,
-                  cumpleHorasTotales: false,
-                  horasOrientacionElegida: 0,
-                  cumpleHorasOrientacion: false,
-                  orientacionesCursadasCount: 0,
-                  orientacionesUnicas: [],
-                  cumpleRotacion: false,
-              }));
-          }
-        }, [practicas, selectedOrientacion, calculateCriterios]);
-
-        const resetState = () => {
-          setStudentName(null);
-          setPracticas([]);
-          setSolicitudes([]);
-          setShowDisclaimer(false);
-          setSelectedOrientacion("");
-          setCriterios({
-            horasTotales: 0,
-            horasFaltantes250: HORAS_OBJETIVO_TOTAL,
-            cumpleHorasTotales: false,
-            horasOrientacionElegida: 0,
-            cumpleHorasOrientacion: false,
-            orientacionesCursadasCount: 0,
-            orientacionesUnicas: [],
-            cumpleRotacion: false,
-          });
-        };
-
-        const handleSearch = async () => {
-          if (!legajo.trim()) {
-            handleShowModal('Entrada Inválida', 'Por favor, ingresa tu número de legajo.');
-            return;
-          }
-          
-          setIsLoading(true);
-          resetState();
-          setActualLegajoSearched(legajo.trim());
-          let foundAnyData = false;
-          let currentStudentName = null;
-
-          try {
-            const { records: studentRecords, error: studentError } = await fetchAirtableData(
-              AIRTABLE_TABLE_NAME_ESTUDIANTES,
-              [FIELD_NOMBRE_ESTUDIANTES],
-              `{${FIELD_LEGAJO_ESTUDIANTES}} = '${legajo.trim()}'`,
-              1
+        // --- BUNDLED COMPONENTS ---
+        const Modal = ({ title, message, isOpen, onClose }) => {
+            if (!isOpen) return null;
+            return React.createElement('div', { className: "fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" },
+                React.createElement('div', { className: "bg-white rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-md text-center" },
+                    React.createElement('h2', { className: "text-xl sm:text-2xl font-semibold text-sky-700 mb-4" }, title),
+                    React.createElement('p', { className: "text-slate-600 text-sm sm:text-base mb-6 sm:mb-8 leading-relaxed whitespace-pre-wrap" }, message),
+                    React.createElement('button', { onClick: onClose, className: "bg-sky-600 hover:bg-sky-700 text-white font-medium py-2.5 px-6 rounded-lg text-sm sm:text-base transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-opacity-50", 'aria-label': "Cerrar modal" }, "Cerrar")
+                )
             );
-
-            if (studentError) {
-              console.warn("Error buscando en tabla Estudiantes:", studentError.error);
-            } else if (studentRecords.length > 0 && studentRecords[0].fields[FIELD_NOMBRE_ESTUDIANTES]) {
-              currentStudentName = studentRecords[0].fields[FIELD_NOMBRE_ESTUDIANTES];
-            }
-
-            if (!currentStudentName) {
-              const { records: ppsNameRecords, error: ppsNameError } = await fetchAirtableData(
-                AIRTABLE_TABLE_NAME_PPS,
-                [FIELD_NOMBRE_ESTUDIANTE_LOOKUP_PPS],
-                `{${FIELD_LEGAJO_PPS}} = '${legajo.trim()}'`,
-                1
-              );
-              if (ppsNameError) {
-                 console.warn("Error buscando nombre en tabla PPS:", ppsNameError.error);
-              } else if (ppsNameRecords.length > 0) {
-                  const nameField = ppsNameRecords[0].fields[FIELD_NOMBRE_ESTUDIANTE_LOOKUP_PPS];
-                  if (Array.isArray(nameField) && nameField.length > 0) {
-                      currentStudentName = nameField[0];
-                  } else if (typeof nameField === 'string') {
-                      currentStudentName = nameField;
-                  }
-              }
-            }
-            
-            setStudentName(currentStudentName || legajo.trim());
-
-            if (currentStudentName) {
-              const { records: practicasRecords, error: practicasError } = await fetchAirtableData(
-                AIRTABLE_TABLE_NAME_PRACTICAS,
-                [FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS, FIELD_HORAS_PRACTICAS, FIELD_FECHA_INICIO_PRACTICAS, FIELD_FECHA_FIN_PRACTICAS, FIELD_ESTADO_PRACTICA, FIELD_ESPECIALIDAD_PRACTICAS],
-                `{${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}} = '${currentStudentName}'`
-              );
-
-              if (practicasError) {
-                handleShowModal('Error de Carga', `Error al cargar prácticas: ${typeof practicasError.error === 'string' ? practicasError.error : practicasError.error.message}`);
-              } else if (practicasRecords.length > 0) {
-                setPracticas(practicasRecords.map(r => ({ ...r.fields, id: r.id })));
-                foundAnyData = true;
-              }
-            } else {
-               console.warn("No se pudo obtener el nombre del estudiante, no se buscarán prácticas.");
-            }
-
-            const { records: solicitudesRecords, error: solicitudesError } = await fetchAirtableData(
-              AIRTABLE_TABLE_NAME_PPS,
-              [FIELD_EMPRESA_PPS_SOLICITUD, FIELD_ESTADO_PPS, FIELD_NOTAS_PPS, FIELD_ULTIMA_ACTUALIZACION_PPS],
-              `{${FIELD_LEGAJO_PPS}} = '${legajo.trim()}'`
-            );
-
-            if (solicitudesError) {
-              handleShowModal('Error de Carga', `Error al cargar solicitudes: ${typeof solicitudesError.error === 'string' ? solicitudesError.error : solicitudesError.error.message}`);
-            } else if (solicitudesRecords.length > 0) {
-              setSolicitudes(solicitudesRecords.map(r => ({ ...r.fields, id: r.id })));
-              foundAnyData = true;
-            }
-            
-            if (foundAnyData) {
-              setShowDisclaimer(true);
-            } else {
-              setStudentName(null); 
-              handleShowModal('Sin Resultados', `No se encontró información asociada al legajo ${legajo.trim()}. Verifica que el número sea correcto.`);
-            }
-
-          } catch (error) {
-            console.error('Error en el proceso de búsqueda general:', error);
-            handleShowModal('Error Crítico', `Ocurrió un error inesperado: ${error.message || 'Por favor, intenta de nuevo más tarde.'}`);
-          } finally {
-            setIsLoading(false);
-          }
         };
+        const Loader = () => React.createElement('div', { className: "flex justify-center items-center my-10 sm:my-12" }, React.createElement('div', { className: "border-4 border-slate-200 border-t-sky-500 rounded-full w-10 h-10 animate-spin" }), React.createElement('span', { className: "sr-only" }, "Cargando..."));
+        const AppHeader = () => React.createElement('header', { className: "text-center mb-6" }, React.createElement('h1', { className: "text-3xl sm:text-4xl font-bold text-slate-800" }, "Portal de Prácticas Profesionales"), React.createElement('p', { className: "text-slate-500 text-base sm:text-lg mt-1" }, "Consulta el estado de tus PPS y el progreso de tus horas."));
+        const LegajoInput = ({ value, onChange, onKeyPress, disabled }) => React.createElement('div', { className: "relative flex-grow" }, React.createElement('div', { className: "pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3" }, React.createElement('span', { className: "material-icons text-slate-400" }, "search")), React.createElement('input', { type: "text", id: "legajo", name: "legajo", value: value, onChange: e => onChange(e.target.value), onKeyPress: onKeyPress, disabled: disabled, className: "w-full rounded-md border border-slate-300/80 p-3 pl-10 text-base text-slate-800 bg-white shadow-sm placeholder-slate-400/80 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed", placeholder: "Ingresa tu número de legajo", 'aria-label': "Número de Legajo" }));
+        const SearchButton = ({ onClick, disabled }) => React.createElement('button', { onClick: onClick, disabled: disabled, className: "bg-blue-600 text-white font-semibold text-base py-3 px-6 rounded-md transition-all duration-200 ease-in-out shadow-sm hover:bg-blue-700 hover:shadow-md active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400 disabled:text-slate-100 disabled:cursor-not-allowed disabled:shadow-none" }, "Consultar");
+        const PracticasTable = ({ practicas }) => {
+            if (practicas.length === 0) return null;
+            return React.createElement('div', { className: "bg-white rounded-xl shadow-md p-6" }, React.createElement('h2', { className: "text-slate-800 text-xl font-semibold leading-tight tracking-tight mb-4" }, "Detalle de Prácticas"), React.createElement('div', { className: "border border-slate-200/80 rounded-lg overflow-x-auto" }, React.createElement('table', { className: "w-full min-w-[650px] " }, React.createElement('thead', null, React.createElement('tr', { className: "bg-slate-50" }, React.createElement('th', { className: "text-left p-3 font-medium text-slate-600 text-sm" }, "Institución"), React.createElement('th', { className: "text-left p-3 font-medium text-slate-600 text-sm" }, "Especialidad"), React.createElement('th', { className: "text-center p-3 font-medium text-slate-600 text-sm" }, "Horas"), React.createElement('th', { className: "text-left p-3 font-medium text-slate-600 text-sm" }, "Inicio"), React.createElement('th', { className: "text-left p-3 font-medium text-slate-600 text-sm" }, "Fin"), React.createElement('th', { className: "text-left p-3 font-medium text-slate-600 text-sm" }, "Estado"))), React.createElement('tbody', null, practicas.map(practica => {
+                const institucion = Array.isArray(practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]) ? practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]?.[0] : practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
+                const especialidad = Array.isArray(practica[FIELD_ESPECIALIDAD_PRACTICAS]) ? practica[FIELD_ESPECIALIDAD_PRACTICAS]?.[0] : practica[FIELD_ESPECIALIDAD_PRACTICAS];
+                const estado = Array.isArray(practica[FIELD_ESTADO_PRACTICA]) ? practica[FIELD_ESTADO_PRACTICA]?.[0] : practica[FIELD_ESTADO_PRACTICA];
+                const visuals = getStatusVisuals(estado);
+                return React.createElement('tr', { key: practica.id, className: "border-t border-slate-200/70" }, React.createElement('td', { className: "p-3 text-slate-700 text-sm font-medium" }, institucion || 'N/A'), React.createElement('td', { className: "p-3 text-slate-700 text-sm" }, React.createElement('span', { className: getEspecialidadClasses(especialidad) }, especialidad || 'N/A')), React.createElement('td', { className: "text-center p-3 text-slate-700 text-sm" }, practica[FIELD_HORAS_PRACTICAS] ?? 'N/A'), React.createElement('td', { className: "p-3 text-slate-700 text-sm" }, formatDate(practica[FIELD_FECHA_INICIO_PRACTICAS])), React.createElement('td', { className: "p-3 text-slate-700 text-sm" }, formatDate(practica[FIELD_FECHA_FIN_PRACTICAS])), React.createElement('td', { className: "p-3 text-slate-700 text-sm" }, React.createElement('span', { className: visuals.labelClass }, estado || 'N/A')));
+            })))));
+        };
+        const SolicitudCard = ({ solicitud }) => {
+            const institucion = Array.isArray(solicitud[FIELD_EMPRESA_PPS_SOLICITUD]) ? solicitud[FIELD_EMPRESA_PPS_SOLICITUD]?.[0] : solicitud[FIELD_EMPRESA_PPS_SOLICITUD];
+            const status = Array.isArray(solicitud[FIELD_ESTADO_PPS]) ? solicitud[FIELD_ESTADO_PPS]?.[0] : solicitud[FIELD_ESTADO_PPS];
+            const notas = solicitud[FIELD_NOTAS_PPS];
+            const actualizacion = solicitud[FIELD_ULTIMA_ACTUALIZACION_PPS];
+            const visuals = getStatusVisuals(status);
+            return React.createElement('div', { className: "bg-white p-4 rounded-xl shadow-sm border border-slate-200/80 flex items-center" }, React.createElement('div', { className: visuals.iconContainerClass }, React.createElement('span', { className: "material-icons !text-2xl" }, visuals.icon)), React.createElement('div', { className: "flex-grow" }, React.createElement('div', { className: "flex justify-between items-start gap-2 mb-1.5" }, React.createElement('p', { className: "text-slate-800 font-semibold leading-normal break-words pr-2" }, institucion || 'Institución no especificada'), React.createElement('span', { className: visuals.labelClass }, status || 'N/A')), notas && React.createElement('p', { className: "text-slate-600 text-sm leading-snug whitespace-normal mb-2" }, React.createElement('span', { className: "font-semibold text-slate-700" }, "Notas:"), " ", notas), React.createElement('p', { className: "text-slate-500 text-xs font-normal" }, "Última actualización: ", formatDate(actualizacion))));
+        };
+        const SolicitudesList = ({ solicitudes }) => {
+            if (solicitudes.length === 0) return null;
+            return React.createElement('div', { className: "bg-white rounded-xl shadow-md p-6" }, React.createElement('h2', { className: "text-slate-800 text-xl font-semibold leading-tight tracking-tight mb-4" }, "Mis Solicitudes de PPS"), React.createElement('div', { className: "space-y-4" }, solicitudes.map(solicitud => React.createElement(SolicitudCard, { key: solicitud.id, solicitud: solicitud }))));
+        };
+        const ProgressBar = ({ value, max, label, unit = '' }) => {
+            const percentage = max > 0 ? (value / max) * 100 : 0;
+            return React.createElement('div', { className: "flex flex-col gap-2" }, React.createElement('div', { className: "flex gap-4 justify-between items-center" }, React.createElement('p', { className: "text-slate-800 text-sm font-medium leading-normal" }, label), React.createElement('p', { className: "text-blue-600 text-sm font-semibold leading-normal" }, `${Math.round(percentage)}%`)), React.createElement('div', { className: "rounded-full h-2.5 bg-slate-200 overflow-hidden" }, React.createElement('div', { className: "h-2.5 rounded-full bg-blue-600 transition-all duration-500", style: { width: `${percentage}%` } })), React.createElement('p', { className: "text-slate-500 text-xs font-normal leading-normal" }, `${value} / ${max}${unit}`));
+        };
+        const RotationTracker = ({ label, count, total, orientacionesUnicas }) => {
+            const dots = Array.from({ length: total }, (_, i) => React.createElement('div', { key: i, className: `h-4 w-4 rounded-full transition-colors duration-300 ${i < count ? 'bg-blue-600' : 'bg-slate-200'}`, 'aria-label': `Rotación ${i + 1} ${i < count ? 'completada' : 'pendiente'}` }));
+            const completedText = count > 0 ? `(${orientacionesUnicas.join(', ')})` : '';
+            return React.createElement('div', { className: "flex flex-col gap-2" }, React.createElement('div', { className: "flex gap-4 justify-between items-center" }, React.createElement('p', { className: "text-slate-800 text-sm font-medium leading-normal" }, label)), React.createElement('div', { className: "flex items-center gap-2.5 pt-1" }, dots), React.createElement('p', { className: "text-slate-500 text-xs font-normal leading-normal" }, `${count} de ${total} completadas `, React.createElement('span', { className: "font-medium text-slate-600 ml-1" }, completedText)));
+        };
+        const CriteriosPanel = ({ criterios, selectedOrientacion, onOrientacionChange, studentName, }) => {
+            const StatusIcon = ({ completed }) => React.createElement('div', { className: `flex-shrink-0 size-6 rounded-full flex items-center justify-center transition-colors duration-300 ${completed ? 'bg-blue-600' : 'bg-slate-300'}` }, completed ? React.createElement('span', { className: "material-icons text-white !text-base" }, "check") : React.createElement('div', { className: "size-2 rounded-full bg-white/70" }));
+            const todosLosCriteriosCumplidos = criterios.cumpleHorasTotales && criterios.cumpleRotacion && criterios.cumpleHorasOrientacion;
+            return React.createElement('div', { className: "bg-white border border-slate-200/80 rounded-xl p-6 mb-8 shadow-md" },
+                React.createElement('div', { className: "flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1" }, React.createElement('h1', { className: "text-slate-800 tracking-tight text-2xl font-bold leading-tight" }, `Bienvenido/a, ${studentName}`)),
+                React.createElement('p', { className: "text-slate-500 text-sm font-normal leading-relaxed mb-6" }, "Este es tu checklist para finalizar el recorrido de prácticas."),
+                React.createElement('div', { className: "border-t border-slate-200 pt-6" },
+                    React.createElement('h2', { className: "text-lg font-semibold text-slate-700 mb-5" }, "Criterios para Finalizar"),
+                    React.createElement('div', { className: "space-y-6" },
+                        React.createElement('div', { className: "flex items-start gap-4" }, React.createElement(StatusIcon, { completed: criterios.cumpleHorasTotales }), React.createElement('div', { className: "flex-grow" }, React.createElement(ProgressBar, { label: `Completa ${HORAS_OBJETIVO_TOTAL} horas totales de práctica`, value: criterios.horasTotales, max: HORAS_OBJETIVO_TOTAL, unit: " hs" }))),
+                        React.createElement('div', { className: "flex items-start gap-4" }, React.createElement(StatusIcon, { completed: criterios.cumpleRotacion }), React.createElement('div', { className: "flex-grow" }, React.createElement(RotationTracker, { label: `Rota por ${ROTACION_OBJETIVO_ORIENTACIONES} orientaciones como mínimo`, count: criterios.orientacionesCursadasCount, total: ROTACION_OBJETIVO_ORIENTACIONES, orientacionesUnicas: criterios.orientacionesUnicas }))),
+                        React.createElement('div', { className: "flex items-start gap-4" }, React.createElement(StatusIcon, { completed: criterios.cumpleHorasOrientacion }), React.createElement('div', { className: "flex-grow" },
+                            React.createElement('p', { className: "text-slate-800 text-sm font-medium leading-normal mb-2" }, `Completa ${HORAS_OBJETIVO_ORIENTACION} horas en tu orientación principal`),
+                            React.createElement('select', { id: "orientacion-elegida-select", value: selectedOrientacion, onChange: e => onOrientacionChange(e.target.value), className: "w-full max-w-sm rounded-md border border-slate-300/80 p-2 text-sm text-slate-800 bg-white shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 outline-none transition-colors", 'aria-label': "Seleccionar orientación principal" },
+                                React.createElement('option', { value: "" }, "Seleccione una orientación..."),
+                                ALL_ORIENTACIONES.map(o => React.createElement('option', { key: o, value: o }, o))
+                            ),
+                            selectedOrientacion ? React.createElement('div', { className: "mt-4" }, React.createElement(ProgressBar, { label: `Progreso en ${selectedOrientacion}`, value: criterios.horasOrientacionElegida, max: HORAS_OBJETIVO_ORIENTACION, unit: " hs" })) : React.createElement('p', { className: "mt-2 text-xs text-slate-500" }, "Selecciona una orientación para ver tu progreso.")
+                        ))
+                    ),
+                    todosLosCriteriosCumplidos && React.createElement('div', { className: "mt-8 border-t border-slate-200 pt-6" }, React.createElement('div', { className: "p-4 sm:p-5 bg-teal-50 border-l-4 border-teal-500 text-teal-900 rounded-r-lg shadow-sm flex items-start gap-4" },
+                        React.createElement('div', { className: "flex-shrink-0 pt-0.5" }, React.createElement('span', { className: "material-icons text-teal-600" }, "celebration")),
+                        React.createElement('div', null,
+                            React.createElement('h3', { className: "font-bold text-lg" }, "¡Felicitaciones! Has cumplido todos los criterios."),
+                            React.createElement('p', { className: "mt-2 text-sm" }, "Si aún no lo has hecho, debes solicitar la acreditación de tus horas mediante el siguiente formulario:"),
+                            React.createElement('a', { href: "https://airtable.com/appBY8PYhPZ1X2ka1/paglLBxubDedzl1qz/form", target: "_blank", rel: "noopener noreferrer", className: "mt-4 inline-block bg-teal-600 text-white font-semibold text-sm py-2 px-4 rounded-md transition-all hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500" }, "Solicitar Acreditación de Horas")
+                        )
+                    ))
+                )
+            );
+        };
+        const Footer = () => React.createElement('footer', { className: "mt-8" }, React.createElement('div', { className: "p-4 sm:p-5 bg-amber-50/80 border-l-4 border-amber-400 text-amber-800 text-sm rounded-r-lg shadow-sm flex items-start gap-4" }, React.createElement('div', { className: "flex-shrink-0 pt-0.5" }, React.createElement('span', { className: "material-icons text-amber-600", 'aria-hidden': "true" }, "info")), React.createElement('div', null, React.createElement('p', null, React.createElement('strong', { className: "font-semibold" }, `${ALERT_DISCLAIMER_TITLE}:`), ` ${ALERT_DISCLAIMER_TEXT_1}`), React.createElement('p', { className: "mt-2" }, ALERT_DISCLAIMER_TEXT_2))));
         
-        const handleKeyPress = (event) => {
-          if (event.key === 'Enter') {
-            event.preventDefault();
-            handleSearch();
-          }
+        // --- BUNDLED FROM: App.tsx ---
+        const App = () => {
+            const [legajo, setLegajo] = useState('');
+            const [studentName, setStudentName] = useState(null);
+            const [actualLegajoSearched, setActualLegajoSearched] = useState(null);
+            const [practicas, setPracticas] = useState([]);
+            const [solicitudes, setSolicitudes] = useState([]);
+            const [isLoading, setIsLoading] = useState(false);
+            const [modalInfo, setModalInfo] = useState(null);
+            const [hasSearched, setHasSearched] = useState(false);
+            const [selectedOrientacion, setSelectedOrientacion] = useState("");
+            const [criterios, setCriterios] = useState({
+                horasTotales: 0,
+                horasFaltantes250: HORAS_OBJETIVO_TOTAL,
+                cumpleHorasTotales: false,
+                horasOrientacionElegida: 0,
+                horasFaltantesOrientacion: HORAS_OBJETIVO_ORIENTACION,
+                cumpleHorasOrientacion: false,
+                orientacionesCursadasCount: 0,
+                orientacionesUnicas: [],
+                cumpleRotacion: false,
+            });
+
+            useEffect(() => {
+                if (!window.AIRTABLE_PAT_WARNING_SHOWN) {
+                    console.warn("ADVERTENCIA DE SEGURIDAD: El token PAT de Airtable está expuesto en este archivo. Para producción, este token debe protegerse en un backend.");
+                    window.AIRTABLE_PAT_WARNING_SHOWN = true;
+                }
+            }, []);
+
+            const handleShowModal = (title, message) => setModalInfo({ title, message });
+
+            const calculateCriterios = useCallback(() => {
+                let totalHoras = 0;
+                const matchedNormalizedOrientacionesEnumSet = new Set();
+                practicas.forEach(p => {
+                    totalHoras += p[FIELD_HORAS_PRACTICAS] || 0;
+                    const especialidadPractica = p[FIELD_ESPECIALIDAD_PRACTICAS];
+                    if (especialidadPractica) {
+                        const normalizedEspecialidadFromPractice = normalizeStringForComparison(especialidadPractica);
+                        for (const orientacionEnumValue of ALL_ORIENTACIONES) {
+                            if (normalizeStringForComparison(orientacionEnumValue) === normalizedEspecialidadFromPractice) {
+                                matchedNormalizedOrientacionesEnumSet.add(normalizeStringForComparison(orientacionEnumValue));
+                                break;
+                            }
+                        }
+                    }
+                });
+                let horasEnOrientacion = 0;
+                if (selectedOrientacion) {
+                    const normalizedSelectedActualOrientacion = normalizeStringForComparison(selectedOrientacion);
+                    practicas.forEach(p => {
+                        const especialidadPractica = p[FIELD_ESPECIALIDAD_PRACTICAS];
+                        if (especialidadPractica) {
+                            if (normalizeStringForComparison(especialidadPractica) === normalizedSelectedActualOrientacion) {
+                                horasEnOrientacion += p[FIELD_HORAS_PRACTICAS] || 0;
+                            }
+                        }
+                    });
+                }
+                const horasFaltantesOrientacion = Math.max(0, HORAS_OBJETIVO_ORIENTACION - horasEnOrientacion);
+                setCriterios({
+                    horasTotales: totalHoras,
+                    horasFaltantes250: Math.max(0, HORAS_OBJETIVO_TOTAL - totalHoras),
+                    cumpleHorasTotales: totalHoras >= HORAS_OBJETIVO_TOTAL,
+                    horasOrientacionElegida: horasEnOrientacion,
+                    horasFaltantesOrientacion: horasFaltantesOrientacion,
+                    cumpleHorasOrientacion: selectedOrientacion ? horasEnOrientacion >= HORAS_OBJETIVO_ORIENTACION : false,
+                    orientacionesCursadasCount: matchedNormalizedOrientacionesEnumSet.size,
+                    orientacionesUnicas: Array.from(matchedNormalizedOrientacionesEnumSet).map(normalizedEnum => {
+                        const originalEnumValue = ALL_ORIENTACIONES.find(o => normalizeStringForComparison(o) === normalizedEnum);
+                        return originalEnumValue || (normalizedEnum.charAt(0).toUpperCase() + normalizedEnum.slice(1));
+                    }),
+                    cumpleRotacion: matchedNormalizedOrientacionesEnumSet.size >= ROTACION_OBJETIVO_ORIENTACIONES,
+                });
+            }, [practicas, selectedOrientacion]);
+
+            useEffect(() => { calculateCriterios(); }, [practicas, selectedOrientacion, calculateCriterios]);
+
+            const resetState = () => {
+                setStudentName(null);
+                setPracticas([]);
+                setSolicitudes([]);
+                setSelectedOrientacion("");
+                setHasSearched(false);
+                setCriterios({
+                    horasTotales: 0,
+                    horasFaltantes250: HORAS_OBJETIVO_TOTAL,
+                    cumpleHorasTotales: false,
+                    horasOrientacionElegida: 0,
+                    horasFaltantesOrientacion: HORAS_OBJETIVO_ORIENTACION,
+                    cumpleHorasOrientacion: false,
+                    orientacionesCursadasCount: 0,
+                    orientacionesUnicas: [],
+                    cumpleRotacion: false,
+                });
+            };
+
+            const handleSearch = async () => {
+                if (!legajo.trim()) {
+                    handleShowModal('Entrada Inválida', 'Por favor, ingresa tu número de legajo.');
+                    return;
+                }
+                setIsLoading(true);
+                resetState();
+                setActualLegajoSearched(legajo.trim());
+                let foundAnyData = false;
+                let currentStudentName = null;
+                try {
+                    const { records: studentRecords, error: studentError } = await fetchAirtableData(AIRTABLE_TABLE_NAME_ESTUDIANTES, [FIELD_NOMBRE_ESTUDIANTES], `{${FIELD_LEGAJO_ESTUDIANTES}} = '${legajo.trim()}'`, 1);
+                    if (studentError) console.warn("Error buscando en Estudiantes:", studentError.error);
+                    else if (studentRecords.length > 0 && studentRecords[0].fields[FIELD_NOMBRE_ESTUDIANTES]) {
+                        currentStudentName = studentRecords[0].fields[FIELD_NOMBRE_ESTUDIANTES];
+                    }
+                    if (!currentStudentName) {
+                        const { records: ppsNameRecords, error: ppsNameError } = await fetchAirtableData(AIRTABLE_TABLE_NAME_PPS, [FIELD_NOMBRE_ESTUDIANTE_LOOKUP_PPS], `{${FIELD_LEGAJO_PPS}} = '${legajo.trim()}'`, 1);
+                        if (ppsNameError) console.warn("Error buscando nombre en PPS:", ppsNameError.error);
+                        else if (ppsNameRecords.length > 0) {
+                            const nameField = ppsNameRecords[0].fields[FIELD_NOMBRE_ESTUDIANTE_LOOKUP_PPS];
+                            if (Array.isArray(nameField) && nameField.length > 0) currentStudentName = nameField[0];
+                            else if (typeof nameField === 'string') currentStudentName = nameField;
+                        }
+                    }
+                    setStudentName(currentStudentName || `Legajo ${legajo.trim()}`);
+                    if (currentStudentName) {
+                        const { records: practicasRecords, error: practicasError } = await fetchAirtableData(AIRTABLE_TABLE_NAME_PRACTICAS, [FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS, FIELD_HORAS_PRACTICAS, FIELD_FECHA_INICIO_PRACTICAS, FIELD_FECHA_FIN_PRACTICAS, FIELD_ESTADO_PRACTICA, FIELD_ESPECIALIDAD_PRACTICAS], `{${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}} = '${currentStudentName}'`);
+                        if (practicasError) handleShowModal('Error de Carga', `Error al cargar prácticas: ${typeof practicasError.error === 'string' ? practicasError.error : practicasError.error.message}`);
+                        else if (practicasRecords.length > 0) {
+                            setPracticas(practicasRecords.map(r => ({ ...r.fields, id: r.id })));
+                            foundAnyData = true;
+                        }
+                    } else {
+                        console.warn("No se pudo obtener nombre, no se buscarán prácticas.");
+                    }
+                    const { records: solicitudesRecords, error: solicitudesError } = await fetchAirtableData(AIRTABLE_TABLE_NAME_PPS, [FIELD_EMPRESA_PPS_SOLICITUD, FIELD_ESTADO_PPS, FIELD_NOTAS_PPS, FIELD_ULTIMA_ACTUALIZACION_PPS], `{${FIELD_LEGAJO_PPS}} = '${legajo.trim()}'`);
+                    if (solicitudesError) handleShowModal('Error de Carga', `Error al cargar solicitudes: ${typeof solicitudesError.error === 'string' ? solicitudesError.error : solicitudesError.error.message}`);
+                    else if (solicitudesRecords.length > 0) {
+                        setSolicitudes(solicitudesRecords.map(r => ({ ...r.fields, id: r.id })));
+                        foundAnyData = true;
+                    }
+                    if (!foundAnyData) {
+                        setStudentName(null);
+                        handleShowModal('Sin Resultados', `No se encontró información para el legajo ${legajo.trim()}.`);
+                    }
+                } catch (error) {
+                    console.error('Error en búsqueda:', error);
+                    handleShowModal('Error Crítico', `Ocurrió un error: ${error.message || 'Intenta de nuevo.'}`);
+                } finally {
+                    setIsLoading(false);
+                    setHasSearched(true);
+                }
+            };
+            const handleKeyPress = e => { if (e.key === 'Enter') { e.preventDefault(); handleSearch(); } };
+            const showResults = !isLoading && hasSearched && studentName;
+            
+            return React.createElement('div', { className: "w-full max-w-4xl mx-auto p-4 sm:p-6 md:p-8 flex flex-col min-h-screen" },
+                React.createElement('div', { className: "flex-grow" },
+                    React.createElement(AppHeader, null),
+                    React.createElement('div', { className: "p-4 bg-white rounded-xl shadow-md mb-8" },
+                        React.createElement('div', { className: "flex flex-col sm:flex-row items-stretch gap-4" },
+                            React.createElement(LegajoInput, { value: legajo, onChange: setLegajo, onKeyPress: handleKeyPress, disabled: isLoading }),
+                            React.createElement(SearchButton, { onClick: handleSearch, disabled: isLoading })
+                        )
+                    ),
+                    isLoading && React.createElement(Loader, null),
+                    showResults && React.createElement('div', { className: "space-y-8" },
+                        React.createElement(CriteriosPanel, { criterios: criterios, selectedOrientacion: selectedOrientacion, onOrientacionChange: setSelectedOrientacion, studentName: studentName }),
+                        React.createElement(SolicitudesList, { solicitudes: solicitudes }),
+                        React.createElement(PracticasTable, { practicas: practicas })
+                    )
+                ),
+                showResults && React.createElement(Footer, null),
+                React.createElement(Modal, { isOpen: !!modalInfo, title: modalInfo?.title || '', message: modalInfo?.message || '', onClose: () => setModalInfo(null) })
+            );
         };
 
-        return (
-          <div className="w-full max-w-4xl mx-auto p-6 sm:p-8 md:p-10 bg-white rounded-2xl shadow-xl border border-slate-200/80">
-            <AppHeader />
-            <LegajoInput value={legajo} onChange={setLegajo} onKeyPress={handleKeyPress} disabled={isLoading} />
-            <SearchButton onClick={handleSearch} disabled={isLoading} />
-
-            {isLoading && <Loader />}
-
-            {!isLoading && studentName && actualLegajoSearched && (
-              <div className="mt-10">
-                <StudentInfoHeader studentName={studentName} legajo={actualLegajoSearched} />
-              </div>
-            )}
-            
-            {!isLoading && practicas.length > 0 && (
-                 <CriteriosPanel 
-                  criterios={criterios} 
-                  selectedOrientacion={selectedOrientacion}
-                  onOrientacionChange={setSelectedOrientacion}
-                  hasPracticas={true}
-                />
-            )}
-            
-            {!isLoading && (studentName || practicas.length > 0 || solicitudes.length > 0) && ( 
-              <React.Fragment>
-                <PracticasTable practicas={practicas} />
-                <SolicitudesList solicitudes={solicitudes} />
-              </React.Fragment>
-            )}
-
-            {!isLoading && showDisclaimer && <Disclaimer />}
-            
-            <Modal
-              isOpen={!!modalInfo}
-              title={modalInfo?.title || ''}
-              message={modalInfo?.message || ''}
-              onClose={() => setModalInfo(null)}
-            />
-          </div>
+        // --- BUNDLED FROM: index.tsx ---
+        const rootElement = document.getElementById('root');
+        if (!rootElement) {
+            throw new Error("Could not find root element to mount to");
+        }
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(
+            React.createElement(React.StrictMode, null, 
+                React.createElement(App, null)
+            )
         );
-      };
-
-      // --- Mount the App ---
-      const rootElement = document.getElementById('root');
-      if (!rootElement) {
-        throw new Error("Could not find root element to mount to");
-      }
-      const root = ReactDOM.createRoot(rootElement);
-      root.render(
-        <React.StrictMode>
-          <App />
-        </React.StrictMode>
-      );
-
     </script>
 </body>
 </html>
