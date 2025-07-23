@@ -828,22 +828,8 @@ const AdminSearch = ({ onSearch, isLoading }) => {
 
 // From: components/Auth.tsx
 // ---
-const Auth = ({ onLoginSuccess, showModal }) => {
-  const { useState, useCallback, useEffect } = React;
-  
-  const [mode, setMode] = useState('login');
-  const [legajo, setLegajo] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const [legajoCheckLoading, setLegajoCheckLoading] = useState(false);
-  const [registerStudentName, setRegisterStudentName] = useState(null);
-  const [legajoError, setLegajoError] = useState(null);
-
-  const AuthInput = ({ id, type, value, onChange, placeholder, icon, onBlur, disabled = false }) => (
+// Moved AuthInput outside the Auth component to prevent re-renders from causing focus loss.
+const AuthInput = ({ id, type, value, onChange, placeholder, icon, onBlur, disabled = false }) => (
     <div className="relative">
       <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
         <span className="material-icons text-slate-400">{icon}</span>
@@ -861,7 +847,22 @@ const Auth = ({ onLoginSuccess, showModal }) => {
         required
       />
     </div>
-  );
+);
+
+const Auth = ({ onLoginSuccess, showModal }) => {
+  const { useState, useCallback, useEffect } = React;
+  
+  const [mode, setMode] = useState('login');
+  const [legajo, setLegajo] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const [legajoCheckLoading, setLegajoCheckLoading] = useState(false);
+  const [registerStudentName, setRegisterStudentName] = useState(null);
+  const [legajoError, setLegajoError] = useState(null);
 
   const verifyLegajo = useCallback(async (legajoToVerify) => {
     if (!legajoToVerify || mode !== 'register') return;
