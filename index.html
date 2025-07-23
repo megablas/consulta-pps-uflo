@@ -563,6 +563,15 @@ const RotationTracker = ({ label, count, total, orientacionesUnicas }) => {
 };
 
 // --- FILE: components/CriteriosPanel.tsx ---
+const StatusIcon = ({ completed }) => (
+    <div className={`flex-shrink-0 size-7 rounded-full flex items-center justify-center transition-all duration-300 ${completed ? 'bg-sky-500 ring-4 ring-sky-500/10' : 'bg-slate-200'}`}>
+      {completed ? 
+        <span className="material-icons text-white !text-lg">check</span> :
+        <div className="size-2 rounded-full bg-white/70"></div>
+      }
+    </div>
+);
+
 const CriteriosPanel = ({ 
   criterios, 
   selectedOrientacion, 
@@ -570,15 +579,6 @@ const CriteriosPanel = ({
   studentName,
   isSuperUserMode
 }) => {
-  const StatusIcon = ({ completed }) => (
-    <div className={`flex-shrink-0 size-7 rounded-full flex items-center justify-center transition-all duration-300 ${completed ? 'bg-sky-500 ring-4 ring-sky-500/10' : 'bg-slate-200'}`}>
-      {completed ? 
-        <span className="material-icons text-white !text-lg">check</span> :
-        <div className="size-2 rounded-full bg-white/70"></div>
-      }
-    </div>
-  );
-
   const todosLosCriteriosCumplidos = criterios.cumpleHorasTotales && criterios.cumpleRotacion && criterios.cumpleHorasOrientacion;
 
   return (
@@ -705,18 +705,7 @@ const Footer = () => {
 };
 
 // --- FILE: components/Auth.tsx ---
-const Auth = ({ onLoginSuccess, showModal }) => {
-  const [mode, setMode] = useState('login');
-  const [legajo, setLegajo] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [legajoCheckLoading, setLegajoCheckLoading] = useState(false);
-  const [registerStudentName, setRegisterStudentName] = useState(null);
-  const [legajoError, setLegajoError] = useState(null);
-
-  const AuthInput = ({ id, type, value, onChange, placeholder, icon, onBlur, disabled = false }) => (
+const AuthInput = ({ id, type, value, onChange, placeholder, icon, onBlur, disabled = false }) => (
     <div className="relative">
       <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
         <span className="material-icons text-slate-400">{icon}</span>
@@ -734,7 +723,18 @@ const Auth = ({ onLoginSuccess, showModal }) => {
         required
       />
     </div>
-  );
+);
+
+const Auth = ({ onLoginSuccess, showModal }) => {
+  const [mode, setMode] = useState('login');
+  const [legajo, setLegajo] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [legajoCheckLoading, setLegajoCheckLoading] = useState(false);
+  const [registerStudentName, setRegisterStudentName] = useState(null);
+  const [legajoError, setLegajoError] = useState(null);
 
   const verifyLegajo = useCallback(async (legajoToVerify) => {
     if (!legajoToVerify || mode !== 'register') return;
