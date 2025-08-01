@@ -9,8 +9,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet">
-    <!-- Babel for JSX Transpilation -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
       body {
         font-family: 'Inter', sans-serif;
@@ -48,11 +46,12 @@
         animation: gradient-move 15s ease infinite;
       }
     </style>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@18.2.0",
-    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "react": "https://esm.sh/react@19.1.0?jsx-runtime=automatic",
+    "react-dom/client": "https://esm.sh/react-dom@19.1.0/client",
     "@google/genai": "https://esm.sh/@google/genai"
   }
 }
@@ -61,49 +60,27 @@
 <body class="bg-slate-50">
     <div id="root"></div>
     <script type="text/babel" data-type="module">
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+// BUNDLED APPLICATION SCRIPT
+// All TSX/TS files have been combined into this single module.
+
+// --- IMPORTS ---
+import React, { useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom/client';
 import { GoogleGenAI } from "@google/genai";
 
-// ============================================================================
-// FILE: types.ts
-// ============================================================================
-
-const Orientacion = {
-  CLINICA: "Clinica",
-  LABORAL: "Laboral",
-  EDUCACIONAL: "Educacional",
-  COMUNITARIA: "Comunitaria",
-  OTRA: "Otra"
-};
-
-const ALL_ORIENTACIONES = [
-  Orientacion.CLINICA,
-  Orientacion.LABORAL,
-  Orientacion.EDUCACIONAL,
-  Orientacion.COMUNITARIA
-];
-
-
-// ============================================================================
-// FILE: constants.ts
-// ============================================================================
-
-const AIRTABLE_PAT = 'patEjnXqyKnMwEUw5.19a19b12ad3c23b36888b9e228c2c9db1cbc923e9a29d7357e4103bb286d4bd1';
+// --- START OF constants.ts ---
+const AIRTABLE_PAT = 'patEjnXqyKnMwEUw5.19a19b12ad3c23b36888b9e228c2c9db1cbc923e9a29d7357e4103bb286d4bd1'; // WARNING: Exposed token
 const AIRTABLE_BASE_ID = 'appBY8PYhPZ1X2ka1';
-
 const AIRTABLE_TABLE_NAME_PPS = 'Solicitud de PPS';
 const AIRTABLE_TABLE_NAME_PRACTICAS = 'Prácticas';
 const AIRTABLE_TABLE_NAME_ESTUDIANTES = 'Estudiantes';
 const AIRTABLE_TABLE_NAME_AUTH_USERS = 'Auth Users';
-
 const FIELD_LEGAJO_PPS = 'Legajo';
 const FIELD_ESTADO_PPS = 'Estado de seguimiento';
 const FIELD_EMPRESA_PPS_SOLICITUD = 'Nombre de la Institución';
 const FIELD_NOMBRE_ESTUDIANTE_LOOKUP_PPS = 'Nombre Busqueda';
 const FIELD_NOTAS_PPS = 'Notas';
 const FIELD_ULTIMA_ACTUALIZACION_PPS = 'Actualización';
-
 const FIELD_NOMBRE_BUSQUEDA_PRACTICAS = 'Nombre busqueda';
 const FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS = 'Nombre (de Institución)';
 const FIELD_HORAS_PRACTICAS = 'Horas Realizadas';
@@ -111,55 +88,36 @@ const FIELD_FECHA_INICIO_PRACTICAS = 'Fecha de Inicio';
 const FIELD_FECHA_FIN_PRACTICAS = 'Fecha de Finalización';
 const FIELD_ESTADO_PRACTICA = 'Estado';
 const FIELD_ESPECIALIDAD_PRACTICAS = 'Especialidad';
-
 const FIELD_LEGAJO_ESTUDIANTES = 'Legajo';
 const FIELD_NOMBRE_ESTUDIANTES = 'Nombre';
 const FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES = 'Orientación Elegida';
-
 const FIELD_LEGAJO_AUTH = 'Legajo';
 const FIELD_NOMBRE_AUTH = 'Nombre';
 const FIELD_PASSWORD_HASH_AUTH = 'PasswordHash';
 const FIELD_SALT_AUTH = 'Salt';
-
 const HORAS_OBJETIVO_TOTAL = 250;
 const HORAS_OBJETIVO_ORIENTACION = 70;
 const ROTACION_OBJETIVO_ORIENTACIONES = 3;
-
 const ALERT_DISCLAIMER_TITLE = "Importante";
 const ALERT_DISCLAIMER_TEXT_1 = "Esta información es una vista preliminar y puede no ser 100% precisa o estar actualizada. No tiene carácter de certificado oficial.";
 const ALERT_DISCLAIMER_TEXT_2 = "Para cualquier solicitud de corrección por omisión o error, es indispensable adjuntar la documentación respaldatoria correspondiente, principalmente la planilla de asistencia. No se responderán correos solicitando cambios sin la documentación adecuada.";
 
-// ============================================================================
-// FILE: utils/auth.ts
-// ============================================================================
+// --- START OF types.ts ---
+const Orientacion = {
+  CLINICA: "Clinica",
+  LABORAL: "Laboral",
+  EDUCACIONAL: "Educacional",
+  COMUNITARIA: "Comunitaria",
+  OTRA: "Otra"
+};
+const ALL_ORIENTACIONES = [
+  Orientacion.CLINICA,
+  Orientacion.LABORAL,
+  Orientacion.EDUCACIONAL,
+  Orientacion.COMUNITARIA
+];
 
-function bufferToHex(buffer) {
-  return [...new Uint8Array(buffer)]
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-function generateSalt() {
-  const salt = window.crypto.getRandomValues(new Uint8Array(16));
-  return bufferToHex(salt);
-}
-
-async function hashPassword(password, salt) {
-  const encoder = new TextEncoder();
-  const passwordWithSalt = encoder.encode(password + salt);
-  const hashBuffer = await window.crypto.subtle.digest('SHA-256', passwordWithSalt);
-  return bufferToHex(hashBuffer);
-}
-
-async function verifyPassword(password, salt, storedHash) {
-  const newHash = await hashPassword(password, salt);
-  return newHash === storedHash;
-}
-
-// ============================================================================
-// FILE: utils/formatters.ts
-// ============================================================================
-
+// --- START OF utils/formatters.ts ---
 function formatDate(dateString) {
     if (!dateString) return 'N/A';
     try {
@@ -176,13 +134,10 @@ function formatDate(dateString) {
         return 'Fecha inválida';
     }
 }
-
 function getEspecialidadClasses(especialidad) {
     if (!especialidad) return 'bg-slate-100 text-slate-800 border-slate-200';
-    
     const baseClasses = "inline-flex items-center font-medium py-1 px-2.5 rounded-full text-xs border";
     const normalizedEspecialidad = normalizeStringForComparison(especialidad);
-
     switch (normalizedEspecialidad) {
         case 'clinica':
             return `${baseClasses} bg-teal-100 text-teal-800 border-teal-200`;
@@ -196,12 +151,10 @@ function getEspecialidadClasses(especialidad) {
             return `${baseClasses} bg-slate-100 text-slate-800 border-slate-200`;
     }
 }
-
 function getStatusVisuals(status) {
     const normalizedStatus = normalizeStringForComparison(status);
     const baseLabel = "inline-flex items-center font-semibold px-2.5 py-1 rounded-full text-xs capitalize";
     const baseIconContainer = "flex-shrink-0 size-11 rounded-lg flex items-center justify-center mr-4";
-
     if (normalizedStatus.includes('pps realiazada') || normalizedStatus.includes('convenio realizado') || normalizedStatus.includes('finalizada')) {
         return {
             icon: 'check_circle',
@@ -236,7 +189,6 @@ function getStatusVisuals(status) {
         labelClass: `${baseLabel} bg-slate-100 text-slate-800`,
     };
 }
-
 function normalizeStringForComparison(str) {
   if (!str) return "";
   return str
@@ -246,9 +198,28 @@ function normalizeStringForComparison(str) {
     .trim();
 }
 
-// ============================================================================
-// FILE: services/airtableService.ts
-// ============================================================================
+// --- START OF utils/auth.ts ---
+function bufferToHex(buffer) {
+  return [...new Uint8Array(buffer)]
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+function generateSalt() {
+  const salt = window.crypto.getRandomValues(new Uint8Array(16));
+  return bufferToHex(salt);
+}
+async function hashPassword(password, salt) {
+  const encoder = new TextEncoder();
+  const passwordWithSalt = encoder.encode(password + salt);
+  const hashBuffer = await window.crypto.subtle.digest('SHA-256', passwordWithSalt);
+  return bufferToHex(hashBuffer);
+}
+async function verifyPassword(password, salt, storedHash) {
+  const newHash = await hashPassword(password, salt);
+  return newHash === storedHash;
+}
+
+// --- START OF services/airtableService.ts ---
 async function fetchDataGeneric(url) {
     try {
         const response = await fetch(url, {
@@ -258,7 +229,7 @@ async function fetchDataGeneric(url) {
             let errorData;
             try {
                 const jsonError = await response.json();
-                errorData = jsonError; 
+                errorData = jsonError;
                 if (typeof errorData.error !== 'object' && typeof errorData.error !== 'string') {
                      errorData = { error: { type: `HTTP_ERROR_${response.status}`, message: `Error ${response.status}: ${response.statusText}. Response not a valid error JSON.` }};
                 }
@@ -285,7 +256,6 @@ async function fetchDataGeneric(url) {
         return { data: null, error: { error: { type: 'NETWORK_ERROR', message: 'No se pudo conectar con el servidor. Revisa tu conexión a internet.' } } };
     }
 }
-
 async function createAirtableRecord(tableName, fields) {
   const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(tableName)}`;
   try {
@@ -322,7 +292,6 @@ async function createAirtableRecord(tableName, fields) {
     return { record: null, error: { error: { type: 'NETWORK_ERROR', message: 'No se pudo conectar con el servidor. Revisa tu conexión a internet.' } } };
   }
 }
-
 async function updateAirtableRecord(tableName, recordId, fields) {
   const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(tableName)}/${recordId}`;
   try {
@@ -353,7 +322,6 @@ async function updateAirtableRecord(tableName, recordId, fields) {
     return { record: null, error: { error: { type: 'NETWORK_ERROR', message: 'No se pudo conectar con el servidor. Revisa tu conexión a internet.' } } };
   }
 }
-
 async function fetchAirtableData(tableName, fields = [], filterByFormula, maxRecords) {
     let url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(tableName)}`;
     const params = new URLSearchParams();
@@ -375,25 +343,29 @@ async function fetchAirtableData(tableName, fields = [], filterByFormula, maxRec
     return { records: data.records, error: null };
 }
 
-// ============================================================================
-// FILE: components/MiPanelLogo.tsx
-// ============================================================================
+// --- START OF COMPONENTS ---
+
 const MiPanelLogo = ({ className, variant = 'light' }) => {
   const isDark = variant === 'dark';
-  const lightTextColor = '#334155';
-  const brandColor = '#0ea5e9';
-  const darkTextColor = '#e2e8f0';
+  const lightTextColor = '#334155'; // slate-700
+  const brandColor = '#0ea5e9'; // sky-500
+  const darkTextColor = '#e2e8f0'; // slate-200
   const whiteColor = '#ffffff';
   const paFillColor = isDark ? whiteColor : brandColor;
   const textFillColor = isDark ? darkTextColor : lightTextColor;
   return (
-    <svg className={className} viewBox="0 0 170 70" xmlns="http://www.w3.org/2000/svg" aria-label="Logo de Mi Panel">
+    <svg
+      className={className}
+      viewBox="0 0 170 70"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-label="Logo de Mi Panel"
+    >
       {isDark && (
         <>
           <defs>
             <linearGradient id="logo-gradient" x1="0.5" y1="0" x2="0.5" y2="1">
-              <stop offset="0%" stopColor="#0ea5e9" />
-              <stop offset="100%" stopColor="#0284c7" />
+              <stop offset="0%" stopColor="#0ea5e9" /> {/* sky-500 */}
+              <stop offset="100%" stopColor="#0284c7" /> {/* sky-600 */}
             </linearGradient>
           </defs>
           <rect x="0" y="0" width="70" height="70" fill="url(#logo-gradient)" rx="12" />
@@ -406,9 +378,6 @@ const MiPanelLogo = ({ className, variant = 'light' }) => {
   );
 };
 
-// ============================================================================
-// FILE: components/UfloLogo.tsx
-// ============================================================================
 const UfloLogo = ({ className, variant = 'light' }) => {
   const isDark = variant === 'dark';
   const mainColor = isDark ? '#e2e8f0' : '#1e293b';
@@ -421,35 +390,6 @@ const UfloLogo = ({ className, variant = 'light' }) => {
   );
 };
 
-// ============================================================================
-// FILE: components/Loader.tsx
-// ============================================================================
-const Loader = () => (
-  <div className="flex justify-center items-center my-10 sm:my-12">
-    <div className="border-4 border-slate-200 border-t-sky-500 rounded-full w-10 h-10 animate-spin"></div>
-    <span className="sr-only">Cargando...</span>
-  </div>
-);
-
-// ============================================================================
-// FILE: components/Modal.tsx
-// ============================================================================
-const Modal = ({ title, message, isOpen, onClose }) => {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm transition-opacity duration-300" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-md sm:max-w-lg text-center transform transition-all duration-300 scale-100 opacity-100">
-        <h2 id="modal-title" className="text-xl sm:text-2xl font-bold text-sky-800 mb-4 text-left">{title}</h2>
-        <p className="text-slate-600 text-sm sm:text-base mb-6 sm:mb-8 leading-relaxed whitespace-pre-wrap text-left">{message}</p>
-        <button onClick={onClose} className="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2.5 px-8 rounded-lg text-sm sm:text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2" aria-label="Cerrar modal">Entendido</button>
-      </div>
-    </div>
-  );
-};
-
-// ============================================================================
-// FILE: components/ProgressBar.tsx
-// ============================================================================
 const ProgressBar = ({ value, max, label, unit = '', small = false }) => {
   const percentage = max > 0 ? Math.min((value / max) * 100, 100) : 0;
   const height = small ? 'h-2' : 'h-2.5';
@@ -468,9 +408,6 @@ const ProgressBar = ({ value, max, label, unit = '', small = false }) => {
   );
 };
 
-// ============================================================================
-// FILE: components/RotationTracker.tsx
-// ============================================================================
 const RotationTracker = ({ label, count, total, orientacionesUnicas }) => {
   const dots = Array.from({ length: total }, (_, i) => (
     <div key={i} className={`h-3 w-full rounded-full transition-colors duration-300 ${i < count ? 'bg-sky-500' : 'bg-slate-200/70'}`} aria-label={`Rotación ${i + 1} ${i < count ? 'completada' : 'pendiente'}`}></div>
@@ -478,8 +415,10 @@ const RotationTracker = ({ label, count, total, orientacionesUnicas }) => {
   const completedText = count > 0 ? `Has cursado: ${orientacionesUnicas.join(', ')}.` : '';
   return (
     <div className="flex flex-col gap-2 w-full">
-      <p className="text-slate-800 text-sm font-medium leading-normal">{label}</p>
-      <div className="flex items-center gap-2 pt-1">{dots}</div>
+       <p className="text-slate-800 text-sm font-medium leading-normal">{label}</p>
+       <div className="flex items-center gap-2 pt-1">
+        {dots}
+      </div>
       <div className="text-slate-500 text-xs font-normal leading-normal">
         <p>{count} de {total} completadas.</p>
         {completedText && <p className="font-medium text-slate-600 mt-1">{completedText}</p>}
@@ -488,43 +427,324 @@ const RotationTracker = ({ label, count, total, orientacionesUnicas }) => {
   );
 };
 
-// ============================================================================
-// FILE: components/CriterionCard.tsx
-// ============================================================================
 const CriterionCard = ({ children, isComplete }) => {
   return (
     <div className={`bg-white border rounded-xl p-5 flex flex-col justify-between transition-all duration-300 ease-in-out hover:shadow-xl hover:-translate-y-1 cursor-default ${isComplete ? 'border-sky-200/80 shadow-md shadow-sky-100/50' : 'border-slate-200/80 shadow-sm shadow-slate-100/50'}`}>
-      <div className="flex-grow">{children}</div>
+      <div className="flex-grow">
+        {children}
+      </div>
       <div className="mt-4 pt-4 border-t border-slate-200/60 flex items-center justify-end">
-        <div className={`flex items-center gap-2 text-xs font-semibold px-2.5 py-1 rounded-full ${isComplete ? 'text-sky-700 bg-sky-100/80' : 'text-slate-500 bg-slate-100'}`}>
-          <div className={`w-2 h-2 rounded-full ${isComplete ? 'bg-sky-500' : 'bg-slate-400'}`}></div>
-          <span>{isComplete ? 'Completo' : 'Pendiente'}</span>
+         <div className={`flex items-center gap-2 text-xs font-semibold px-2.5 py-1 rounded-full ${isComplete ? 'text-sky-700 bg-sky-100/80' : 'text-slate-500 bg-slate-100'}`}>
+            <div className={`w-2 h-2 rounded-full ${isComplete ? 'bg-sky-500' : 'bg-slate-400'}`}></div>
+            <span>{isComplete ? 'Completo' : 'Pendiente'}</span>
+         </div>
+      </div>
+    </div>
+  );
+};
+
+const Loader = () => {
+  return (
+    <div className="flex justify-center items-center my-10 sm:my-12">
+      <div className="border-4 border-slate-200 border-t-sky-500 rounded-full w-10 h-10 animate-spin"></div>
+      <span className="sr-only">Cargando...</span>
+    </div>
+  );
+};
+
+const Modal = ({ title, message, isOpen, onClose }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm transition-opacity duration-300" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+      <div className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-md sm:max-w-lg text-center transform transition-all duration-300 scale-100 opacity-100">
+        <h2 id="modal-title" className="text-xl sm:text-2xl font-bold text-sky-800 mb-4 text-left">{title}</h2>
+        <p className="text-slate-600 text-sm sm:text-base mb-6 sm:mb-8 leading-relaxed whitespace-pre-wrap text-left">{message}</p>
+        <button onClick={onClose} className="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2.5 px-8 rounded-lg text-sm sm:text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2" aria-label="Cerrar modal">
+          Entendido
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Footer = () => {
+  return (
+    <footer className="mt-12 mb-4">
+      <div className="p-6 bg-slate-100/70 rounded-2xl border border-slate-200/60">
+        <div className="flex items-start gap-5">
+          <div className="flex-shrink-0">
+            <div className="bg-sky-500/10 text-sky-600 rounded-full size-10 flex items-center justify-center">
+              <span className="material-icons" aria-hidden="true">gavel</span>
+            </div>
+          </div>
+          <div className="flex-grow">
+            <h3 className="font-bold text-slate-800 text-base leading-tight">{ALERT_DISCLAIMER_TITLE}</h3>
+            <p className="mt-2 text-slate-600 text-sm leading-relaxed">{ALERT_DISCLAIMER_TEXT_1}</p>
+            <p className="mt-2 text-slate-600 text-sm leading-relaxed">{ALERT_DISCLAIMER_TEXT_2}</p>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+};
+
+const AppHeader = ({ isLoggedIn, onLogout, isSuperUserMode }) => {
+  return (
+    <header className="lg:hidden p-4 flex justify-between items-center border-b border-slate-200/80 mb-8 bg-white/95 backdrop-blur-sm rounded-xl shadow-sm">
+      <div className="flex-shrink-0">
+          <MiPanelLogo className="h-10 w-auto" />
+      </div>
+      <div className="flex items-center gap-2">
+         {isSuperUserMode && (<span className="bg-sky-100 text-sky-800 text-xs font-semibold px-2.5 py-1 rounded-full border border-sky-200/80">Admin</span>)}
+         {isLoggedIn && onLogout && (
+            <button onClick={onLogout} className="bg-white hover:bg-rose-50 text-slate-600 hover:text-rose-600 font-semibold p-2 rounded-full transition-all duration-200 shadow-sm border border-slate-200/80 flex items-center justify-center" aria-label="Cerrar sesión">
+              <span className="material-icons !text-xl">logout</span>
+            </button>
+         )}
+      </div>
+    </header>
+  );
+};
+
+const SolicitudCard = ({ solicitud }) => {
+  const institucionRaw = solicitud[FIELD_EMPRESA_PPS_SOLICITUD];
+  const institucion = Array.isArray(institucionRaw) ? institucionRaw?.[0] : institucionRaw;
+  const statusRaw = solicitud[FIELD_ESTADO_PPS];
+  const status = Array.isArray(statusRaw) ? statusRaw?.[0] : statusRaw;
+  const notas = solicitud[FIELD_NOTAS_PPS];
+  const actualizacion = solicitud[FIELD_ULTIMA_ACTUALIZACION_PPS];
+  const visuals = getStatusVisuals(status);
+  return (
+    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200/60 flex items-center gap-4 transition-all duration-300 hover:shadow-lg hover:border-slate-300/80 hover:-translate-y-1">
+      <div className={visuals.iconContainerClass}>
+        <span className="material-icons !text-3xl">{visuals.icon}</span>
+      </div>
+      <div className="flex-grow flex flex-col sm:flex-row justify-between sm:items-center min-w-0 gap-4">
+        <div className="flex-grow min-w-0">
+          <p className="text-slate-800 font-semibold leading-normal break-words text-base">{institucion || 'Institución no especificada'}</p>
+          {notas && (<p className="text-slate-600 text-sm leading-snug whitespace-normal mt-1 max-w-prose">{notas}</p>)}
+          <p className="text-slate-400 text-xs font-normal mt-2">Actualizado: {formatDate(actualizacion)}</p>
+        </div>
+        <div className="flex-shrink-0 self-start sm:self-center">
+          <span className={visuals.labelClass}>{status || 'N/A'}</span>
         </div>
       </div>
     </div>
   );
 };
 
-// ============================================================================
-// FILE: components/Auth.tsx
-// ============================================================================
-const AuthInput = ({ id, type, value, onChange, placeholder, icon, disabled = false, style, ...props }) => (
-  <div className="relative animate-fade-in-up" style={style}>
+const SolicitudesList = ({ solicitudes }) => {
+  if (solicitudes.length === 0) {
+    return (
+      <div className="bg-white rounded-xl shadow-lg shadow-slate-200/50 p-6">
+        <h2 className="text-slate-800 text-xl font-semibold leading-tight tracking-tight mb-2 flex items-center gap-3">
+          <span className="material-icons text-sky-500 !text-2xl">list_alt</span>
+          <span>Mis Solicitudes de PPS</span>
+        </h2>
+        <p className="text-slate-500 mt-3 text-center py-4">No tienes solicitudes de PPS registradas.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="bg-white rounded-xl shadow-lg shadow-slate-200/50 p-6">
+      <h2 className="text-slate-800 text-xl font-semibold leading-tight tracking-tight mb-5 flex items-center gap-3">
+        <span className="material-icons text-sky-500 !text-2xl">list_alt</span>
+        <span>Mis Solicitudes de PPS</span>
+      </h2>
+      <div className="space-y-4">
+        {solicitudes.map((solicitud) => (<SolicitudCard key={solicitud.id} solicitud={solicitud} />))}
+      </div>
+    </div>
+  );
+};
+
+const SortableHeader = ({ label, sortKey, sortConfig, requestSort, className = "text-center" }) => {
+  const isActive = sortConfig.key === sortKey;
+  const icon = isActive ? (sortConfig.direction === 'ascending' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more';
+  return (
+    <th className={`px-4 py-4 ${className} cursor-pointer select-none group transition-colors hover:bg-slate-100/70 text-slate-700 font-bold text-sm tracking-wider uppercase`} onClick={() => requestSort(sortKey)}>
+      <div className="flex items-center justify-center gap-2">
+        <span>{label}</span>
+        <span className={`material-icons !text-base transition-opacity ${isActive ? 'opacity-80' : 'opacity-40 group-hover:opacity-60'}`}>{icon}</span>
+      </div>
+    </th>
+  );
+};
+const PracticasTable = ({ practicas, selectedOrientacion }) => {
+    const [sortConfig, setSortConfig] = useState({ key: 'fechaInicio', direction: 'descending' });
+    const sortedPracticas = React.useMemo(() => {
+        let processableItems = [...practicas];
+        if (sortConfig.key !== null) {
+            processableItems.sort((a, b) => {
+                let aValue, bValue;
+                const safeGetTime = (dateStr) => {
+                    if (!dateStr) return 0;
+                    const date = new Date(dateStr);
+                    return isNaN(date.getTime()) ? 0 : date.getTime();
+                };
+                switch(sortConfig.key) {
+                    case 'institucion':
+                        aValue = normalizeStringForComparison(Array.isArray(a[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]) ? a[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]?.[0] : a[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]);
+                        bValue = normalizeStringForComparison(Array.isArray(b[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]) ? b[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]?.[0] : b[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]);
+                        break;
+                    case 'especialidad':
+                        aValue = normalizeStringForComparison(a[FIELD_ESPECIALIDAD_PRACTICAS]);
+                        bValue = normalizeStringForComparison(b[FIELD_ESPECIALIDAD_PRACTICAS]);
+                        break;
+                    case 'horas':
+                        aValue = a[FIELD_HORAS_PRACTICAS] || 0;
+                        bValue = b[FIELD_HORAS_PRACTICAS] || 0;
+                        break;
+                    case 'fechaInicio':
+                        aValue = safeGetTime(a[FIELD_FECHA_INICIO_PRACTICAS]);
+                        bValue = safeGetTime(b[FIELD_FECHA_FIN_PRACTICAS]);
+                        break;
+                    case 'estado':
+                        aValue = normalizeStringForComparison(a[FIELD_ESTADO_PRACTICA]);
+                        bValue = normalizeStringForComparison(b[FIELD_ESTADO_PRACTICA]);
+                        break;
+                    default:
+                        return 0;
+                }
+                if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+                if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
+                return 0;
+            });
+        }
+        return processableItems;
+    }, [practicas, sortConfig]);
+    const requestSort = (key) => {
+        let direction = 'ascending';
+        if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+            direction = 'descending';
+        }
+        setSortConfig({ key, direction });
+    };
+  if (practicas.length === 0) {
+    return (
+       <div className="bg-white rounded-xl shadow-lg shadow-slate-200/50 p-6">
+        <h2 className="text-slate-800 text-xl font-semibold leading-tight tracking-tight mb-2 flex items-center gap-3">
+            <span className="material-icons text-sky-500 !text-2xl">work_history</span>
+            <span>Detalle de Prácticas</span>
+        </h2>
+        <p className="text-slate-500 mt-3 text-center py-4">No tienes prácticas registradas.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="bg-white rounded-xl shadow-lg shadow-slate-200/50 p-6">
+      <div className="mb-5">
+          <h2 className="text-slate-800 text-xl font-semibold leading-tight tracking-tight flex items-center gap-3">
+            <span className="material-icons text-sky-500 !text-2xl">work_history</span>
+            <span>Detalle de Prácticas</span>
+          </h2>
+      </div>
+      <div className="border rounded-lg overflow-x-auto border-slate-200/70">
+        <table className="w-full min-w-[700px]">
+          <thead className="bg-slate-100/70 border-b-2 border-slate-200">
+            <tr>
+              <SortableHeader label="Institución" sortKey="institucion" sortConfig={sortConfig} requestSort={requestSort} className="text-left w-2/6" />
+              <SortableHeader label="Especialidad" sortKey="especialidad" sortConfig={sortConfig} requestSort={requestSort} />
+              <SortableHeader label="Horas" sortKey="horas" sortConfig={sortConfig} requestSort={requestSort} />
+              <SortableHeader label="Periodo" sortKey="fechaInicio" sortConfig={sortConfig} requestSort={requestSort} />
+              <SortableHeader label="Estado" sortKey="estado" sortConfig={sortConfig} requestSort={requestSort} />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200/60">
+            {sortedPracticas.map((practica) => {
+              const institucionRaw = practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
+              const institucion = Array.isArray(institucionRaw) ? institucionRaw.join(', ') : institucionRaw;
+              const statusRaw = practica[FIELD_ESTADO_PRACTICA];
+              const status = Array.isArray(statusRaw) ? statusRaw?.[0] : statusRaw;
+              const statusVisuals = getStatusVisuals(status);
+              return (
+              <tr key={practica.id} className="transition-colors duration-200 odd:bg-white even:bg-slate-50/50 hover:!bg-slate-100">
+                <td className="p-4 align-middle text-sm text-slate-800 font-medium break-words">{institucion || 'N/A'}</td>
+                <td className="p-4 align-middle text-center">
+                    <span className={getEspecialidadClasses(practica[FIELD_ESPECIALIDAD_PRACTICAS])}>{practica[FIELD_ESPECIALIDAD_PRACTICAS] || 'N/A'}</span>
+                </td>
+                <td className="p-4 text-sm text-center align-middle text-slate-700 font-semibold">{practica[FIELD_HORAS_PRACTICAS] || 0}</td>
+                <td className="p-4 text-sm text-center align-middle text-slate-700">{formatDate(practica[FIELD_FECHA_INICIO_PRACTICAS])} - {formatDate(practica[FIELD_FECHA_FIN_PRACTICAS])}</td>
+                <td className="p-4 align-middle text-center">
+                   <span className={`${statusVisuals.labelClass} gap-1.5`}>
+                        <span className="material-icons !text-sm">{statusVisuals.icon}</span>
+                        <span>{status || 'N/A'}</span>
+                   </span>
+                </td>
+              </tr>
+            )})}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+const CriteriosPanel = ({ criterios, selectedOrientacion, onOrientacionChange, studentName, isSuperUserMode, showSaveConfirmation }) => {
+  const todosLosCriteriosCumplidos = criterios.cumpleHorasTotales && criterios.cumpleRotacion && criterios.cumpleHorasOrientacion;
+  return (
+    <div className="bg-white border border-slate-200/60 rounded-xl p-6 sm:p-8 mb-8 shadow-xl shadow-slate-200/40">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
+        <h1 className="text-slate-800 tracking-tight text-2xl sm:text-3xl font-bold leading-tight flex items-center gap-3">
+          <span className="material-icons text-sky-500 !text-2xl">dashboard</span>
+          <span>{isSuperUserMode ? 'Panel de:' : 'Bienvenido/a,'} <span className="text-sky-600">{studentName}</span></span>
+        </h1>
+      </div>
+      <p className="text-slate-500 text-base font-normal leading-relaxed mb-8">{isSuperUserMode ? 'Este es el checklist del estudiante para finalizar el recorrido de prácticas.' : 'Este es tu checklist para finalizar el recorrido de prácticas.'}</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <CriterionCard isComplete={criterios.cumpleHorasTotales}>
+          <ProgressBar label={`Completa ${HORAS_OBJETIVO_TOTAL} hs totales`} value={criterios.horasTotales} max={HORAS_OBJETIVO_TOTAL} unit="hs"/>
+        </CriterionCard>
+        <CriterionCard isComplete={criterios.cumpleRotacion}>
+           <RotationTracker label={`Rota por ${ROTACION_OBJETIVO_ORIENTACIONES} orientaciones`} count={criterios.orientacionesCursadasCount} total={ROTACION_OBJETIVO_ORIENTACIONES} orientacionesUnicas={criterios.orientacionesUnicas}/>
+        </CriterionCard>
+        <CriterionCard isComplete={criterios.cumpleHorasOrientacion}>
+           <div className="flex items-center justify-between gap-2 mb-3">
+             <p className="text-slate-800 text-sm font-medium leading-normal">Completa {HORAS_OBJETIVO_ORIENTACION} hs en tu orientación</p>
+            <div className={`transition-opacity duration-300 ${showSaveConfirmation ? 'opacity-100' : 'opacity-0'}`}>
+                <span className="text-xs font-semibold text-teal-600">Guardado ✓</span>
+            </div>
+           </div>
+           <div className="relative">
+              <select id="orientacion-elegida-select" value={selectedOrientacion} onChange={(e) => onOrientacionChange(e.target.value)} className="appearance-none w-full rounded-md border border-slate-300/80 p-2.5 pr-10 text-sm text-slate-800 bg-white shadow-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none transition-colors" aria-label="Seleccionar orientación principal">
+                <option value="">Seleccione orientación...</option>
+                {ALL_ORIENTACIONES.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500"><span className="material-icons !text-base">unfold_more</span></div>
+           </div>
+          {selectedOrientacion ? (
+            <div className="mt-4">
+              <ProgressBar label={`Progreso en ${selectedOrientacion}`} value={criterios.horasOrientacionElegida} max={HORAS_OBJETIVO_ORIENTACION} unit="hs" small/>
+            </div>
+          ) : (
+            <div className="mt-4 h-12 flex items-center justify-center bg-slate-100/70 rounded-lg">
+              <p className="text-xs text-slate-500">Selecciona una orientación.</p>
+            </div>
+          )}
+        </CriterionCard>
+      </div>
+      {todosLosCriteriosCumplidos && (
+        <div className="mt-8 border-t border-slate-200/80 pt-6 animate-fade-in-up">
+          <div className="p-5 bg-teal-500/10 border border-teal-500/20 text-teal-900 rounded-xl shadow-sm flex items-start gap-4">
+            <div className="flex-shrink-0 pt-1"><span className="material-icons text-teal-500 !text-2xl animate-pulse">celebration</span></div>
+            <div>
+              <h3 className="font-bold text-lg">¡Felicitaciones! Has cumplido todos los criterios.</h3>
+              <p className="mt-1 text-sm">Si aún no lo has hecho, puedes solicitar la acreditación de tus horas.</p>
+              <a href="https://airtable.com/appBY8PYhPZ1X2ka1/paglLBxubDedzl1qz/form" target="_blank" rel="noopener noreferrer" className="mt-4 inline-block bg-teal-500 text-white font-bold text-sm py-2.5 px-5 rounded-lg transition-all hover:bg-teal-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 focus:ring-offset-teal-50">Solicitar Acreditación</a>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const AuthInput = ({ id, type, value, onChange, placeholder, icon, disabled = false, ...props }) => (
+  <div className="relative">
     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
       <span className="material-icons text-slate-400">{icon}</span>
     </div>
-    <input
-      id={id}
-      name={id}
-      type={type}
-      value={value}
-      onChange={onChange}
-      disabled={disabled}
-      className="w-full rounded-lg border border-slate-300 p-3 pl-11 text-base text-slate-800 bg-white shadow-sm placeholder-slate-400/80 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none transition-all disabled:bg-slate-100"
-      placeholder={placeholder}
-      required
-      {...props}
-    />
+    <input id={id} name={id} type={type} value={value} onChange={onChange} disabled={disabled} className="w-full rounded-lg border border-slate-300 p-3 pl-11 text-base text-slate-800 bg-white shadow-sm placeholder-slate-400/80 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none transition-all disabled:bg-slate-100" placeholder={placeholder} required {...props} />
   </div>
 );
 
@@ -587,19 +807,21 @@ const Auth = ({ onLoginSuccess, showModal }) => {
   }, [mode]);
 
   useEffect(() => {
-    if (mode !== 'register') return;
+    if (mode !== 'register') {
+        setLegajoError(null);
+        setRegisterStudentName(null);
+        return;
+    }
     const handler = setTimeout(() => {
-      const legajoTrimmed = legajo.trim();
-      if (legajoTrimmed.match(/^\d+$/)) {
-        verifyLegajo(legajoTrimmed);
+      const legajoToVerify = legajo.trim();
+      if (legajoToVerify) {
+        verifyLegajo(legajoToVerify);
       } else {
-        setLegajoError(legajoTrimmed ? 'El legajo debe ser solo números.' : null);
+        setLegajoError(null);
         setRegisterStudentName(null);
       }
     }, 500);
-    return () => {
-      clearTimeout(handler);
-    };
+    return () => clearTimeout(handler);
   }, [legajo, mode, verifyLegajo]);
 
   const handleSubmit = async (e) => {
@@ -610,8 +832,8 @@ const Auth = ({ onLoginSuccess, showModal }) => {
       onLoginSuccess({ legajo: 'admin', nombre: 'Super Usuario', isSuperUser: true });
       return;
     }
-    if (!legajoTrimmed || !passwordTrimmed || !legajoTrimmed.match(/^\d+$/)) {
-        setError('Por favor, completa todos los campos correctamente. El legajo debe ser numérico.');
+    if (!legajoTrimmed || !passwordTrimmed) {
+        setError('Por favor, completa todos los campos. El legajo y la contraseña son obligatorios.');
         return;
     }
     setIsLoading(true);
@@ -677,70 +899,61 @@ const Auth = ({ onLoginSuccess, showModal }) => {
     setRegisterStudentName(null);
     setPassword('');
     setConfirmPassword('');
-  };
+  }
 
   return (
     <div className="min-h-screen w-full bg-slate-50 md:grid md:grid-cols-5 xl:grid-cols-2">
       <div className="hidden md:flex md:col-span-2 xl:col-span-1 bg-gradient-to-br from-slate-900 to-slate-800 p-8 lg:p-12 flex-col justify-between text-white shadow-2xl animate-gradient-move">
-        <div className="flex-shrink-0 animate-fade-in-up" style={{ animationDelay: '0ms' }}>
-          <MiPanelLogo className="h-16 w-auto" variant="dark" />
-        </div>
+        <div className="flex-shrink-0 animate-fade-in-up" style={{ animationDelay: '0ms' }}><MiPanelLogo className="h-16 w-auto" variant="dark" /></div>
         <div className="flex-grow flex flex-col justify-center">
-          <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-            Bienvenido a <br/> Mi Panel Académico
-          </h1>
-          <p className="mt-4 text-slate-300 text-lg lg:text-xl max-w-sm animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-            Tu portal centralizado para el seguimiento de Prácticas Profesionales Supervisadas.
-          </p>
+          <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight animate-fade-in-up" style={{ animationDelay: '100ms' }}>Bienvenido a <br/> Mi Panel Académico</h1>
+          <p className="mt-4 text-slate-300 text-lg lg:text-xl max-w-sm animate-fade-in-up" style={{ animationDelay: '200ms' }}>Tu portal centralizado para el seguimiento de Prácticas Profesionales Supervisadas.</p>
         </div>
-        <div className="flex-shrink-0 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-          <UfloLogo className="h-16 w-auto" variant="dark" />
-        </div>
+        <div className="flex-shrink-0 animate-fade-in-up" style={{ animationDelay: '300ms' }}><UfloLogo className="h-16 w-auto" variant="dark" /></div>
       </div>
-      
       <div className="md:col-span-3 xl:col-span-1 flex flex-col items-center justify-center p-4 min-h-screen">
-        <main className="w-full max-w-md">
-            <div className="flex md:hidden justify-center items-center mb-8">
-                <div className="flex items-center justify-center gap-x-4 h-12">
-                    <UfloLogo className="h-full w-auto" />
-                    <div className="w-px h-10 bg-slate-300"></div>
-                    <MiPanelLogo className="h-full w-auto" />
-                </div>
+          <main className="w-full max-w-md">
+            <div className="flex md:hidden justify-center items-center gap-4 mb-6">
+                <UfloLogo className="h-12 w-auto" />
+                <MiPanelLogo className="h-12 w-auto" />
             </div>
             <div className="bg-white rounded-xl shadow-xl border border-slate-200/80 p-6 sm:p-10">
-              <div className="text-center mb-6">
-                <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 animate-fade-in-up" style={{ animationDelay: '400ms' }}>Acceso de Estudiantes</h2>
-                <p className="text-slate-500 mt-1 animate-fade-in-up" style={{ animationDelay: '500ms' }}>Accede a tu cuenta o regístrate.</p>
-              </div>
-              <div className="p-1 bg-slate-100 rounded-lg flex items-center mb-6 ring-1 ring-slate-200/50 animate-fade-in-up" style={{ animationDelay: '600ms' }}>
-                <button onClick={() => handleModeChange('login')} className={`w-full py-2.5 text-sm font-semibold rounded-md transition-all duration-300 ${mode === 'login' ? 'bg-white text-sky-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Iniciar Sesión</button>
-                <button onClick={() => handleModeChange('register')} className={`w-full py-2.5 text-sm font-semibold rounded-md transition-all duration-300 ${mode === 'register' ? 'bg-white text-sky-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Crear Usuario</button>
-              </div>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <AuthInput id="legajo" type="text" value={legajo} onChange={(e) => setLegajo(e.target.value)} placeholder="Número de Legajo" icon="badge" disabled={isLoading} autoComplete="username" style={{ animationDelay: '700ms' }}/>
-                {mode === 'register' && (
-                  <div className="h-10 px-3 flex items-center animate-fade-in-up" style={{ animationDelay: '750ms' }}>
-                    {legajoCheckLoading ? (<div className="flex items-center gap-2 text-slate-500 text-sm"><div className="border-2 border-slate-200 border-t-sky-500 rounded-full w-4 h-4 animate-spin"></div><span>Verificando legajo...</span></div>) : legajoError ? (<p className="text-red-600 text-sm flex items-center gap-1.5"><span className="material-icons !text-base">error_outline</span>{legajoError}</p>) : registerStudentName ? (<p className="text-teal-700 text-sm font-medium flex items-center gap-1.5"><span className="material-icons !text-base">check_circle</span>Estudiante: {registerStudentName}</p>) : <p className="text-slate-500 text-xs">Ingresa tu legajo para verificar tu identidad.</p>}
-                  </div>
-                )}
-                <div className="relative animate-fade-in-up" style={{ animationDelay: '800ms' }}>
-                  <AuthInput id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Contraseña" icon="lock" disabled={isLoading} autoComplete={mode === 'login' ? 'current-password' : 'new-password'}/>
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 hover:text-slate-700" aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}><span className="material-icons !text-xl">{showPassword ? 'visibility_off' : 'visibility'}</span></button>
+                <div className="text-center mb-6">
+                    <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 animate-fade-in-up" style={{ animationDelay: '400ms' }}>Acceso de Estudiantes</h2>
+                    <p className="text-slate-500 mt-1 animate-fade-in-up" style={{ animationDelay: '500ms' }}>Accede a tu cuenta o regístrate.</p>
                 </div>
-                {mode === 'register' && (
-                  <div className="relative animate-fade-in-up" style={{ animationDelay: '900ms' }}>
-                    <AuthInput id="confirmPassword" type={showPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirmar Contraseña" icon="lock_person" disabled={isLoading} autoComplete="new-password"/>
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 hover:text-slate-700" aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}><span className="material-icons !text-xl">{showPassword ? 'visibility_off' : 'visibility'}</span></button>
-                  </div>
-                )}
-                {error && <p className="text-red-600 text-sm text-center pt-2">{error}</p>}
-                <div className="pt-4 animate-fade-in-up" style={{ animationDelay: '1000ms' }}>
-                  <button type="submit" disabled={isLoading || (mode === 'register' && (!registerStudentName || !!legajoError))} className="w-full bg-sky-600 text-white font-bold text-base py-3 px-6 rounded-lg transition-all duration-200 ease-in-out shadow-md hover:bg-sky-700 active:bg-sky-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-3">
-                    {isLoading && <div className="border-2 border-white/50 border-t-white rounded-full w-5 h-5 animate-spin"></div>}
-                    <span>{mode === 'login' ? 'Ingresar' : 'Crear Cuenta'}</span>
-                  </button>
+                <div className="p-1 bg-slate-100 rounded-lg flex items-center mb-6 ring-1 ring-slate-200/50 animate-fade-in-up" style={{ animationDelay: '600ms' }}>
+                    <button onClick={() => handleModeChange('login')} className={`w-full py-2.5 text-sm font-semibold rounded-md transition-all duration-300 ${mode === 'login' ? 'bg-white text-sky-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Iniciar Sesión</button>
+                    <button onClick={() => handleModeChange('register')} className={`w-full py-2.5 text-sm font-semibold rounded-md transition-all duration-300 ${mode === 'register' ? 'bg-white text-sky-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Crear Usuario</button>
                 </div>
-              </form>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="relative animate-fade-in-up" style={{ animationDelay: '700ms' }}><AuthInput id="legajo" type="text" value={legajo} onChange={(e) => setLegajo(e.target.value)} placeholder="Número de Legajo" icon="badge" disabled={isLoading} autoComplete="username"/></div>
+                    {mode === 'register' && (
+                        <div className="h-10 px-3 flex items-center">
+                            {legajoCheckLoading ? (<div className="flex items-center gap-2 text-slate-500 text-sm"><div className="border-2 border-slate-200 border-t-sky-500 rounded-full w-4 h-4 animate-spin"></div><span>Verificando legajo...</span></div>
+                            ) : legajoError ? (<p className="text-red-600 text-sm flex items-center gap-1.5"><span className="material-icons !text-base">error_outline</span>{legajoError}</p>
+                            ) : registerStudentName ? (<p className="text-teal-700 text-sm font-medium flex items-center gap-1.5"><span className="material-icons !text-base">check_circle</span>Estudiante: {registerStudentName}</p>
+                            ): <p className="text-slate-500 text-xs">Ingresa tu legajo para verificar tu identidad.</p>}
+                        </div>
+                    )}
+                    <div className="relative animate-fade-in-up" style={{ animationDelay: '800ms' }}>
+                      <AuthInput id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Contraseña" icon="lock" disabled={isLoading} autoComplete={mode === 'login' ? 'current-password' : 'new-password'}/>
+                       <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 hover:text-slate-700" aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}><span className="material-icons !text-xl">{showPassword ? 'visibility_off' : 'visibility'}</span></button>
+                    </div>
+                    {mode === 'register' && (
+                        <div className="relative">
+                          <AuthInput id="confirmPassword" type={showPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirmar Contraseña" icon="lock_person" disabled={isLoading} autoComplete="new-password"/>
+                           <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 hover:text-slate-700" aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}><span className="material-icons !text-xl">{showPassword ? 'visibility_off' : 'visibility'}</span></button>
+                        </div>
+                    )}
+                    {error && <p className="text-red-600 text-sm text-center pt-2">{error}</p>}
+                    <div className="pt-4 animate-fade-in-up" style={{ animationDelay: '1000ms' }}>
+                        <button type="submit" disabled={isLoading || (mode === 'register' && (!registerStudentName || !!legajoError))} className="w-full bg-sky-600 text-white font-bold text-base py-3 px-6 rounded-lg transition-all duration-200 ease-in-out shadow-md hover:bg-sky-700 active:bg-sky-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-3">
+                            {isLoading && <div className="border-2 border-white/50 border-t-white rounded-full w-5 h-5 animate-spin"></div>}
+                            <span>{mode === 'login' ? 'Ingresar' : 'Crear Cuenta'}</span>
+                        </button>
+                    </div>
+                </form>
             </div>
         </main>
       </div>
@@ -748,62 +961,6 @@ const Auth = ({ onLoginSuccess, showModal }) => {
   );
 };
 
-// ============================================================================
-// FILE: components/Header.tsx
-// ============================================================================
-const AppHeader = ({ isLoggedIn, onLogout, isSuperUserMode }) => {
-  return (
-    <header className="lg:hidden p-4 flex justify-between items-center border-b border-slate-200/80 mb-8 bg-white/95 backdrop-blur-sm rounded-xl shadow-sm">
-      <div className="flex-shrink-0">
-          <MiPanelLogo className="h-10 w-auto" />
-      </div>
-      <div className="flex items-center gap-2">
-         {isSuperUserMode && (
-            <span className="bg-sky-100 text-sky-800 text-xs font-semibold px-2.5 py-1 rounded-full border border-sky-200/80">
-              Admin
-            </span>
-         )}
-         {isLoggedIn && onLogout && (
-            <button
-              onClick={onLogout}
-              className="bg-white hover:bg-rose-50 text-slate-600 hover:text-rose-600 font-semibold p-2 rounded-full transition-all duration-200 shadow-sm border border-slate-200/80 flex items-center justify-center"
-              aria-label="Cerrar sesión"
-            >
-              <span className="material-icons !text-xl">logout</span>
-            </button>
-         )}
-      </div>
-    </header>
-  );
-};
-
-// ============================================================================
-// FILE: components/Footer.tsx
-// ============================================================================
-const Footer = () => {
-  return (
-    <footer className="mt-12 mb-4">
-      <div className="p-6 bg-slate-100/70 rounded-2xl border border-slate-200/60">
-        <div className="flex items-start gap-5">
-          <div className="flex-shrink-0">
-            <div className="bg-sky-500/10 text-sky-600 rounded-full size-10 flex items-center justify-center">
-              <span className="material-icons" aria-hidden="true">gavel</span>
-            </div>
-          </div>
-          <div className="flex-grow">
-            <h3 className="font-bold text-slate-800 text-base leading-tight">{ALERT_DISCLAIMER_TITLE}</h3>
-            <p className="mt-2 text-slate-600 text-sm leading-relaxed">{ALERT_DISCLAIMER_TEXT_1}</p>
-            <p className="mt-2 text-slate-600 text-sm leading-relaxed">{ALERT_DISCLAIMER_TEXT_2}</p>
-          </div>
-        </div>
-      </div>
-    </footer>
-  );
-};
-
-// ============================================================================
-// FILE: components/AdminSearch.tsx
-// ============================================================================
 const AdminSearch = ({ onSearch, isLoading }) => {
   const [legajo, setLegajo] = useState('');
   const handleSearch = (e) => {
@@ -818,9 +975,7 @@ const AdminSearch = ({ onSearch, isLoading }) => {
       <p className="text-slate-600 text-base mt-1 mb-6">Ingrese el número de legajo del estudiante que desea consultar.</p>
       <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-grow">
-          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-            <span className="material-icons text-slate-400">person_search</span>
-          </div>
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5"><span className="material-icons text-slate-400">person_search</span></div>
           <input type="text" value={legajo} onChange={(e) => setLegajo(e.target.value)} disabled={isLoading} className="w-full rounded-lg border border-slate-300 p-3 pl-11 text-base text-slate-800 bg-white shadow-sm placeholder-slate-400/80 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none transition-all disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed" placeholder="Número de legajo del estudiante" aria-label="Número de Legajo del Estudiante" />
         </div>
         <button type="submit" disabled={isLoading || !legajo.trim()} className="bg-sky-600 text-white font-bold text-base py-3 px-8 rounded-lg transition-all duration-200 ease-in-out shadow-md hover:bg-sky-700 active:bg-sky-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:bg-slate-400 disabled:text-slate-100 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2">
@@ -831,219 +986,8 @@ const AdminSearch = ({ onSearch, isLoading }) => {
   );
 };
 
-// ============================================================================
-// FILE: components/CriteriosPanel.tsx
-// ============================================================================
-const CriteriosPanel = ({ criterios, selectedOrientacion, onOrientacionChange, studentName, isSuperUserMode, showSaveConfirmation }) => {
-  const todosLosCriteriosCumplidos = criterios.cumpleHorasTotales && criterios.cumpleRotacion && criterios.cumpleHorasOrientacion;
-  return (
-    <div className="bg-white border border-slate-200/60 rounded-xl p-6 sm:p-8 mb-8 shadow-xl shadow-slate-200/40">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
-        <h1 className="text-slate-800 tracking-tight text-2xl sm:text-3xl font-bold leading-tight flex items-center gap-3">
-          <span className="material-icons text-sky-500 !text-2xl">dashboard</span>
-          <span>{isSuperUserMode ? 'Panel de:' : 'Bienvenido/a,'} <span className="text-sky-600">{studentName}</span></span>
-        </h1>
-      </div>
-      <p className="text-slate-500 text-base font-normal leading-relaxed mb-8">{isSuperUserMode ? 'Este es el checklist del estudiante para finalizar el recorrido de prácticas.' : 'Este es tu checklist para finalizar el recorrido de prácticas.'}</p>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <CriterionCard isComplete={criterios.cumpleHorasTotales}><ProgressBar label={`Completa ${HORAS_OBJETIVO_TOTAL} hs totales`} value={criterios.horasTotales} max={HORAS_OBJETIVO_TOTAL} unit="hs" /></CriterionCard>
-        <CriterionCard isComplete={criterios.cumpleRotacion}><RotationTracker label={`Rota por ${ROTACION_OBJETIVO_ORIENTACIONES} orientaciones`} count={criterios.orientacionesCursadasCount} total={ROTACION_OBJETIVO_ORIENTACIONES} orientacionesUnicas={criterios.orientacionesUnicas} /></CriterionCard>
-        <CriterionCard isComplete={criterios.cumpleHorasOrientacion}>
-          <div className="flex items-center justify-between gap-2 mb-3">
-            <p className="text-slate-800 text-sm font-medium leading-normal">Completa {HORAS_OBJETIVO_ORIENTACION} hs en tu orientación</p>
-            <div className={`transition-opacity duration-300 ${showSaveConfirmation ? 'opacity-100' : 'opacity-0'}`}><span className="text-xs font-semibold text-teal-600">Guardado ✓</span></div>
-          </div>
-          <div className="relative">
-            <select id="orientacion-elegida-select" value={selectedOrientacion} onChange={(e) => onOrientacionChange(e.target.value)} className="appearance-none w-full rounded-md border border-slate-300/80 p-2.5 pr-10 text-sm text-slate-800 bg-white shadow-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none transition-colors" aria-label="Seleccionar orientación principal">
-              <option value="">Seleccione orientación...</option>
-              {ALL_ORIENTACIONES.map(o => <option key={o} value={o}>{o}</option>)}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500"><span className="material-icons !text-base">unfold_more</span></div>
-          </div>
-          {selectedOrientacion ? (<div className="mt-4"><ProgressBar label={`Progreso en ${selectedOrientacion}`} value={criterios.horasOrientacionElegida} max={HORAS_OBJETIVO_ORIENTACION} unit="hs" small /></div>) : (<div className="mt-4 h-12 flex items-center justify-center bg-slate-100/70 rounded-lg"><p className="text-xs text-slate-500">Selecciona una orientación.</p></div>)}
-        </CriterionCard>
-      </div>
-      {todosLosCriteriosCumplidos && (
-        <div className="mt-8 border-t border-slate-200/80 pt-6 animate-fade-in-up">
-          <div className="p-5 bg-teal-500/10 border border-teal-500/20 text-teal-900 rounded-xl shadow-sm flex items-start gap-4">
-            <div className="flex-shrink-0 pt-1"><span className="material-icons text-teal-500 !text-2xl animate-pulse">celebration</span></div>
-            <div>
-              <h3 className="font-bold text-lg">¡Felicitaciones! Has cumplido todos los criterios.</h3>
-              <p className="mt-1 text-sm">Si aún no lo has hecho, puedes solicitar la acreditación de tus horas.</p>
-              <a href="https://airtable.com/appBY8PYhPZ1X2ka1/paglLBxubDedzl1qz/form" target="_blank" rel="noopener noreferrer" className="mt-4 inline-block bg-teal-500 text-white font-bold text-sm py-2.5 px-5 rounded-lg transition-all hover:bg-teal-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 focus:ring-offset-teal-50">Solicitar Acreditación</a>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
 
-
-// ============================================================================
-// FILE: components/SolicitudCard.tsx
-// ============================================================================
-const SolicitudCard = ({ solicitud }) => {
-  const institucionRaw = solicitud[FIELD_EMPRESA_PPS_SOLICITUD];
-  const institucion = Array.isArray(institucionRaw) ? institucionRaw?.[0] : institucionRaw;
-  const statusRaw = solicitud[FIELD_ESTADO_PPS];
-  const status = Array.isArray(statusRaw) ? statusRaw?.[0] : statusRaw;
-  const notas = solicitud[FIELD_NOTAS_PPS];
-  const actualizacion = solicitud[FIELD_ULTIMA_ACTUALIZACION_PPS];
-  const visuals = getStatusVisuals(status);
-  return (
-    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200/60 flex items-center gap-4 transition-all duration-300 hover:shadow-lg hover:border-slate-300/80 hover:-translate-y-1">
-      <div className={visuals.iconContainerClass}><span className="material-icons !text-3xl">{visuals.icon}</span></div>
-      <div className="flex-grow flex flex-col sm:flex-row justify-between sm:items-center min-w-0 gap-4">
-        <div className="flex-grow min-w-0">
-          <p className="text-slate-800 font-semibold leading-normal break-words text-base">{institucion || 'Institución no especificada'}</p>
-          {notas && (<p className="text-slate-600 text-sm leading-snug whitespace-normal mt-1 max-w-prose">{notas}</p>)}
-          <p className="text-slate-400 text-xs font-normal mt-2">Actualizado: {formatDate(actualizacion)}</p>
-        </div>
-        <div className="flex-shrink-0 self-start sm:self-center"><span className={visuals.labelClass}>{status || 'N/A'}</span></div>
-      </div>
-    </div>
-  );
-};
-
-
-// ============================================================================
-// FILE: components/SolicitudesList.tsx
-// ============================================================================
-const SolicitudesList = ({ solicitudes }) => {
-  if (solicitudes.length === 0) {
-    return (
-      <div className="bg-white rounded-xl shadow-lg shadow-slate-200/50 p-6">
-        <h2 className="text-slate-800 text-xl font-semibold leading-tight tracking-tight mb-2 flex items-center gap-3"><span className="material-icons text-sky-500 !text-2xl">list_alt</span><span>Mis Solicitudes de PPS</span></h2>
-        <p className="text-slate-500 mt-3 text-center py-4">No tienes solicitudes de PPS registradas.</p>
-      </div>
-    );
-  }
-  return (
-    <div className="bg-white rounded-xl shadow-lg shadow-slate-200/50 p-6">
-      <h2 className="text-slate-800 text-xl font-semibold leading-tight tracking-tight mb-5 flex items-center gap-3"><span className="material-icons text-sky-500 !text-2xl">list_alt</span><span>Mis Solicitudes de PPS</span></h2>
-      <div className="space-y-4">{solicitudes.map((solicitud) => (<SolicitudCard key={solicitud.id} solicitud={solicitud} />))}</div>
-    </div>
-  );
-};
-
-// ============================================================================
-// FILE: components/PracticasTable.tsx
-// ============================================================================
-const SortableHeader = ({ label, sortKey, sortConfig, requestSort, className = "text-center" }) => {
-  const isActive = sortConfig.key === sortKey;
-  const icon = isActive ? (sortConfig.direction === 'ascending' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more';
-  return (
-    <th className={`px-4 py-4 ${className} cursor-pointer select-none group transition-colors hover:bg-slate-100/70 text-slate-700 font-bold text-sm tracking-wider uppercase`} onClick={() => requestSort(sortKey)}>
-      <div className="flex items-center justify-center gap-2">
-        <span>{label}</span>
-        <span className={`material-icons !text-base transition-opacity ${isActive ? 'opacity-80' : 'opacity-40 group-hover:opacity-60'}`}>{icon}</span>
-      </div>
-    </th>
-  );
-};
-
-const PracticasTable = ({ practicas, selectedOrientacion }) => {
-    const [sortConfig, setSortConfig] = useState({ key: 'fechaInicio', direction: 'descending' });
-    const sortedPracticas = useMemo(() => {
-        let processableItems = [...practicas];
-        if (sortConfig.key !== null) {
-            processableItems.sort((a, b) => {
-                let aValue, bValue;
-                const safeGetTime = (dateStr) => {
-                    if (!dateStr) return 0;
-                    const date = new Date(dateStr);
-                    return isNaN(date.getTime()) ? 0 : date.getTime();
-                };
-                switch(sortConfig.key) {
-                    case 'institucion':
-                        aValue = normalizeStringForComparison(Array.isArray(a[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]) ? a[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]?.[0] : a[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]);
-                        bValue = normalizeStringForComparison(Array.isArray(b[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]) ? b[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]?.[0] : b[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]);
-                        break;
-                    case 'especialidad':
-                        aValue = normalizeStringForComparison(a[FIELD_ESPECIALIDAD_PRACTICAS]);
-                        bValue = normalizeStringForComparison(b[FIELD_ESPECIALIDAD_PRACTICAS]);
-                        break;
-                    case 'horas':
-                        aValue = a[FIELD_HORAS_PRACTICAS] || 0;
-                        bValue = b[FIELD_HORAS_PRACTICAS] || 0;
-                        break;
-                    case 'fechaInicio':
-                        aValue = safeGetTime(a[FIELD_FECHA_INICIO_PRACTICAS]);
-                        bValue = safeGetTime(b[FIELD_FECHA_FIN_PRACTICAS]);
-                        break;
-                    case 'estado':
-                        aValue = normalizeStringForComparison(a[FIELD_ESTADO_PRACTICA]);
-                        bValue = normalizeStringForComparison(b[FIELD_ESTADO_PRACTICA]);
-                        break;
-                    default: return 0;
-                }
-                if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
-                if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
-                return 0;
-            });
-        }
-        return processableItems;
-    }, [practicas, sortConfig]);
-
-    const requestSort = (key) => {
-        let direction = 'ascending';
-        if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-            direction = 'descending';
-        }
-        setSortConfig({ key, direction });
-    };
-
-  if (practicas.length === 0) {
-    return (
-       <div className="bg-white rounded-xl shadow-lg shadow-slate-200/50 p-6">
-        <h2 className="text-slate-800 text-xl font-semibold leading-tight tracking-tight mb-2 flex items-center gap-3"><span className="material-icons text-sky-500 !text-2xl">work_history</span><span>Detalle de Prácticas</span></h2>
-        <p className="text-slate-500 mt-3 text-center py-4">No tienes prácticas registradas.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-white rounded-xl shadow-lg shadow-slate-200/50 p-6">
-      <div className="mb-5"><h2 className="text-slate-800 text-xl font-semibold leading-tight tracking-tight flex items-center gap-3"><span className="material-icons text-sky-500 !text-2xl">work_history</span><span>Detalle de Prácticas</span></h2></div>
-      <div className="border rounded-lg overflow-x-auto border-slate-200/70">
-        <table className="w-full min-w-[700px]">
-          <thead className="bg-slate-100/70 border-b-2 border-slate-200">
-            <tr>
-              <SortableHeader label="Institución" sortKey="institucion" sortConfig={sortConfig} requestSort={requestSort} className="text-left w-2/6" />
-              <SortableHeader label="Especialidad" sortKey="especialidad" sortConfig={sortConfig} requestSort={requestSort} />
-              <SortableHeader label="Horas" sortKey="horas" sortConfig={sortConfig} requestSort={requestSort} />
-              <SortableHeader label="Periodo" sortKey="fechaInicio" sortConfig={sortConfig} requestSort={requestSort} />
-              <SortableHeader label="Estado" sortKey="estado" sortConfig={sortConfig} requestSort={requestSort} />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200/60">
-            {sortedPracticas.map((practica) => {
-              const institucionRaw = practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
-              const institucion = Array.isArray(institucionRaw) ? institucionRaw.join(', ') : institucionRaw;
-              const statusRaw = practica[FIELD_ESTADO_PRACTICA];
-              const status = Array.isArray(statusRaw) ? statusRaw?.[0] : statusRaw;
-              const statusVisuals = getStatusVisuals(status);
-              return (
-              <tr key={practica.id} className="transition-colors duration-200 odd:bg-white even:bg-slate-50/50 hover:!bg-slate-100">
-                <td className="p-4 align-middle text-sm text-slate-800 font-medium break-words">{institucion || 'N/A'}</td>
-                <td className="p-4 align-middle text-center"><span className={getEspecialidadClasses(practica[FIELD_ESPECIALIDAD_PRACTICAS])}>{practica[FIELD_ESPECIALIDAD_PRACTICAS] || 'N/A'}</span></td>
-                <td className="p-4 text-sm text-center align-middle text-slate-700 font-semibold">{practica[FIELD_HORAS_PRACTICAS] || 0}</td>
-                <td className="p-4 text-sm text-center align-middle text-slate-700">{formatDate(practica[FIELD_FECHA_INICIO_PRACTICAS])} - {formatDate(practica[FIELD_FECHA_FIN_PRACTICAS])}</td>
-                <td className="p-4 align-middle text-center"><span className={`${statusVisuals.labelClass} gap-1.5`}><span className="material-icons !text-sm">{statusVisuals.icon}</span><span>{status || 'N/A'}</span></span></td>
-              </tr>
-            )})}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-};
-
-
-// ============================================================================
-// FILE: App.tsx
-// ============================================================================
+// --- START OF App.tsx ---
 const App = () => {
   const [authenticatedUser, setAuthenticatedUser] = useState(null);
   const [viewedStudent, setViewedStudent] = useState(null);
@@ -1070,7 +1014,7 @@ const App = () => {
 
   useEffect(() => {
     if (!window.AIRTABLE_PAT_WARNING_SHOWN) {
-        console.warn("ADVERTENCIA DE SEGURIDAD: El token PAT de Airtable está expuesto. Para producción, este código debe ejecutarse en un backend.");
+        console.warn("ADVERTENCIA DE SEGURIDAD: El token PAT de Airtable está expuesto en este código. Para producción, la lógica que usa este token debería ejecutarse en un backend seguro.");
         window.AIRTABLE_PAT_WARNING_SHOWN = true;
     }
     const storedUser = sessionStorage.getItem('authenticatedUser');
@@ -1082,9 +1026,7 @@ const App = () => {
     }
   }, []);
 
-  const handleShowModal = (title, message) => {
-    setModalInfo({ title, message });
-  };
+  const handleShowModal = (title, message) => setModalInfo({ title, message });
 
   const calculateCriterios = useCallback(() => {
     let totalHoras = 0;
@@ -1162,21 +1104,13 @@ const App = () => {
     setSolicitudes([]);
     let foundAnyData = false;
     try {
-        const { records: practicasRecords, error: practicasError } = await fetchAirtableData(
-          AIRTABLE_TABLE_NAME_PRACTICAS,
-          [FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS, FIELD_HORAS_PRACTICAS, FIELD_FECHA_INICIO_PRACTICAS, FIELD_FECHA_FIN_PRACTICAS, FIELD_ESTADO_PRACTICA, FIELD_ESPECIALIDAD_PRACTICAS],
-          `{${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}} = '${studentName}'`
-        );
+        const { records: practicasRecords, error: practicasError } = await fetchAirtableData(AIRTABLE_TABLE_NAME_PRACTICAS, [FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS, FIELD_HORAS_PRACTICAS, FIELD_FECHA_INICIO_PRACTICAS, FIELD_FECHA_FIN_PRACTICAS, FIELD_ESTADO_PRACTICA, FIELD_ESPECIALIDAD_PRACTICAS], `{${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}} = '${studentName}'`);
         if (practicasError) handleShowModal('Error de Carga', `Error al cargar prácticas: ${typeof practicasError.error === 'string' ? practicasError.error : practicasError.error.message}`);
         else if (practicasRecords.length > 0) {
           setPracticas(practicasRecords.map(r => ({ ...r.fields, id: r.id })));
           foundAnyData = true;
         }
-      const { records: solicitudesRecords, error: solicitudesError } = await fetchAirtableData(
-        AIRTABLE_TABLE_NAME_PPS,
-        [FIELD_EMPRESA_PPS_SOLICITUD, FIELD_ESTADO_PPS, FIELD_NOTAS_PPS, FIELD_ULTIMA_ACTUALIZACION_PPS],
-        `{${FIELD_LEGAJO_PPS}} = '${legajo.trim()}'`
-      );
+      const { records: solicitudesRecords, error: solicitudesError } = await fetchAirtableData(AIRTABLE_TABLE_NAME_PPS, [FIELD_EMPRESA_PPS_SOLICITUD, FIELD_ESTADO_PPS, FIELD_NOTAS_PPS, FIELD_ULTIMA_ACTUALIZACION_PPS], `{${FIELD_LEGAJO_PPS}} = '${legajo.trim()}'`);
       if (solicitudesError) handleShowModal('Error de Carga', `Error al cargar solicitudes: ${typeof solicitudesError.error === 'string' ? solicitudesError.error : solicitudesError.error.message}`);
       else if (solicitudesRecords.length > 0) {
         setSolicitudes(solicitudesRecords.map(r => ({ ...r.fields, id: r.id })));
@@ -1198,26 +1132,16 @@ const App = () => {
       resetStateForDataFetch();
       let studentName = null;
       try {
-          const { records: studentRecords, error: studentError } = await fetchAirtableData(
-              AIRTABLE_TABLE_NAME_ESTUDIANTES,
-              [FIELD_NOMBRE_ESTUDIANTES, FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES],
-              `{${FIELD_LEGAJO_ESTUDIANTES}} = '${legajo}'`, 1
-          );
+          const { records: studentRecords, error: studentError } = await fetchAirtableData(AIRTABLE_TABLE_NAME_ESTUDIANTES, [FIELD_NOMBRE_ESTUDIANTES, FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES], `{${FIELD_LEGAJO_ESTUDIANTES}} = '${legajo}'`, 1);
           if (studentError) throw new Error(`Error al buscar en 'Estudiantes': ${typeof studentError.error === 'string' ? studentError.error : studentError.error.message}`);
           if (studentRecords.length > 0 && studentRecords[0].fields[FIELD_NOMBRE_ESTUDIANTES]) {
               const studentRecord = studentRecords[0];
               studentName = studentRecord.fields[FIELD_NOMBRE_ESTUDIANTES];
               setStudentAirtableId(studentRecord.id);
               const savedOrientacion = studentRecord.fields[FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES];
-              if (savedOrientacion) {
-                  setSelectedOrientacion(savedOrientacion);
-              }
+              if (savedOrientacion) setSelectedOrientacion(savedOrientacion);
           } else {
-              const { records: ppsRecords, error: ppsError } = await fetchAirtableData(
-                  AIRTABLE_TABLE_NAME_PPS,
-                  [FIELD_NOMBRE_ESTUDIANTE_LOOKUP_PPS],
-                  `{${FIELD_LEGAJO_PPS}} = '${legajo}'`, 1
-              );
+              const { records: ppsRecords, error: ppsError } = await fetchAirtableData(AIRTABLE_TABLE_NAME_PPS, [FIELD_NOMBRE_ESTUDIANTE_LOOKUP_PPS], `{${FIELD_LEGAJO_PPS}} = '${legajo}'`, 1);
               if (ppsError) throw new Error(`Error al buscar en 'Solicitud de PPS': ${typeof ppsError.error === 'string' ? ppsError.error : ppsError.error.message}`);
               if (ppsRecords.length > 0) {
                   const nameField = ppsRecords[0].fields[FIELD_NOMBRE_ESTUDIANTE_LOOKUP_PPS];
@@ -1244,21 +1168,13 @@ const App = () => {
         const initializeUserData = async () => {
             setIsLoading(true);
             resetStateForDataFetch();
-            const { records: studentRecords, error: studentError } = await fetchAirtableData(
-                AIRTABLE_TABLE_NAME_ESTUDIANTES,
-                [FIELD_NOMBRE_ESTUDIANTES, FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES],
-                `{${FIELD_LEGAJO_ESTUDIANTES}} = '${authenticatedUser.legajo}'`, 1
-            );
-            if (studentError) {
-              console.error("Could not fetch student record for pre-filling orientation", studentError);
-            }
+            const { records: studentRecords, error: studentError } = await fetchAirtableData(AIRTABLE_TABLE_NAME_ESTUDIANTES, [FIELD_NOMBRE_ESTUDIANTES, FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES], `{${FIELD_LEGAJO_ESTUDIANTES}} = '${authenticatedUser.legajo}'`, 1);
+            if (studentError) console.error("Could not fetch student record for pre-filling orientation", studentError);
             if (studentRecords && studentRecords.length > 0) {
                 const studentRecord = studentRecords[0];
                 setStudentAirtableId(studentRecord.id);
                 const savedOrientacion = studentRecord.fields[FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES];
-                if (savedOrientacion) {
-                    setSelectedOrientacion(savedOrientacion);
-                }
+                if (savedOrientacion) setSelectedOrientacion(savedOrientacion);
             }
             await fetchDataForUser(authenticatedUser.legajo, authenticatedUser.nombre);
         };
@@ -1271,19 +1187,22 @@ const App = () => {
   const handleOrientacionChange = async (orientacion) => {
     setSelectedOrientacion(orientacion);
     setShowSaveConfirmation(true);
-    setTimeout(() => setShowSaveConfirmation(false), 2000);
+    setTimeout(() => setShowSaveConfirmation(false), 2000); // Hide after 2 seconds
+
     if (studentAirtableId) {
         const { error } = await updateAirtableRecord(
             AIRTABLE_TABLE_NAME_ESTUDIANTES,
             studentAirtableId,
             { [FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES]: orientacion || null }
         );
+
         if (error) {
             console.error("Failed to update chosen orientation in Airtable:", error);
             handleShowModal('Error de Sincronización', 'No se pudo guardar la orientación elegida. La selección funcionará localmente pero no se guardará para futuras sesiones.');
         }
     }
   };
+
 
   const handleLoginSuccess = (user) => {
     setAuthenticatedUser(user);
@@ -1305,8 +1224,19 @@ const App = () => {
   if (!authenticatedUser) {
     return (
       <>
-        {isLoading ? (<div className="w-full min-h-screen flex flex-col items-center justify-center p-4"><Loader /></div>) : (<Auth onLoginSuccess={handleLoginSuccess} showModal={handleShowModal} />)}
-        <Modal isOpen={!!modalInfo} title={modalInfo?.title || ''} message={modalInfo?.message || ''} onClose={() => setModalInfo(null)} />
+        {isLoading ? (
+            <div className="w-full min-h-screen flex flex-col items-center justify-center p-4">
+                <Loader />
+            </div>
+        ) : (
+            <Auth onLoginSuccess={handleLoginSuccess} showModal={handleShowModal} />
+        )}
+        <Modal
+          isOpen={!!modalInfo}
+          title={modalInfo?.title || ''}
+          message={modalInfo?.message || ''}
+          onClose={() => setModalInfo(null)}
+        />
       </>
     );
   }
@@ -1314,12 +1244,20 @@ const App = () => {
   return (
     <div className="min-h-screen">
       <div className="hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:inset-y-0 lg:z-50 bg-gradient-to-br from-slate-900 to-slate-800 shadow-2xl p-8 text-white">
-        <div className="flex-shrink-0"><MiPanelLogo className="h-16 w-auto" variant="dark" /></div>
+        <div className="flex-shrink-0">
+           <MiPanelLogo className="h-16 w-auto" variant="dark" />
+        </div>
         <div className="flex-grow flex flex-col justify-center gap-4">
-            <p className="text-slate-400 text-sm font-semibold uppercase tracking-wider">{isSuperUserMode ? 'Modo Administrador' : 'Estudiante'}</p>
+            <p className="text-slate-400 text-sm font-semibold uppercase tracking-wider">
+              {isSuperUserMode ? 'Modo Administrador' : 'Estudiante'}
+            </p>
             <div className="space-y-1">
-              <h2 className="text-2xl font-bold text-white">{authenticatedUser.nombre}</h2>
-              {!isSuperUserMode && (<p className="text-slate-300 font-medium">Legajo: {authenticatedUser.legajo}</p>)}
+              <h2 className="text-2xl font-bold text-white">
+                {authenticatedUser.nombre}
+              </h2>
+              {!isSuperUserMode && (
+                 <p className="text-slate-300 font-medium">Legajo: {authenticatedUser.legajo}</p>
+              )}
             </div>
              {isSuperUserMode && viewedStudent && (
                  <div className="mt-4 p-4 bg-slate-700/50 rounded-lg border border-slate-600/80">
@@ -1330,12 +1268,18 @@ const App = () => {
              )}
         </div>
         <div className="flex-shrink-0 space-y-6">
-            <button onClick={handleLogout} className="w-full bg-slate-700/80 hover:bg-slate-700 text-slate-200 hover:text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 text-base shadow-sm border border-slate-600/80 flex items-center justify-center gap-3" aria-label="Cerrar sesión">
-              <span className="material-icons !text-xl">logout</span><span>Cerrar Sesión</span>
+            <button
+              onClick={handleLogout}
+              className="w-full bg-slate-700/80 hover:bg-slate-700 text-slate-200 hover:text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 text-base shadow-sm border border-slate-600/80 flex items-center justify-center gap-3"
+              aria-label="Cerrar sesión"
+            >
+              <span className="material-icons !text-xl">logout</span>
+              <span>Cerrar Sesión</span>
             </button>
             <UfloLogo className="h-16 w-auto mx-auto" variant="dark" />
         </div>
       </div>
+
       <div className="lg:pl-72">
         <div className="w-full max-w-5xl mx-auto p-4 sm:p-6 md:p-8">
             <AppHeader isLoggedIn={!!authenticatedUser} onLogout={handleLogout} isSuperUserMode={isSuperUserMode} />
@@ -1346,7 +1290,14 @@ const App = () => {
                   {isLoading && <div className="mt-8"><Loader /></div>}
                   {showData && (
                     <div className="space-y-8 mt-8">
-                      <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} onOrientacionChange={handleOrientacionChange} studentName={studentNameToDisplay} isSuperUserMode={true} showSaveConfirmation={showSaveConfirmation} />
+                      <CriteriosPanel 
+                        criterios={criterios} 
+                        selectedOrientacion={selectedOrientacion}
+                        onOrientacionChange={handleOrientacionChange}
+                        studentName={studentNameToDisplay}
+                        isSuperUserMode={true}
+                        showSaveConfirmation={showSaveConfirmation}
+                      />
                       <SolicitudesList solicitudes={solicitudes} />
                       <PracticasTable practicas={practicas} selectedOrientacion={selectedOrientacion} />
                       <Footer />
@@ -1358,7 +1309,13 @@ const App = () => {
                   {isLoading ? <Loader /> : (
                      showData && (
                       <div className="space-y-8">
-                          <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} onOrientacionChange={handleOrientacionChange} studentName={studentNameToDisplay} showSaveConfirmation={showSaveConfirmation} />
+                          <CriteriosPanel 
+                              criterios={criterios} 
+                              selectedOrientacion={selectedOrientacion}
+                              onOrientacionChange={handleOrientacionChange}
+                              studentName={studentNameToDisplay}
+                              showSaveConfirmation={showSaveConfirmation}
+                          />
                           <SolicitudesList solicitudes={solicitudes} />
                           <PracticasTable practicas={practicas} selectedOrientacion={selectedOrientacion} />
                           <Footer />
@@ -1370,18 +1327,24 @@ const App = () => {
             </main>
         </div>
       </div>
-      <Modal isOpen={!!modalInfo} title={modalInfo?.title || ''} message={modalInfo?.message || ''} onClose={() => setModalInfo(null)} />
+      
+      <Modal
+        isOpen={!!modalInfo}
+        title={modalInfo?.title || ''}
+        message={modalInfo?.message || ''}
+        onClose={() => setModalInfo(null)}
+      />
     </div>
   );
 };
 
-// ============================================================================
-// FILE: index.tsx
-// ============================================================================
+
+// --- START OF index.tsx ---
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
+
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
