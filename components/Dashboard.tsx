@@ -6,7 +6,7 @@ import SolicitudesList from './SolicitudesList';
 import EmptyState from './EmptyState';
 import Tabs from './Tabs';
 import Card from './Card';
-import { CriteriosPanelSkeleton, TableSkeleton } from './Skeletons';
+import { CriteriosPanelSkeleton, TableSkeleton } from './Skeletons.tsx';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 
