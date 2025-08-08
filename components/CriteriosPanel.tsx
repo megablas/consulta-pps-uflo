@@ -61,7 +61,7 @@ const CriteriosPanel: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <CriterionCard isComplete={criterios.cumpleHorasTotales}>
           <ProgressBar 
-            label={`Completa ${HORAS_OBJETIVO_TOTAL} hs totales`}
+            label={`Horas Totales`}
             value={criterios.horasTotales}
             max={HORAS_OBJETIVO_TOTAL}
             unit="hs"
@@ -70,36 +70,37 @@ const CriteriosPanel: React.FC = () => {
 
         <CriterionCard isComplete={criterios.cumpleRotacion}>
            <RotationTracker
-            label={`Rota por ${ROTACION_OBJETIVO_ORIENTACIONES} orientaciones`}
+            label={`Rotación de Orientaciones`}
             count={criterios.orientacionesCursadasCount}
             total={ROTACION_OBJETIVO_ORIENTACIONES}
             orientacionesUnicas={criterios.orientacionesUnicas}
           />
         </CriterionCard>
         
-        <CriterionCard isComplete={criterios.cumpleHorasOrientacion} controls={orientacionControls}>
+        <CriterionCard 
+            isComplete={criterios.cumpleHorasOrientacion} 
+            controls={!selectedOrientacion ? orientacionControls : undefined}
+        >
           {selectedOrientacion ? (
             <ProgressBar
-              label={`Progreso en ${selectedOrientacion}`}
+              label={`Horas en ${selectedOrientacion}`}
               value={criterios.horasOrientacionElegida}
               max={HORAS_OBJETIVO_ORIENTACION}
               unit="hs"
             />
           ) : (
-            <div className="flex flex-col gap-1 w-full text-center">
-              <div className="h-16 flex items-center justify-center">
-                <p className="text-slate-800 font-medium leading-normal text-sm">
-                  Completa {HORAS_OBJETIVO_ORIENTACION} hs en tu orientación
-                </p>
-              </div>
-              <div className="rounded-full h-2.5 bg-slate-200/70 overflow-hidden my-1.5">
-                  {/* Empty bar to maintain layout */}
-              </div>
-              <div className="min-h-9 flex items-center justify-center">
-                <p className="text-slate-500 font-semibold leading-normal text-sm">
-                  Selecciona una orientación
-                </p>
-              </div>
+            <div className="flex flex-col gap-3 w-full">
+                <div className="flex justify-between items-baseline">
+                    <p className="text-slate-800 font-semibold text-sm leading-tight">
+                    Completa {HORAS_OBJETIVO_ORIENTACION} hs en tu orientación
+                    </p>
+                </div>
+                <div className="rounded-full h-3.5 bg-slate-200/70" />
+                <div className="text-center mt-1">
+                    <p className="text-slate-500 text-xs font-medium">
+                    Selecciona una orientación para ver tu progreso.
+                    </p>
+                </div>
             </div>
           )}
         </CriterionCard>

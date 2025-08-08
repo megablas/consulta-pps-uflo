@@ -5,7 +5,7 @@ const Shimmer: React.FC = () => (
     <div className="absolute inset-0 -translate-x-full animate-background-shine bg-slate-200" />
 );
 
-const SkeletonBox: React.FC<{className?: string}> = ({ className }) => (
+export const SkeletonBox: React.FC<{className?: string}> = ({ className }) => (
     <div className={`relative overflow-hidden bg-slate-200/70 rounded-md ${className}`}>
         <div className="animate-background-shine absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent" />
     </div>
