@@ -1,61 +1,65 @@
+# Nombre del flujo de trabajo, aparecerá en la pestaña "Actions" de GitHub
 name: Deploy to GitHub Pages
 
+# Define cuándo se debe ejecutar este flujo
 on:
-  # Se ejecuta en cada push a la rama 'main'
+  # Se ejecuta automáticamente cada vez que subes código a la rama 'main'
   push:
     branches:
       - main
-  # Te permite ejecutar este workflow manualmente desde la pestaña Actions en GitHub
+  # También te permite ejecutarlo manualmente desde la pestaña "Actions"
   workflow_dispatch:
 
-# Permisos necesarios para que el job pueda interactuar con GitHub Pages
+# Permisos necesarios para que el flujo pueda leer tu código y publicar en GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Permite solo un despliegue concurrente, cancelando los anteriores si se hace un nuevo push
+# Evita que se ejecuten varios despliegues a la vez. Si subes código de nuevo,
+# el despliegue anterior se cancela y empieza el nuevo.
 concurrency:
   group: "pages"
   cancel-in-progress: true
 
+# Define los trabajos (tareas) que se realizarán
 jobs:
-  # Job único para construir y desplegar
+  # El único trabajo de este flujo se llama 'deploy'
   deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # Se ejecutará en una máquina virtual con Linux
     steps:
+      # 1. Descarga el código de tu repositorio
       - name: Checkout repository
-        # Clona tu repositorio para que el workflow pueda acceder a tu código
         uses: actions/checkout@v4
       
+      # 2. Configura el entorno de Node.js (versión 20)
       - name: Set up Node.js
-        # Configura el entorno de Node.js para poder instalar dependencias y construir
         uses: actions/setup-node@v4
         with:
-          node-version: 18 # Puedes usar 18 o 20
+          node-version: 20
 
+      # 3. Instala todas las dependencias (Vite, React, etc.)
       - name: Install dependencies
-        # Instala las dependencias definidas en tu package.json
         run: npm install
       
+      # 4. Construye la aplicación para producción (ejecuta "npm run build")
       - name: Build project
-        # Ejecuta el script 'build' de tu package.json (que llama a 'vite build')
         run: npm run build
       
+      # 5. Prepara el entorno para GitHub Pages
       - name: Setup Pages
-        # Configura el entorno para el despliegue a GitHub Pages
         uses: actions/configure-pages@v5
       
+      # 6. Sube la carpeta 'dist' (el resultado de la construcción) como un "artefacto"
       - name: Upload artifact
-        # Sube el directorio 'dist' (el resultado de la compilación) como un artefacto
         uses: actions/upload-pages-artifact@v3
         with:
           path: './dist'
           
+      # 7. Despliega el artefacto subido a tu sitio de GitHub Pages
       - name: Deploy to GitHub Pages
-        # Despliega el artefacto subido a tu sitio de GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
