@@ -6,7 +6,7 @@ import PracticasTable from '../components/PracticasTable';
 import EmptyState from '../components/EmptyState';
 import Tabs from '../components/Tabs';
 import Card from '../components/Card';
-import { CriteriosPanelSkeleton, TableSkeleton } from '../components/Skeletons.tsx';
+import { CriteriosPanelSkeleton, TableSkeleton } from '../components/Skeletons';
 import { useData } from '../contexts/DataContext';
 import EnrollmentForm from '../components/EnrollmentForm';
 import Modal from '../components/Modal';
