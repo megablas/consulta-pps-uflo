@@ -1,16 +1,17 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import type { SolicitudPPS } from '../types';
-import { 
-    FIELD_EMPRESA_PPS_SOLICITUD, 
-    FIELD_ESTADO_PPS, 
-    FIELD_NOTAS_PPS, 
-    FIELD_ULTIMA_ACTUALIZACION_PPS,
-    FIELD_LEGAJO_PPS,
-    FIELD_NOMBRE_ESTUDIANTE_LOOKUP_PPS
-} from '../constants';
 
-// This assumes process.env.API_KEY is available in the execution environment.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+let ai: GoogleGenAI | null = null;
+
+// Lazily initialize the AI client to prevent app crash on load
+// if the environment variable is not set.
+const getAiClient = (): GoogleGenAI => {
+    if (!ai) {
+        // This assumes process.env.API_KEY is available in the execution environment.
+        ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    }
+    return ai;
+};
+
 
 const nameSchema = {
     type: Type.OBJECT,
@@ -59,7 +60,8 @@ export async function splitNameWithAI(fullName: string): Promise<{ nombre: strin
     }
 
     try {
-        const response = await ai.models.generateContent({
+        const client = getAiClient();
+        const response = await client.models.generateContent({
             model: "gemini-2.5-flash",
             contents: `Accurately separate the following full name into first name(s) and last name(s). Full Name: "${fullName}"`,
             config: {
@@ -87,58 +89,5 @@ export async function splitNameWithAI(fullName: string): Promise<{ nombre: strin
     } catch (error) {
         console.error(`AI name split failed for "${fullName}". Falling back to simple logic. Error:`, error);
         return simpleNameSplit(fullName);
-    }
-}
-
-
-export async function generateFollowUpReport(solicitudes: SolicitudPPS[]): Promise<string> {
-    if (solicitudes.length === 0) {
-        return "No hay solicitudes activas para analizar.";
-    }
-
-    const prompt = `
-    Eres un asistente experto para un coordinador de pasantías universitarias. Tu tarea es analizar una lista de solicitudes de pasantías (PPS) activas y generar un informe de seguimiento claro y accionable.
-
-    La fecha de hoy es ${new Date().toLocaleDateString('es-ES')}.
-
-    Tu objetivo principal es identificar las solicitudes que están estancadas y necesitan atención. Una solicitud se considera estancada si ha pasado mucho tiempo (por ejemplo, más de 2-3 semanas) en un estado inicial como "Puesta en contacto" o "En conversaciones" sin ninguna actualización reciente en las notas.
-
-    Analiza la siguiente lista de solicitudes. Para cada una, considera el estado actual, las notas y la fecha de la última actualización para determinar qué acción, si alguna, se necesita.
-
-    Formato del informe:
-    - Comienza con un resumen general.
-    - Luego, crea una sección para cada solicitud que REQUIERE ACCIÓN. Usa Markdown para el formato (### para títulos, ** para negrita, - para listas).
-    - Para cada solicitud que requiera acción, proporciona:
-        - El nombre de la institución y el estudiante.
-        - Un resumen del problema (ej: "Han pasado 4 semanas sin contacto.").
-        - Una recomendación CLARA y DIRECTA (ej: "Acción recomendada: Enviar un correo de seguimiento para consultar el estado.").
-    - Si ninguna solicitud requiere acción, simplemente indícalo.
-    - Sé conciso y profesional.
-
-    Aquí están las solicitudes para analizar:
-    ${solicitudes.map(s => `
-    ---
-    Institución: ${s[FIELD_EMPRESA_PPS_SOLICITUD] || 'N/A'}
-    Estudiante: ${s[FIELD_NOMBRE_ESTUDIANTE_LOOKUP_PPS]?.[0] || 'N/A'} (Legajo: ${s[FIELD_LEGAJO_PPS] || 'N/A'})
-    Estado Actual: ${s[FIELD_ESTADO_PPS] || 'N/A'}
-    Última Actualización: ${s[FIELD_ULTIMA_ACTUALIZACION_PPS] ? new Date(s[FIELD_ULTIMA_ACTUALIZACION_PPS]).toLocaleDateString('es-ES') : 'N/A'}
-    Notas: ${s[FIELD_NOTAS_PPS] || 'Sin notas.'}
-    ---
-    `).join('')}
-
-    Genera el informe de seguimiento.
-    `;
-
-    try {
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-        });
-        
-        return response.text;
-
-    } catch (error) {
-        console.error('Error generating follow-up report with AI:', error);
-        throw new Error('La IA no pudo generar el informe. Por favor, inténtelo de nuevo más tarde.');
     }
 }

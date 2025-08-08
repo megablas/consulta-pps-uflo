@@ -4,9 +4,9 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  // IMPORTANTE: El valor 'base' debe coincidir con el subdirectorio de tu sitio en GitHub Pages.
-  // Para la URL https://megablas.github.io/consulta-pps-uflo/, el valor correcto es '/consulta-pps-uflo/'.
-  base: '/consulta-pps-uflo/',
+  // Using a relative base path is more robust for GitHub Pages deployments.
+  // It ensures that asset paths are relative to the index.html file.
+  base: './',
   build: {
     rollupOptions: {
       // Especifica los módulos que deben dejarse como externos y no empaquetarse.

@@ -2,7 +2,6 @@ import React, { useState, useCallback } from 'react';
 import Layout from '../components/Layout';
 import AdminSearch from '../components/AdminSearch';
 import SeguroGenerator from '../components/SeguroGenerator';
-import SolicitudManager from '../components/SolicitudManager';
 import Dashboard from '../components/Dashboard';
 import { DataProvider } from '../contexts/DataContext';
 import { AuthUser } from '../contexts/AuthContext';
@@ -87,13 +86,6 @@ const AdminView: React.FC = () => {
             icon: 'shield',
             isClosable: false,
             content: <SeguroGenerator showModal={handleShowModal} />
-        },
-        {
-            id: 'solicitud-manager',
-            label: 'Gestor de Solicitudes',
-            icon: 'manage_history',
-            isClosable: false,
-            content: <SolicitudManager showModal={handleShowModal} />
         },
         ...studentTabs.map(student => ({
             id: student.id,
