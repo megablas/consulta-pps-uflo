@@ -9,12 +9,12 @@ import {
     FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS,
     FIELD_HORAS_ACREDITADAS_LANZAMIENTOS,
 } from '../constants';
-import { formatDate, getEspecialidadClasses } from '../utils/formatters';
+import { formatDate, getEspecialidadClasses, normalizeStringForComparison } from '../utils/formatters';
 
 interface ConvocatoriaCardProps {
   lanzamiento: LanzamientoPPS;
   onInscribir: (lanzamiento: LanzamientoPPS) => void;
-  isEnrolled: boolean;
+  enrollmentStatus: string | null;
   isEnrolling: boolean;
 }
 
@@ -29,7 +29,7 @@ const InfoRow: React.FC<{ icon: string; text: string | undefined; }> = ({ icon, 
 };
 
 
-const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInscribir, isEnrolled, isEnrolling }) => {
+const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInscribir, enrollmentStatus, isEnrolling }) => {
   const { 
     [FIELD_NOMBRE_PPS_LANZAMIENTOS]: nombre, 
     [FIELD_ORIENTACION_LANZAMIENTOS]: orientacion,
@@ -39,6 +39,73 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInsc
     [FIELD_FECHA_FIN_LANZAMIENTOS]: fechaFin,
     [FIELD_HORAS_ACREDITADAS_LANZAMIENTOS]: horas,
   } = lanzamiento;
+  
+  const hasEnrollment = !!enrollmentStatus;
+  const normalizedStatus = normalizeStringForComparison(enrollmentStatus);
+
+  const renderStatusBlock = () => {
+    if (!hasEnrollment) {
+      return (
+        <button
+            onClick={() => onInscribir(lanzamiento)}
+            disabled={isEnrolling}
+            className={`w-full font-bold text-base py-3 px-5 rounded-xl transition-all duration-200 ease-in-out shadow-lg flex items-center justify-center gap-2.5
+              ${isEnrolling 
+                ? 'bg-slate-400 text-white cursor-wait'
+                : 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+              }`}
+            aria-label={`Postularme para ${nombre}`}
+          >
+            {isEnrolling ? (
+              <>
+                <div className="border-2 border-white/50 border-t-white rounded-full w-5 h-5 animate-spin"></div>
+                <span>Procesando...</span>
+              </>
+            ) : (
+              <>
+                <span className="material-icons !text-xl">rocket_launch</span>
+                <span>Postularme</span>
+              </>
+            )}
+          </button>
+      );
+    }
+
+    let statusStyles = 'bg-slate-100 border-slate-200/80';
+    let textStyles = 'text-slate-700';
+    let icon = 'info';
+    let title = enrollmentStatus;
+    let subtitle = 'Estado de tu postulación.';
+
+    if (normalizedStatus === 'seleccionado') {
+        statusStyles = 'bg-indigo-50 border-indigo-200/80';
+        textStyles = 'text-indigo-700';
+        icon = 'verified';
+        title = '¡Seleccionado!';
+        subtitle = 'Has sido seleccionado/a.';
+    } else if (normalizedStatus === 'inscripto') {
+        statusStyles = 'bg-blue-50 border-blue-200/80';
+        textStyles = 'text-blue-700';
+        icon = 'check_circle';
+        title = '¡Inscripto!';
+        subtitle = 'Tu postulación fue registrada.';
+    } else if (normalizedStatus.includes('no seleccionado')) {
+        statusStyles = 'bg-rose-50 border-rose-200/80';
+        textStyles = 'text-rose-700';
+        icon = 'cancel';
+        subtitle = 'No fuiste seleccionado/a esta vez.';
+    }
+
+    return (
+        <div className={`text-center w-full flex flex-col items-center justify-center h-full p-4 rounded-lg border ${statusStyles}`}>
+          <div className={`flex items-center gap-2 text-base font-bold ${textStyles}`}>
+            <span className="material-icons">{icon}</span>
+            <span>{title}</span>
+          </div>
+          <p className="text-xs text-slate-500 mt-1.5">{subtitle}</p>
+        </div>
+    );
+  };
 
   return (
     <div 
@@ -65,38 +132,7 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInsc
       
       {/* Right Side: Action */}
       <div className="w-full lg:w-56 flex-shrink-0 flex flex-col items-center justify-center lg:border-l lg:pl-6 border-slate-200/60 self-stretch min-h-[80px]">
-        {isEnrolled ? (
-           <div className="text-center w-full flex flex-col items-center justify-center h-full p-4 bg-blue-50 rounded-lg border border-blue-200/80">
-              <div className="flex items-center gap-2 text-blue-700 font-bold text-base">
-                <span className="material-icons">check_circle</span>
-                <span>¡Inscripto!</span>
-              </div>
-              <p className="text-xs text-slate-500 mt-1.5">Tu postulación fue registrada.</p>
-           </div>
-        ) : (
-          <button
-            onClick={() => onInscribir(lanzamiento)}
-            disabled={isEnrolling}
-            className={`w-full font-bold text-base py-3 px-5 rounded-xl transition-all duration-200 ease-in-out shadow-lg flex items-center justify-center gap-2.5
-              ${isEnrolling 
-                ? 'bg-slate-400 text-white cursor-wait'
-                : 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
-              }`}
-            aria-label={isEnrolled ? `Inscripto en ${nombre}` : `Postularme para ${nombre}`}
-          >
-            {isEnrolling ? (
-              <>
-                <div className="border-2 border-white/50 border-t-white rounded-full w-5 h-5 animate-spin"></div>
-                <span>Procesando...</span>
-              </>
-            ) : (
-              <>
-                <span className="material-icons !text-xl">rocket_launch</span>
-                <span>Postularme</span>
-              </>
-            )}
-          </button>
-        )}
+        {renderStatusBlock()}
       </div>
     </div>
   );

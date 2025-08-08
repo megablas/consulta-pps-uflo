@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Convocatoria, LanzamientoPPS } from '../types';
 import ConvocatoriaCard from './ConvocatoriaCard';
-import { FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS } from '../constants';
+import { FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS } from '../constants';
 import EmptyState from './EmptyState';
 
 interface ConvocatoriasListProps {
@@ -27,16 +27,18 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myE
     return (
         <div className="space-y-5">
           {lanzamientos.map((lanzamiento) => {
-            const isEnrolled = !!studentAirtableId && myEnrollments.some(enrollment =>
-              (enrollment[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || []).includes(lanzamiento.id)
-            );
+            const enrollment = studentAirtableId
+                ? myEnrollments.find(e => (e[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || []).includes(lanzamiento.id))
+                : undefined;
+        
+            const enrollmentStatus = enrollment ? enrollment[FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS] : null;
             const isEnrolling = enrollingId === lanzamiento.id;
             
             return (
               <ConvocatoriaCard 
                   key={lanzamiento.id} 
                   lanzamiento={lanzamiento}
-                  isEnrolled={isEnrolled}
+                  enrollmentStatus={enrollmentStatus}
                   isEnrolling={isEnrolling}
                   onInscribir={onInscribir}
               />

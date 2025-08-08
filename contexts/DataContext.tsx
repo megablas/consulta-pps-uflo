@@ -163,8 +163,8 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
               ),
               fetchAirtableData<ConvocatoriaFields>(
                   AIRTABLE_TABLE_NAME_CONVOCATORIAS, 
-                  [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS], 
-                  `FIND('${studentId}', ARRAYJOIN({${FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS}}))`
+                  [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS], 
+                  `{${FIELD_LEGAJO_CONVOCATORIAS}} = ${user.legajo}`
               ),
           ]);
 
