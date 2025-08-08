@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta de PPS y Prácticas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #f8fafc; /* bg-slate-50 */
+        /* Subtle gradient + dot pattern for a more premium feel */
+        background-image: radial-gradient(theme(colors.blue.100 / 0.5) 1px, transparent 1px), linear-gradient(to bottom, theme(colors.white), theme(colors.slate.50));
+        background-size: 30px 30px, 100% 100%;
+      }
+      html, body {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        scroll-behavior: smooth;
+      }
+      #root {
+        min-height: 100vh;
+      }
+
+      /* -- Custom Animations -- */
+      @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(16px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .animate-fade-in-up {
+        animation: fadeInUp 0.5s ease-out forwards;
+        opacity: 0; /* Start hidden */
+      }
+      
+      /* Subtle scale-in for modals and cards */
+      @keyframes scaleIn {
+        from { opacity: 0; transform: scale(0.97); }
+        to { opacity: 1; transform: scale(1); }
+      }
+       .animate-scale-in {
+        animation: scaleIn 0.3s ease-out forwards;
+      }
+
+      /* Glowing pulse for important CTAs */
+      @keyframes pulse-glow {
+        0%, 100% { 
+          transform: scale(1);
+          box-shadow: 0 0 0 0 theme(colors.blue.500 / 0.7);
+        }
+        50% { 
+          transform: scale(1.02);
+          box-shadow: 0 0 12px 5px theme(colors.blue.500 / 0.3);
+        }
+      }
+      .animate-pulse-glow {
+        animation: pulse-glow 3s infinite ease-in-out;
+      }
+
+      /* Shimmer effect for loading placeholders */
+      @keyframes background-shine {
+        from {
+          background-position: 200% 0;
+        }
+        to {
+          background-position: -200% 0;
+        }
+      }
+      .animate-background-shine {
+        animation: background-shine 2s linear infinite;
+        background: linear-gradient(110deg, rgba(255,255,255,0) 8%, theme(colors.white / 0.8) 18%, rgba(255,255,255,0) 33%);
+        background-size: 200% 100%;
+      }
+
+
+      @keyframes gradient-move {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+      .animate-gradient-move {
+        background-size: 200% 200%;
+        animation: gradient-move 15s ease infinite;
+      }
+      
+      /* -- Prose styles for AI-generated content -- */
+      .prose {
+          color: theme(colors.slate.700);
+          line-height: 1.7;
+          max-width: none;
+      }
+      .prose p {
+          margin-bottom: 1em;
+      }
+      .prose h1, .prose h2, .prose h3 {
+          color: theme(colors.slate.900);
+          line-height: 1.3;
+          font-weight: 700;
+          margin-bottom: 0.8em;
+          margin-top: 1.5em;
+      }
+      .prose h2 {
+          font-size: 1.5em;
+          padding-bottom: 0.4em;
+          border-bottom: 1px solid theme(colors.slate.200);
+      }
+      .prose h3 {
+          font-size: 1.25em;
+      }
+      .prose strong {
+          font-weight: 600;
+          color: theme(colors.slate.800);
+      }
+      .prose ul {
+          list-style-type: disc;
+          padding-left: 1.5em;
+          margin-top: 1em;
+          margin-bottom: 1em;
+      }
+      .prose li {
+          margin-bottom: 0.5em;
+      }
+      .prose hr {
+          margin-top: 2em;
+          margin-bottom: 2em;
+          border-top: 1px solid theme(colors.slate.200);
+      }
+    </style>
+
+<link rel="stylesheet" href="/index.css">
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.1.1",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.1/",
+    "react/": "https://esm.sh/react@^19.1.1/",
+    "xlsx": "https://esm.sh/xlsx@^0.18.5",
+    "@google/genai": "https://esm.sh/@google/genai",
+    "react-dom": "https://esm.sh/react-dom@^19.1.1",
+    "vite": "https://esm.sh/vite@^7.1.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.0.0"
+  }
+}
+</script>
+  <script type="module" crossorigin src="/consulta-pps-uflo/assets/index-D5vbl-fb.js"></script>
+</head>
+<body class="bg-slate-50">
+    <div id="root"></div>
+</body>
+</html>
