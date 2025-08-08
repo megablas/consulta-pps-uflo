@@ -1,3 +1,4 @@
+
 {
   "name": "mi-panel-academico",
   "homepage": "https://megablas.github.io/consulta-pps-uflo/",
@@ -8,13 +9,15 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "tsc --noEmit",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {},
   "devDependencies": {
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "gh-pages": "^6.1.1",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.5.3",
     "vite": "^5.3.1"
