@@ -2,7 +2,7 @@
 import { AIRTABLE_PAT, AIRTABLE_BASE_ID } from '../constants';
 import type { AirtableResponse, AirtableErrorResponse, AirtableRecord } from '../types';
 
-async function fetchDataGeneric<T,>(url: string): Promise<{ data: AirtableResponse<T> | null, error: AirtableErrorResponse | null }> {
+async function fetchDataGeneric<T>(url: string): Promise<{ data: AirtableResponse<T> | null, error: AirtableErrorResponse | null }> {
     try {
         const response = await fetch(url, {
             headers: { 'Authorization': `Bearer ${AIRTABLE_PAT}` }
@@ -46,7 +46,7 @@ async function fetchDataGeneric<T,>(url: string): Promise<{ data: AirtableRespon
     }
 }
 
-export async function createAirtableRecord<TFields,>(
+export async function createAirtableRecord<TFields>(
   tableName: string,
   fields: TFields
 ): Promise<{ record: AirtableRecord<TFields> | null, error: AirtableErrorResponse | null }> {
@@ -132,7 +132,7 @@ export async function updateAirtableRecord<TFields>(
 }
 
 
-export async function fetchAirtableData<TFields,>(
+export async function fetchAirtableData<TFields>(
     tableName: string, 
     fields: string[] = [], 
     filterByFormula?: string,
