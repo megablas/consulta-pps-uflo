@@ -4,11 +4,12 @@ import {
   Convocatoria, EstudianteFields, PracticaFields, SolicitudPPSFields, 
   LanzamientoPPSFields, ConvocatoriaFields, ALL_ORIENTACIONES
 } from '../types';
-import { HORAS_OBJETIVO_TOTAL, HORAS_OBJETIVO_ORIENTACION, ROTACION_OBJETIVO_ORIENTACIONES, AIRTABLE_TABLE_NAME_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES, FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES, AIRTABLE_TABLE_NAME_PRACTICAS, FIELD_NOMBRE_BUSQUEDA_PRACTICAS, FIELD_HORAS_PRACTICAS, FIELD_NOTA_PRACTICAS, FIELD_ESPECIALIDAD_PRACTICAS, AIRTABLE_TABLE_NAME_PPS, FIELD_LEGAJO_PPS, FIELD_EMPRESA_PPS_SOLICITUD, FIELD_ESTADO_PPS, FIELD_NOTAS_PPS, FIELD_ULTIMA_ACTUALIZACION_PPS, AIRTABLE_TABLE_NAME_CONVOCATORIAS, FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_NOMBRE_PPS_CONVOCATORIAS, FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS, FIELD_FECHA_INICIO_LANZAMIENTOS, FIELD_NOMBRE_PPS_LANZAMIENTOS, FIELD_FECHA_FIN_LANZAMIENTOS, FIELD_DIRECCION_LANZAMIENTOS, FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS, FIELD_ORIENTACION_LANZAMIENTOS, FIELD_HORAS_ACREDITADAS_LANZAMIENTOS, FIELD_DNI_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_FECHA_NACIMIENTO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES, FIELD_TERMINO_CURSAR_CONVOCATORIAS, FIELD_CURSANDO_ELECTIVAS_CONVOCATORIAS, FIELD_FINALES_ADEUDA_CONVOCATORIAS, FIELD_OTRA_SITUACION_CONVOCATORIAS, FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS, FIELD_DNI_CONVOCATORIAS, FIELD_CORREO_CONVOCATORIAS, FIELD_FECHA_NACIMIENTO_CONVOCATORIAS, FIELD_TELEFONO_CONVOCATORIAS, FIELD_LEGAJO_CONVOCATORIAS, FIELD_FECHA_INICIO_CONVOCATORIAS, FIELD_FECHA_FIN_CONVOCATORIAS, FIELD_DIRECCION_CONVOCATORIAS, FIELD_HORARIO_FORMULA_CONVOCATORIAS, FIELD_ORIENTACION_CONVOCATORIAS, FIELD_NOMBRE_ESTUDIANTES, FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS, FIELD_FECHA_INICIO_PRACTICAS, FIELD_FECHA_FIN_PRACTICAS, FIELD_ESTADO_PRACTICA } from '../constants';
+import { HORAS_OBJETIVO_TOTAL, HORAS_OBJETIVO_ORIENTACION, ROTACION_OBJETIVO_ORIENTACIONES, AIRTABLE_TABLE_NAME_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES, FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES, AIRTABLE_TABLE_NAME_PRACTICAS, FIELD_NOMBRE_BUSQUEDA_PRACTICAS, FIELD_HORAS_PRACTICAS, FIELD_NOTA_PRACTICAS, FIELD_ESPECIALIDAD_PRACTICAS, AIRTABLE_TABLE_NAME_PPS, FIELD_LEGAJO_PPS, FIELD_EMPRESA_PPS_SOLICITUD, FIELD_ESTADO_PPS, FIELD_NOTAS_PPS, FIELD_ULTIMA_ACTUALIZACION_PPS, AIRTABLE_TABLE_NAME_CONVOCATORIAS, FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_NOMBRE_PPS_CONVOCATORIAS, FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS, FIELD_FECHA_INICIO_LANZAMIENTOS, FIELD_NOMBRE_PPS_LANZAMIENTOS, FIELD_FECHA_FIN_LANZAMIENTOS, FIELD_DIRECCION_LANZAMIENTOS, FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS, FIELD_ORIENTACION_LANZAMIENTOS, FIELD_HORAS_ACREDITADAS_LANZAMIENTOS, FIELD_DNI_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_FECHA_NACIMIENTO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES, FIELD_TERMINO_CURSAR_CONVOCATORIAS, FIELD_CURSANDO_ELECTIVAS_CONVOCATORIAS, FIELD_FINALES_ADEUDA_CONVOCATORIAS, FIELD_OTRA_SITUACION_CONVOCATORIAS, FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS, FIELD_DNI_CONVOCATORIAS, FIELD_CORREO_CONVOCATORIAS, FIELD_FECHA_NACIMIENTO_CONVOCATORIAS, FIELD_TELEFONO_CONVOCATORIAS, FIELD_LEGAJO_CONVOCATORIAS, FIELD_FECHA_INICIO_CONVOCATORIAS, FIELD_FECHA_FIN_CONVOCATORIAS, FIELD_DIRECCION_CONVOCATORIAS, FIELD_HORARIO_FORMULA_CONVOCATORIAS, FIELD_ORIENTACION_CONVOCATORIAS, FIELD_NOMBRE_ESTUDIANTES, FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS, FIELD_FECHA_INICIO_PRACTICAS, FIELD_FECHA_FIN_PRACTICAS, FIELD_ESTADO_PRACTICA, FIELD_GENERO_ESTUDIANTES } from '../constants';
 import { fetchAirtableData, updateAirtableRecord, createAirtableRecord } from '../services/airtableService';
 import { normalizeStringForComparison } from '../utils/formatters';
 import type { AuthUser } from './AuthContext';
 
+type UserGender = 'masculino' | 'femenino' | 'neutro';
 interface DataContextType {
   practicas: Practica[];
   solicitudes: SolicitudPPS[];
@@ -24,6 +25,7 @@ interface DataContextType {
   initialLoadCompleted: boolean;
   studentNameForPanel: string;
   studentDetails: EstudianteFields | null;
+  userGender: UserGender;
 
   fetchStudentData: (legajo?: string, nombre?: string) => void;
   handleOrientacionChange: (orientacion: Orientacion | "") => void;
@@ -66,6 +68,7 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
   const [selectedOrientacion, setSelectedOrientacion] = useState<Orientacion | "">("");
   const [studentAirtableId, setStudentAirtableId] = useState<string | null>(null);
   const [studentDetails, setStudentDetails] = useState<EstudianteFields | null>(null);
+  const [userGender, setUserGender] = useState<UserGender>('neutro');
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -127,9 +130,14 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
       setError(null);
 
       try {
+          const studentFieldsToFetch = [
+            FIELD_LEGAJO_ESTUDIANTES, FIELD_NOMBRE_ESTUDIANTES, FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES,
+            FIELD_DNI_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_FECHA_NACIMIENTO_ESTUDIANTES,
+            FIELD_TELEFONO_ESTUDIANTES, FIELD_GENERO_ESTUDIANTES
+          ];
           const { records: studentRecords, error: studentError } = await fetchAirtableData<EstudianteFields>(
               AIRTABLE_TABLE_NAME_ESTUDIANTES,
-              [FIELD_LEGAJO_ESTUDIANTES, FIELD_NOMBRE_ESTUDIANTES, FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES, FIELD_DNI_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_FECHA_NACIMIENTO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES],
+              studentFieldsToFetch,
               `{${FIELD_LEGAJO_ESTUDIANTES}} = '${user.legajo}'`,
               1
           );
@@ -144,6 +152,20 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
           setStudentNameForPanel(studentName);
           setSelectedOrientacion(orientacionElegida);
           setStudentDetails(studentRecord.fields);
+          
+          const existingAirtableGender = studentRecord.fields[FIELD_GENERO_ESTUDIANTES] as string | undefined;
+          let genderToSet: UserGender = 'neutro'; // Default to neutro
+
+          if (existingAirtableGender) {
+              const lowerGender = existingAirtableGender.toLowerCase().trim();
+              if (lowerGender === 'varon') {
+                  genderToSet = 'masculino';
+              } else if (lowerGender === 'mujer') {
+                  genderToSet = 'femenino';
+              }
+          }
+          // If the field is empty or has a value other than 'varon' or 'mujer', it defaults to 'neutro'
+          setUserGender(genderToSet);
 
           const [practicasResult, solicitudesResult, lanzamientosResult, enrollmentsResult] = await Promise.all([
               fetchAirtableData<PracticaFields>(
@@ -167,7 +189,7 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
                   `{${FIELD_LEGAJO_CONVOCATORIAS}} = ${user.legajo}`
               ),
           ]);
-
+          
           if (practicasResult.error) console.error("Error fetching practicas:", practicasResult.error);
           const practicasData = practicasResult.records.map(r => ({ ...r.fields, id: r.id })) as Practica[];
           setPracticas(practicasData);
@@ -293,6 +315,7 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
     initialLoadCompleted,
     studentNameForPanel,
     studentDetails,
+    userGender,
     fetchStudentData,
     handleOrientacionChange,
     handleNotaChange,
