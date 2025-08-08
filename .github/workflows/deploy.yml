@@ -1,0 +1,57 @@
+# Nombre del flujo de trabajo que aparecerá en la pestaña "Actions" de GitHub
+name: Deploy to GitHub Pages
+
+# Define cuándo se debe ejecutar este flujo de trabajo
+on:
+  # Se activa cada vez que haces un 'push' (subes cambios) a la rama 'main'
+  push:
+    branches:
+      - main
+
+# Define los permisos que necesitará el flujo de trabajo para ejecutarse
+permissions:
+  contents: read      # Permite leer el contenido de tu repositorio
+  pages: write        # Permite escribir en el entorno de GitHub Pages (para desplegar)
+  id-token: write     # Permiso necesario para la autenticación segura sin tokens manuales
+
+# Define los trabajos (jobs) que se ejecutarán. En este caso, solo uno.
+jobs:
+  build-and-deploy:
+    # Usa la última versión estable de Ubuntu como sistema operativo para la ejecución
+    runs-on: ubuntu-latest
+    
+    # Define la secuencia de pasos que se ejecutarán en el trabajo
+    steps:
+      # Paso 1: Descargar el código de tu repositorio en el entorno de ejecución
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Paso 2: Configurar Node.js, que es necesario para instalar dependencias y construir el proyecto
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Usamos una versión LTS (Long Term Support) de Node.js
+          cache: 'npm'       # Habilitar el caché para 'npm' acelera las futuras ejecuciones
+
+      # Paso 3: Instalar las dependencias del proyecto (como React, Vite, etc.)
+      - name: Install dependencies
+        run: npm ci # 'npm ci' es más rápido y seguro para entornos de automatización que 'npm install'
+
+      # Paso 4: Construir la aplicación para producción. Esto crea la carpeta 'dist'
+      - name: Build project
+        run: npm run build
+
+      # Paso 5: Preparar el entorno de GitHub Pages para el despliegue
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      # Paso 6: Subir los archivos construidos (la carpeta 'dist') como un "artefacto" de despliegue
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist' # La ruta a la carpeta que contiene el sitio web construido
+
+      # Paso 7: Desplegar el artefacto subido a GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4 # Esta acción toma el artefacto y lo publica
