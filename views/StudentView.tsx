@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import Layout from '../components/Layout';
 import CriteriosPanel from '../components/CriteriosPanel';
 import ConvocatoriasList from '../components/ConvocatoriasList';
 import SolicitudesList from '../components/SolicitudesList';
 import PracticasTable from '../components/PracticasTable';
-import Loader from '../components/Loader';
 import EmptyState from '../components/EmptyState';
 import Tabs from '../components/Tabs';
 import Card from '../components/Card';
+import { CriteriosPanelSkeleton, TableSkeleton } from '../components/Skeletons';
 import { useData } from '../contexts/DataContext';
 import EnrollmentForm from '../components/EnrollmentForm';
 import Modal from '../components/Modal';
@@ -74,7 +73,23 @@ const StudentView: React.FC = () => {
 
     const renderContent = () => {
         if (isLoading && !initialLoadCompleted) {
-            return <Loader />;
+            return (
+                 <div className="space-y-8">
+                    <CriteriosPanelSkeleton />
+                    <Card>
+                        <div className="border-b border-slate-200">
+                             <div className="-mb-px flex space-x-6">
+                                <div className="whitespace-nowrap py-4 px-1 border-b-2 font-semibold text-sm border-blue-500 text-blue-600">
+                                    Cargando...
+                                </div>
+                             </div>
+                        </div>
+                        <div className="pt-6">
+                            <TableSkeleton />
+                        </div>
+                    </Card>
+                </div>
+            );
         }
     
         if (error) {
@@ -116,7 +131,7 @@ const StudentView: React.FC = () => {
 
 
     return (
-        <Layout>
+        <>
             <Modal
                 isOpen={!!modalInfo}
                 title={modalInfo?.title || ''}
@@ -132,7 +147,7 @@ const StudentView: React.FC = () => {
               horariosDisponibles={horariosArray}
               isSubmitting={isSubmitting}
             />
-        </Layout>
+        </>
     );
 };
 

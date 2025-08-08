@@ -1,11 +1,10 @@
 import React from 'react';
-
 import Loader from './components/Loader';
 import Modal from './components/Modal';
 import Auth from './components/Auth';
 import StudentView from './views/StudentView';
 import AdminView from './views/AdminView';
-
+import Layout from './components/Layout';
 import { useAuth } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
 
@@ -14,7 +13,7 @@ const AppContent: React.FC = () => {
   
   if (!authenticatedUser) {
     // This case should ideally not be hit if App logic is correct, but as a safeguard.
-    return <Auth showModal={() => {}} />;
+    return null;
   }
   
   // Each View gets its own DataProvider to encapsulate its state.
@@ -54,11 +53,13 @@ const App: React.FC = () => {
         message={modalInfo?.message || ''}
         onClose={() => setModalInfo(null)}
       />
-      {!authenticatedUser ? (
-        <Auth showModal={handleShowModal} />
-      ) : (
-        <AppContent />
-      )}
+      <Layout>
+        {!authenticatedUser ? (
+          <Auth showModal={handleShowModal} />
+        ) : (
+          <AppContent />
+        )}
+      </Layout>
     </>
   );
 };

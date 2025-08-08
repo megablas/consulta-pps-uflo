@@ -20,7 +20,7 @@ const SolicitudCard: React.FC<SolicitudCardProps> = ({ solicitud }) => {
   const visuals = getStatusVisuals(status);
 
   return (
-    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200/60 flex items-center gap-4 transition-all duration-300 hover:shadow-lg hover:border-blue-300/80 hover:-translate-y-1.5">
+    <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200/60 flex items-center gap-4 transition-all duration-300 hover:shadow-md hover:border-slate-300 hover:-translate-y-1">
       <div className={visuals.iconContainerClass}>
         <span className="material-icons !text-3xl">{visuals.icon}</span>
       </div>
@@ -38,7 +38,7 @@ const SolicitudCard: React.FC<SolicitudCardProps> = ({ solicitud }) => {
             </p>
           )}
           
-          <p className="text-slate-400 text-xs font-normal mt-2">
+          <p className="text-slate-500 text-xs font-medium mt-2">
             Actualizado: {formatDate(actualizacion)}
           </p>
         </div>

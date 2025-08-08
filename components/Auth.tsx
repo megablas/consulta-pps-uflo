@@ -22,7 +22,7 @@ interface AuthInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 const AuthInput: React.FC<AuthInputProps> = ({ id, type, value, onChange, placeholder, icon, disabled = false, ...props }) => (
   <div className="relative">
-    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
       <span className="material-icons text-slate-400">{icon}</span>
     </div>
     <input
@@ -32,7 +32,7 @@ const AuthInput: React.FC<AuthInputProps> = ({ id, type, value, onChange, placeh
       value={value}
       onChange={onChange}
       disabled={disabled}
-      className="w-full rounded-lg border border-slate-300 p-3 pl-11 text-base text-slate-800 bg-white shadow-sm placeholder-slate-400/80 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all disabled:bg-slate-100"
+      className="w-full rounded-lg border border-slate-300 py-3 pl-12 pr-4 text-base text-slate-900 bg-white/50 shadow-sm placeholder-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all disabled:bg-slate-100"
       placeholder={placeholder}
       required
       {...props}
@@ -228,80 +228,87 @@ const Auth: React.FC<AuthProps> = ({ showModal }) => {
   }
 
   return (
-    <div className="min-h-screen w-full bg-slate-50 md:grid md:grid-cols-5 xl:grid-cols-2">
-      <div className="hidden md:flex md:col-span-2 xl:col-span-1 bg-gradient-to-br from-gray-900 to-blue-900 p-8 lg:p-12 flex-col justify-between text-white shadow-2xl animate-gradient-move">
-        <div className="flex-shrink-0 animate-fade-in-up" style={{ animationDelay: '0ms' }}><MiPanelLogo className="h-16 w-auto" variant="dark" /></div>
-        <div className="flex-grow flex flex-col justify-center">
-          <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight animate-fade-in-up" style={{ animationDelay: '100ms' }}>Bienvenido a <br/> Mi Panel Académico</h1>
-          <p className="mt-4 text-slate-300 text-lg lg:text-xl max-w-sm animate-fade-in-up" style={{ animationDelay: '200ms' }}>Tu portal centralizado para el seguimiento de Prácticas Profesionales Supervisadas.</p>
-        </div>
-        <div className="flex-shrink-0 animate-fade-in-up" style={{ animationDelay: '300ms' }}><UfloLogo className="h-16 w-auto" variant="dark" /></div>
+    <div className="w-full bg-white md:grid md:grid-cols-2 min-h-[80vh] rounded-2xl shadow-2xl shadow-slate-200/40 overflow-hidden border border-slate-200/60">
+      
+      {/* Left Panel */}
+      <div className="hidden md:flex flex-col justify-between p-8 lg:p-12 bg-slate-900 text-white">
+          <div className="flex-shrink-0 animate-fade-in-up" style={{ animationDelay: '0ms' }}><MiPanelLogo className="h-16 w-auto" variant="dark" /></div>
+          <div className="flex-grow flex flex-col justify-center">
+            <h1 className="text-5xl lg:text-6xl font-extrabold tracking-tighter leading-tight animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+              Tu Panel<br/>Académico.
+            </h1>
+            <p className="mt-4 text-slate-300 text-lg lg:text-xl max-w-sm animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+              El portal centralizado para el seguimiento de tus Prácticas Profesionales Supervisadas.
+            </p>
+          </div>
+          <div className="flex-shrink-0 animate-fade-in-up" style={{ animationDelay: '300ms' }}><UfloLogo className="h-16 w-auto" variant="dark" /></div>
       </div>
       
-      <div className="md:col-span-3 xl:col-span-1 flex flex-col items-center justify-center p-4 min-h-screen">
+      {/* Right Panel */}
+      <div className="flex flex-col items-center justify-center p-6 sm:p-10 min-h-full">
           <main className="w-full max-w-md">
-            <div className="flex md:hidden justify-center items-center gap-4 mb-6"><UfloLogo className="h-12 w-auto" /><MiPanelLogo className="h-12 w-auto" /></div>
-            <div className="bg-white rounded-xl shadow-xl border border-slate-200/80 p-6 sm:p-10">
-                <div className="text-center mb-6">
-                    <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 animate-fade-in-up" style={{ animationDelay: '400ms' }}>Acceso de Estudiantes</h2>
-                    <p className="text-slate-500 mt-1 animate-fade-in-up" style={{ animationDelay: '500ms' }}>Accede a tu cuenta o regístrate.</p>
-                </div>
-                <div className="p-1 bg-slate-100 rounded-lg flex items-center mb-6 ring-1 ring-slate-200/50 animate-fade-in-up" style={{ animationDelay: '600ms' }}>
-                    <button onClick={() => handleModeChange('login')} className={`w-full py-2.5 text-sm font-semibold rounded-md transition-all duration-300 ${mode === 'login' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Iniciar Sesión</button>
-                    <button onClick={() => handleModeChange('register')} className={`w-full py-2.5 text-sm font-semibold rounded-md transition-all duration-300 ${mode === 'register' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Crear Usuario</button>
+            <div className="flex md:hidden justify-center items-center gap-4 mb-8"><UfloLogo className="h-12 w-auto" /><MiPanelLogo className="h-12 w-auto" /></div>
+            
+            <div className="text-left mb-8">
+                <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 animate-fade-in-up" style={{ animationDelay: '400ms' }}>Acceso de Estudiantes</h2>
+                <p className="text-slate-500 mt-1 animate-fade-in-up" style={{ animationDelay: '500ms' }}>Accede a tu cuenta o regístrate para comenzar.</p>
+            </div>
+            
+            <div className="p-1 bg-slate-100 rounded-lg flex items-center mb-8 ring-1 ring-slate-200/50 animate-fade-in-up" style={{ animationDelay: '600ms' }}>
+                <button onClick={() => handleModeChange('login')} className={`w-full py-2.5 text-sm font-semibold rounded-md transition-all duration-300 ${mode === 'login' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700'}`}>Iniciar Sesión</button>
+                <button onClick={() => handleModeChange('register')} className={`w-full py-2.5 text-sm font-semibold rounded-md transition-all duration-300 ${mode === 'register' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700'}`}>Crear Usuario</button>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="animate-fade-in-up" style={{ animationDelay: '700ms' }}>
+                  <div className="relative">
+                    <AuthInput id="legajo" type="text" value={legajo} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLegajo(e.target.value)} placeholder="Número de Legajo" icon="badge" disabled={isLoading} autoComplete="username"/>
+                    { mode === 'register' && (
+                       <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                        {legajoCheckState === 'loading' && <div className="border-2 border-slate-200 border-t-blue-500 rounded-full w-5 h-5 animate-spin"></div>}
+                        {legajoCheckState === 'success' && <span className="material-icons text-green-500">check_circle</span>}
+                        {legajoCheckState === 'error' && <span className="material-icons text-rose-500">error</span>}
+                       </div>
+                    )}
+                  </div>
+                  { mode === 'register' && legajoMessage && (
+                    <p className={`text-xs mt-2 px-1 ${legajoCheckState === 'error' ? 'text-rose-600' : 'text-slate-500'}`}>{legajoMessage}</p>
+                  )}
                 </div>
                 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="animate-fade-in-up" style={{ animationDelay: '700ms' }}>
-                      <div className="relative">
-                        <AuthInput id="legajo" type="text" value={legajo} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLegajo(e.target.value)} placeholder="Número de Legajo" icon="badge" disabled={isLoading} autoComplete="username"/>
-                        { mode === 'register' && (
-                           <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                            {legajoCheckState === 'loading' && <div className="border-2 border-slate-200 border-t-blue-500 rounded-full w-5 h-5 animate-spin"></div>}
-                            {legajoCheckState === 'success' && <span className="material-icons text-green-500">check_circle</span>}
-                            {legajoCheckState === 'error' && <span className="material-icons text-rose-500">error</span>}
-                           </div>
-                        )}
-                      </div>
-                      { mode === 'register' && legajoMessage && (
-                        <p className={`text-xs mt-2 px-1 ${legajoCheckState === 'error' ? 'text-rose-600' : 'text-slate-500'}`}>{legajoMessage}</p>
-                      )}
+                {mode === 'register' && legajoCheckState === 'success' && foundStudent && (
+                    <div className="space-y-4 animate-fade-in-up">
+                        {missingFields.length > 0 && <p className="text-sm font-semibold text-slate-700 border-t pt-4 mt-4">Completa tus datos para continuar:</p>}
+                        {missingFields.includes(FIELD_DNI_ESTUDIANTES) && <AuthInput name={FIELD_DNI_ESTUDIANTES} type="text" placeholder="DNI (sin puntos)" icon="badge" value={newData[FIELD_DNI_ESTUDIANTES] || ''} onChange={handleNewDataChange} disabled={isLoading} />}
+                        {missingFields.includes(FIELD_FECHA_NACIMIENTO_ESTUDIANTES) && <AuthInput name={FIELD_FECHA_NACIMIENTO_ESTUDIANTES} type="date" placeholder="Fecha de Nacimiento" icon="cake" value={newData[FIELD_FECHA_NACIMIENTO_ESTUDIANTES] || ''} onChange={handleNewDataChange} disabled={isLoading} />}
+                        {missingFields.includes(FIELD_CORREO_ESTUDIANTES) && <AuthInput name={FIELD_CORREO_ESTUDIANTES} type="email" placeholder="Correo" icon="email" value={newData[FIELD_CORREO_ESTUDIANTES] || ''} onChange={handleNewDataChange} disabled={isLoading} />}
+                        {missingFields.includes(FIELD_TELEFONO_ESTUDIANTES) && <AuthInput name={FIELD_TELEFONO_ESTUDIANTES} type="tel" placeholder="Teléfono (con cód. de área)" icon="phone" value={newData[FIELD_TELEFONO_ESTUDIANTES] || ''} onChange={handleNewDataChange} disabled={isLoading} />}
                     </div>
-                    
-                    {mode === 'register' && legajoCheckState === 'success' && foundStudent && (
-                        <div className="space-y-4 animate-fade-in-up">
-                            {missingFields.length > 0 && <p className="text-sm font-medium text-slate-700 border-t pt-4 mt-4">Completa tus datos para continuar:</p>}
-                            {missingFields.includes(FIELD_DNI_ESTUDIANTES) && <AuthInput name={FIELD_DNI_ESTUDIANTES} type="text" placeholder="DNI (sin puntos)" icon="badge" value={newData[FIELD_DNI_ESTUDIANTES] || ''} onChange={handleNewDataChange} disabled={isLoading} />}
-                            {missingFields.includes(FIELD_FECHA_NACIMIENTO_ESTUDIANTES) && <AuthInput name={FIELD_FECHA_NACIMIENTO_ESTUDIANTES} type="date" placeholder="Fecha de Nacimiento" icon="cake" value={newData[FIELD_FECHA_NACIMIENTO_ESTUDIANTES] || ''} onChange={handleNewDataChange} disabled={isLoading} />}
-                            {missingFields.includes(FIELD_CORREO_ESTUDIANTES) && <AuthInput name={FIELD_CORREO_ESTUDIANTES} type="email" placeholder="Correo" icon="email" value={newData[FIELD_CORREO_ESTUDIANTES] || ''} onChange={handleNewDataChange} disabled={isLoading} />}
-                            {missingFields.includes(FIELD_TELEFONO_ESTUDIANTES) && <AuthInput name={FIELD_TELEFONO_ESTUDIANTES} type="tel" placeholder="Teléfono (con cód. de área)" icon="phone" value={newData[FIELD_TELEFONO_ESTUDIANTES] || ''} onChange={handleNewDataChange} disabled={isLoading} />}
-                        </div>
-                    )}
+                )}
 
-                    <div className="relative animate-fade-in-up" style={{ animationDelay: '800ms' }}>
-                      <AuthInput id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)} placeholder="Contraseña" icon="lock" disabled={isLoading || (mode === 'register' && legajoCheckState !== 'success')} autoComplete={mode === 'login' ? 'current-password' : 'new-password'}/>
-                       <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 hover:text-slate-700" aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
-                         <span className="material-icons !text-xl">{showPassword ? 'visibility_off' : 'visibility'}</span>
-                       </button>
+                <div className="relative animate-fade-in-up" style={{ animationDelay: '800ms' }}>
+                  <AuthInput id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)} placeholder="Contraseña" icon="lock" disabled={isLoading || (mode === 'register' && legajoCheckState !== 'success')} autoComplete={mode === 'login' ? 'current-password' : 'new-password'}/>
+                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center px-4 text-slate-500 hover:text-slate-700" aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+                     <span className="material-icons !text-xl">{showPassword ? 'visibility_off' : 'visibility'}</span>
+                   </button>
+                </div>
+
+                {mode === 'register' && (
+                    <div className="relative animate-fade-in-up" style={{ animationDelay: '900ms' }}>
+                      <AuthInput id="confirmPassword" type={showPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)} placeholder="Confirmar Contraseña" icon="lock_person" disabled={isLoading || (mode === 'register' && legajoCheckState !== 'success')} autoComplete="new-password"/>
                     </div>
+                )}
 
-                    {mode === 'register' && (
-                        <div className="relative animate-fade-in-up" style={{ animationDelay: '900ms' }}>
-                          <AuthInput id="confirmPassword" type={showPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)} placeholder="Confirmar Contraseña" icon="lock_person" disabled={isLoading || (mode === 'register' && legajoCheckState !== 'success')} autoComplete="new-password"/>
-                        </div>
-                    )}
-
-                    {error && <p className="text-red-600 text-sm text-center pt-2">{error}</p>}
-                    
-                    <div className="pt-4 animate-fade-in-up" style={{ animationDelay: '1000ms' }}>
-                        <button type="submit" disabled={isLoading || (mode === 'register' && legajoCheckState !== 'success')} className="w-full bg-blue-600 text-white font-bold text-base py-3 px-6 rounded-lg transition-all duration-200 ease-in-out shadow-md hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-3">
-                            {isLoading && <div className="border-2 border-white/50 border-t-white rounded-full w-5 h-5 animate-spin"></div>}
-                            <span>{isLoading ? 'Procesando...' : (mode === 'login' ? 'Ingresar' : 'Crear Cuenta')}</span>
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </main>
+                {error && <p className="text-red-600 text-sm text-center pt-2">{error}</p>}
+                
+                <div className="pt-4 animate-fade-in-up" style={{ animationDelay: '1000ms' }}>
+                    <button type="submit" disabled={isLoading || (mode === 'register' && legajoCheckState !== 'success')} className="w-full bg-blue-600 text-white font-bold text-base py-3 px-6 rounded-lg transition-all duration-200 ease-in-out shadow-md hover:bg-blue-700 hover:-translate-y-0.5 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-y-0 flex items-center justify-center gap-3">
+                        {isLoading && <div className="border-2 border-white/50 border-t-white rounded-full w-5 h-5 animate-spin"></div>}
+                        <span>{isLoading ? 'Procesando...' : (mode === 'login' ? 'Ingresar' : 'Crear Cuenta')}</span>
+                    </button>
+                </div>
+            </form>
+          </main>
       </div>
     </div>
   );

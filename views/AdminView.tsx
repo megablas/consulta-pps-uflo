@@ -1,5 +1,4 @@
 import React, { useState, useCallback } from 'react';
-import Layout from '../components/Layout';
 import AdminSearch from '../components/AdminSearch';
 import SeguroGenerator from '../components/SeguroGenerator';
 import Dashboard from '../components/Dashboard';
@@ -101,7 +100,7 @@ const AdminView: React.FC = () => {
     ];
 
     return (
-        <Layout>
+        <>
              <Modal
                 isOpen={!!modalInfo}
                 title={modalInfo?.title || ''}
@@ -116,7 +115,7 @@ const AdminView: React.FC = () => {
                     onTabClose={handleCloseTab}
                 />
             </Card>
-        </Layout>
+        </>
     );
 };
 

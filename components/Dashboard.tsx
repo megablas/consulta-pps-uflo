@@ -3,10 +3,10 @@ import React, { useState, useEffect } from 'react';
 import CriteriosPanel from './CriteriosPanel';
 import PracticasTable from './PracticasTable';
 import SolicitudesList from './SolicitudesList';
-import Loader from './Loader';
 import EmptyState from './EmptyState';
 import Tabs from './Tabs';
 import Card from './Card';
+import { CriteriosPanelSkeleton, TableSkeleton } from './Skeletons';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -29,7 +29,23 @@ const Dashboard: React.FC = () => {
     }, [fetchStudentData]);
 
     if (isLoading && !initialLoadCompleted) {
-        return <Loader />;
+        return (
+            <div className="space-y-8">
+                <CriteriosPanelSkeleton />
+                <Card>
+                    <div className="border-b border-slate-200">
+                         <div className="-mb-px flex space-x-6">
+                            <div className="whitespace-nowrap py-4 px-1 border-b-2 font-semibold text-sm border-blue-500 text-blue-600">
+                                Cargando...
+                            </div>
+                         </div>
+                    </div>
+                    <div className="pt-6">
+                        <TableSkeleton />
+                    </div>
+                </Card>
+            </div>
+        );
     }
 
     if (error) {

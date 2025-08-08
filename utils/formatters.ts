@@ -24,7 +24,7 @@ export function getEspecialidadClasses(especialidad?: string): string {
 
     switch (normalizedEspecialidad) {
         case 'clinica':
-            return `${baseClasses} bg-blue-100 text-blue-800 border-blue-200`;
+            return `${baseClasses} bg-green-100 text-green-800 border-green-200`;
         case 'educacional':
             return `${baseClasses} bg-sky-100 text-sky-800 border-sky-200`;
         case 'laboral':

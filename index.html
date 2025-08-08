@@ -12,10 +12,12 @@
     <style>
       body {
         font-family: 'Inter', sans-serif;
-        background-color: #f8fafc; /* bg-slate-50 */
-        /* Subtle gradient + dot pattern for a more premium feel */
-        background-image: radial-gradient(theme(colors.blue.100 / 0.5) 1px, transparent 1px), linear-gradient(to bottom, theme(colors.white), theme(colors.slate.50));
-        background-size: 30px 30px, 100% 100%;
+        /* Updated professional background */
+        background-color: #f9fafb; /* bg-gray-50 */
+        background-image:
+          linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+        background-size: 20px 20px;
       }
       html, body {
         width: 100%;
@@ -29,36 +31,23 @@
 
       /* -- Custom Animations -- */
       @keyframes fadeInUp {
-        from { opacity: 0; transform: translateY(16px); }
+        from { opacity: 0; transform: translateY(20px); }
         to { opacity: 1; transform: translateY(0); }
       }
       .animate-fade-in-up {
-        animation: fadeInUp 0.5s ease-out forwards;
+        animation: fadeInUp 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
         opacity: 0; /* Start hidden */
+        will-change: transform, opacity;
       }
       
       /* Subtle scale-in for modals and cards */
       @keyframes scaleIn {
-        from { opacity: 0; transform: scale(0.97); }
+        from { opacity: 0; transform: scale(0.96); }
         to { opacity: 1; transform: scale(1); }
       }
        .animate-scale-in {
-        animation: scaleIn 0.3s ease-out forwards;
-      }
-
-      /* Glowing pulse for important CTAs */
-      @keyframes pulse-glow {
-        0%, 100% { 
-          transform: scale(1);
-          box-shadow: 0 0 0 0 theme(colors.blue.500 / 0.7);
-        }
-        50% { 
-          transform: scale(1.02);
-          box-shadow: 0 0 12px 5px theme(colors.blue.500 / 0.3);
-        }
-      }
-      .animate-pulse-glow {
-        animation: pulse-glow 3s infinite ease-in-out;
+        animation: scaleIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        will-change: transform, opacity;
       }
 
       /* Shimmer effect for loading placeholders */
@@ -71,20 +60,10 @@
         }
       }
       .animate-background-shine {
-        animation: background-shine 2s linear infinite;
-        background: linear-gradient(110deg, rgba(255,255,255,0) 8%, theme(colors.white / 0.8) 18%, rgba(255,255,255,0) 33%);
+        animation: background-shine 1.5s linear infinite;
+        background: linear-gradient(110deg, theme(colors.slate.200/50) 8%, theme(colors.slate.100/80) 18%, theme(colors.slate.200/50) 33%);
         background-size: 200% 100%;
-      }
-
-
-      @keyframes gradient-move {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-      }
-      .animate-gradient-move {
-        background-size: 200% 200%;
-        animation: gradient-move 15s ease infinite;
+        will-change: background-position;
       }
       
       /* -- Prose styles for AI-generated content -- */
@@ -133,22 +112,20 @@
 <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@18.2.0",
-    "react-dom": "https://esm.sh/react-dom@18.2.0",
-    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-    "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime",
-    "xlsx": "https://esm.sh/xlsx@0.18.5",
-    "@google/genai": "https://esm.sh/@google/genai",
+    "react": "https://esm.sh/react@^19.1.1",
     "react-dom/": "https://esm.sh/react-dom@^19.1.1/",
     "react/": "https://esm.sh/react@^19.1.1/",
+    "xlsx": "https://esm.sh/xlsx@^0.18.5",
+    "@google/genai": "https://esm.sh/@google/genai",
+    "react-dom": "https://esm.sh/react-dom@^19.1.1",
     "vite": "https://esm.sh/vite@^7.1.0",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.0.0"
   }
 }
 </script>
 </head>
-<body class="bg-slate-50">
+<body class="bg-gray-50 text-slate-800">
     <div id="root"></div>
-    <script type="module" src="./index.tsx"></script>
+    <script type="module" src="/index.tsx"></script>
 </body>
 </html>

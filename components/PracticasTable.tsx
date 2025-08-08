@@ -18,10 +18,10 @@ const SortableHeader: React.FC<{
   const icon = isActive ? (sortConfig.direction === 'ascending' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more';
 
   return (
-    <th className={`px-4 py-4 ${className} cursor-pointer select-none group transition-colors hover:bg-slate-200/50 text-slate-600 font-bold text-sm tracking-wider uppercase`} onClick={() => requestSort(sortKey)}>
+    <th className={`px-4 py-3 ${className} cursor-pointer select-none group transition-colors hover:bg-slate-100 text-slate-500 font-semibold text-xs tracking-wider uppercase`} onClick={() => requestSort(sortKey)}>
       <div className="flex items-center justify-center gap-2">
         <span>{label}</span>
-        <span className={`material-icons !text-base transition-opacity ${isActive ? 'opacity-90' : 'opacity-40 group-hover:opacity-70'}`}>{icon}</span>
+        <span className={`material-icons !text-base transition-opacity ${isActive ? 'opacity-90 text-slate-700' : 'opacity-40 group-hover:opacity-70'}`}>{icon}</span>
       </div>
     </th>
   );
@@ -110,16 +110,16 @@ const PracticasTable: React.FC = () => {
   }
 
   return (
-      <div className="border rounded-lg overflow-x-auto border-slate-200/70 bg-white shadow-md">
+      <div className="border rounded-xl overflow-x-auto border-slate-200/70 bg-white">
         <table className="w-full min-w-[800px]">
-          <thead className="bg-slate-100/70 border-b-2 border-slate-200">
+          <thead className="bg-slate-50">
             <tr>
               <SortableHeader label="Institución" sortKey="institucion" sortConfig={sortConfig} requestSort={requestSort} className="text-left w-2/6" />
               <SortableHeader label="Especialidad" sortKey="especialidad" sortConfig={sortConfig} requestSort={requestSort} />
               <SortableHeader label="Horas" sortKey="horas" sortConfig={sortConfig} requestSort={requestSort} />
               <SortableHeader label="Periodo" sortKey="fechaInicio" sortConfig={sortConfig} requestSort={requestSort} />
               <SortableHeader label="Estado" sortKey="estado" sortConfig={sortConfig} requestSort={requestSort} />
-              <th className="px-4 py-4 text-center text-slate-600 font-bold text-sm tracking-wider uppercase">
+              <th className="px-4 py-3 text-center text-slate-500 font-semibold text-xs tracking-wider uppercase">
                 <div className="flex items-center justify-center gap-2">
                     <span>Nota</span>
                     <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded-full border border-blue-200/80">Nuevo</span>
@@ -127,8 +127,8 @@ const PracticasTable: React.FC = () => {
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200/60">
-            {sortedPracticas.map((practica) => {
+          <tbody>
+            {sortedPracticas.map((practica, index) => {
               const institucionRaw = practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
               const institucion = Array.isArray(institucionRaw) ? institucionRaw.join(', ') : institucionRaw;
               const statusRaw = practica[FIELD_ESTADO_PRACTICA];
@@ -136,15 +136,15 @@ const PracticasTable: React.FC = () => {
               const statusVisuals = getStatusVisuals(status);
 
               return (
-              <tr key={practica.id} className="transition-colors duration-200 odd:bg-white even:bg-slate-50/50 hover:!bg-blue-50/50">
+              <tr key={practica.id} className="transition-colors duration-200 hover:bg-slate-50/50 border-t border-slate-200/70">
                 <td className="p-4 align-middle text-sm text-slate-800 font-medium break-words">{institucion || 'N/A'}</td>
                 <td className="p-4 align-middle text-center">
                     <span className={getEspecialidadClasses(practica[FIELD_ESPECIALIDAD_PRACTICAS])}>
                         {practica[FIELD_ESPECIALIDAD_PRACTICAS] || 'N/A'}
                     </span>
                 </td>
-                <td className="p-4 text-sm text-center align-middle text-slate-700 font-semibold">{practica[FIELD_HORAS_PRACTICAS] || 0}</td>
-                <td className="p-4 text-sm text-center align-middle text-slate-700">
+                <td className="p-4 text-sm text-center align-middle text-slate-600 font-semibold">{practica[FIELD_HORAS_PRACTICAS] || 0}</td>
+                <td className="p-4 text-sm text-center align-middle text-slate-600">
                   {formatDate(practica[FIELD_FECHA_INICIO_PRACTICAS])} - {formatDate(practica[FIELD_FECHA_FIN_PRACTICAS])}
                 </td>
                 <td className="p-4 align-middle text-center">
@@ -157,7 +157,7 @@ const PracticasTable: React.FC = () => {
                     <select
                         value={practica[FIELD_NOTA_PRACTICAS] || 'Sin calificar'}
                         onChange={(e) => handleLocalNotaChange(practica.id, e.target.value)}
-                        className={`w-full text-sm rounded-md border-slate-300/80 p-2 text-slate-800 bg-white shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all ${savingNotaId === practica.id ? 'ring-2 ring-blue-400 border-blue-400' : ''}`}
+                        className={`w-full text-sm rounded-lg border-slate-300/80 p-2 text-slate-800 bg-white shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all ${savingNotaId === practica.id ? 'ring-2 ring-blue-400 border-blue-400' : ''}`}
                         aria-label={`Calificación para ${institucion}`}
                     >
                         {NOTA_OPTIONS.map(option => (

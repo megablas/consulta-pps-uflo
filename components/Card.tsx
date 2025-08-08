@@ -2,8 +2,8 @@ import React from 'react';
 
 interface CardProps {
   children: React.ReactNode;
-  title?: string;
-  description?: string;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
   icon?: string;
   actions?: React.ReactNode;
   className?: string;
@@ -25,7 +25,7 @@ const Card: React.FC<CardProps> = ({
   const TitleTag = titleAs;
 
   return (
-    <div className={`bg-white rounded-2xl shadow-lg shadow-slate-200/50 p-6 sm:p-8 border border-slate-200/60 ${className}`}>
+    <div className={`bg-white rounded-2xl shadow-md shadow-slate-200/40 p-6 sm:p-8 border border-slate-200/60 ${className}`}>
       {(title || description || actions) && (
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
           {(title || description) && (

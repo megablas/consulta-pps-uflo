@@ -9,41 +9,31 @@ interface CriterionCardProps {
 const CriterionCard: React.FC<CriterionCardProps> = ({ children, isComplete, controls }) => {
   return (
     <div 
+      style={{ willChange: 'transform, box-shadow' }}
       className={`
         bg-white border rounded-xl p-5 flex flex-col justify-between 
         transition-all duration-300 ease-in-out 
-        hover:shadow-xl hover:-translate-y-1.5 
+        hover:shadow-xl hover:-translate-y-1
         ${isComplete 
-          ? 'border-blue-200/80 shadow-lg shadow-blue-100/50' 
-          : 'border-slate-200/80 shadow-md shadow-slate-100/50'
+          ? 'border-blue-300/80 shadow-lg shadow-blue-500/10' 
+          : 'border-slate-200/80 shadow-md shadow-slate-500/5'
         }
       `}
     >
-      <div className="flex-grow flex flex-col">
+      <div className="flex-grow flex flex-col relative">
+        {isComplete && (
+           <div className="absolute top-0 right-0 bg-blue-500 text-white rounded-full h-7 w-7 flex items-center justify-center -mt-2 -mr-2 shadow-md">
+             <span className="material-icons !text-lg">check</span>
+           </div>
+        )}
         {children}
       </div>
 
       {controls && (
-        <div className="mt-4">
+        <div className="mt-4 pt-4 border-t border-slate-200/70">
           {controls}
         </div>
       )}
-
-      <div className="mt-4 pt-4 border-t border-slate-200/60 flex items-center justify-end">
-         <div 
-           className={`
-             flex items-center gap-2 text-xs font-semibold px-2.5 py-1 rounded-full
-             transition-colors
-             ${isComplete 
-               ? 'text-blue-700 bg-blue-100' 
-               : 'text-slate-500 bg-slate-100'
-             }
-           `}
-         >
-            <div className={`w-2 h-2 rounded-full transition-colors ${isComplete ? 'bg-blue-500' : 'bg-slate-400'}`}></div>
-            <span>{isComplete ? 'Completo' : 'Pendiente'}</span>
-         </div>
-      </div>
     </div>
   );
 };
