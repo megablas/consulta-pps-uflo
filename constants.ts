@@ -38,6 +38,7 @@ export const FIELD_DNI_ESTUDIANTES = 'DNI';
 export const FIELD_FECHA_NACIMIENTO_ESTUDIANTES = 'Fecha de Nacimiento';
 export const FIELD_CORREO_ESTUDIANTES = 'Correo';
 export const FIELD_TELEFONO_ESTUDIANTES = 'Teléfono';
+export const FIELD_GENERO_ESTUDIANTES = 'Género';
 
 // Field names for AuthUsers Table
 export const FIELD_LEGAJO_AUTH = 'Legajo';

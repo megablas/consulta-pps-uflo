@@ -1,6 +1,7 @@
 
 
 
+
 export interface AirtableRecord<T> {
   id: string;
   createdTime: string;
@@ -33,6 +34,7 @@ export interface EstudianteFields {
   [key: string]: any;
   'Legajo'?: string;
   'Nombre'?: string;
+  'Género'?: 'Varon' | 'Mujer' | 'Otro';
   'Orientación Elegida'?: string;
   'DNI'?: string;
   'Fecha de Nacimiento'?: string; // Date string

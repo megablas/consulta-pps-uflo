@@ -10,6 +10,7 @@ import {
     FIELD_HORAS_ACREDITADAS_LANZAMIENTOS,
 } from '../constants';
 import { formatDate, getEspecialidadClasses, normalizeStringForComparison } from '../utils/formatters';
+import { useData } from '../contexts/DataContext';
 
 interface ConvocatoriaCardProps {
   lanzamiento: LanzamientoPPS;
@@ -30,6 +31,7 @@ const InfoRow: React.FC<{ icon: string; text: string | undefined; }> = ({ icon, 
 
 
 const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInscribir, enrollmentStatus, isEnrolling }) => {
+  const { userGender } = useData();
   const { 
     [FIELD_NOMBRE_PPS_LANZAMIENTOS]: nombre, 
     [FIELD_ORIENTACION_LANZAMIENTOS]: orientacion,
@@ -81,19 +83,40 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInsc
         statusStyles = 'bg-indigo-50 border-indigo-200/80';
         textStyles = 'text-indigo-700';
         icon = 'verified';
-        title = '¡Seleccionado!';
-        subtitle = 'Has sido seleccionado/a.';
+        if (userGender === 'femenino') {
+            title = '¡Seleccionada!';
+            subtitle = 'Has sido seleccionada.';
+        } else if (userGender === 'masculino') {
+            title = '¡Seleccionado!';
+            subtitle = 'Has sido seleccionado.';
+        } else {
+            title = '¡Seleccionado/a!';
+            subtitle = 'Has sido seleccionado/a.';
+        }
     } else if (normalizedStatus === 'inscripto') {
         statusStyles = 'bg-blue-50 border-blue-200/80';
         textStyles = 'text-blue-700';
         icon = 'check_circle';
-        title = '¡Inscripto!';
+        if (userGender === 'femenino') {
+            title = '¡Inscripta!';
+        } else if (userGender === 'masculino') {
+            title = '¡Inscripto!';
+        } else {
+            title = '¡Inscripto/a!';
+        }
         subtitle = 'Tu postulación fue registrada.';
     } else if (normalizedStatus.includes('no seleccionado')) {
         statusStyles = 'bg-rose-50 border-rose-200/80';
         textStyles = 'text-rose-700';
         icon = 'cancel';
-        subtitle = 'No fuiste seleccionado/a esta vez.';
+        title = 'No Seleccionado';
+        if (userGender === 'femenino') {
+            subtitle = 'No fuiste seleccionada esta vez.';
+        } else if (userGender === 'masculino') {
+            subtitle = 'No fuiste seleccionado esta vez.';
+        } else {
+            subtitle = 'No fuiste seleccionado/a esta vez.';
+        }
     }
 
     return (

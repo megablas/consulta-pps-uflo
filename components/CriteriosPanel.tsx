@@ -15,7 +15,8 @@ const CriteriosPanel: React.FC = () => {
     selectedOrientacion, 
     handleOrientacionChange, 
     showSaveConfirmation,
-    studentNameForPanel
+    studentNameForPanel,
+    userGender
   } = useData();
   const { isSuperUserMode } = useAuth();
 
@@ -44,8 +45,17 @@ const CriteriosPanel: React.FC = () => {
       </div>
     </>
   );
+  
+  const getWelcomeMessage = () => {
+    const name = studentNameForPanel;
+    switch (userGender) {
+        case 'masculino': return `¡Bienvenido, ${name}!`;
+        case 'femenino': return `¡Bienvenida, ${name}!`;
+        default: return `¡Bienvenido/a, ${name}!`;
+    }
+  };
 
-  const title = isSuperUserMode ? `Panel de: ${studentNameForPanel}` : `¡Bienvenido/a, ${studentNameForPanel}!`;
+  const title = isSuperUserMode ? `Panel de: ${studentNameForPanel}` : getWelcomeMessage();
   const description = isSuperUserMode 
     ? 'Este es el checklist del estudiante para finalizar el recorrido de prácticas.'
     : 'Este es tu checklist para finalizar el recorrido de prácticas.';

@@ -28,6 +28,18 @@ const nameSchema = {
     required: ['nombre', 'apellido'],
 };
 
+const genderSchema = {
+    type: Type.OBJECT,
+    properties: {
+        gender: {
+            type: Type.STRING,
+            description: 'The determined gender of the person. Should be one of: "masculino", "femenino", or "neutro".',
+        },
+    },
+    required: ['gender'],
+};
+
+
 const simpleNameSplit = (fullName: string): { nombre: string; apellido: string } => {
     let nombre = '';
     let apellido = '';
@@ -89,5 +101,44 @@ export async function splitNameWithAI(fullName: string): Promise<{ nombre: strin
     } catch (error) {
         console.error(`AI name split failed for "${fullName}". Falling back to simple logic. Error:`, error);
         return simpleNameSplit(fullName);
+    }
+}
+
+/**
+ * Determines the gender of a person based on their full name using the Gemini API.
+ * @param fullName The full name to analyze.
+ * @returns A string: 'masculino', 'femenino', or 'neutro'.
+ */
+export async function getGenderFromFullName(fullName: string): Promise<'masculino' | 'femenino' | 'neutro'> {
+    if (!fullName || !fullName.trim()) {
+        return 'neutro';
+    }
+
+    try {
+        const client = getAiClient();
+        const response = await client.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: `Analyze the following full name and determine if it is most likely masculine, feminine, or neutral. Answer in Spanish. Full Name: "${fullName}"`,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: genderSchema,
+                temperature: 0,
+            },
+        });
+
+        const jsonStr = response.text.trim();
+        const parsed = JSON.parse(jsonStr);
+
+        const gender = parsed.gender;
+        if (gender === 'masculino' || gender === 'femenino' || gender === 'neutro') {
+            return gender;
+        }
+        
+        console.warn(`AI gender detection for "${fullName}" returned invalid value. Falling back.`, gender);
+        return 'neutro';
+
+    } catch (error) {
+        console.error(`AI gender detection failed for "${fullName}". Falling back to neutral. Error:`, error);
+        return 'neutro';
     }
 }
