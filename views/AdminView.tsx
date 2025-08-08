@@ -11,8 +11,11 @@ import { fetchAirtableData } from '../services/airtableService';
 import { AIRTABLE_TABLE_NAME_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES, FIELD_NOMBRE_ESTUDIANTES } from '../constants';
 import type { EstudianteFields } from '../types';
 
-interface StudentTab extends AuthUser {
+interface StudentTab {
     id: string; // legajo
+    legajo: string;
+    nombre: string;
+    isSuperUser?: boolean;
 }
 
 const AdminView: React.FC = () => {
