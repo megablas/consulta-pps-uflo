@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import type { LanzamientoPPS } from '../types';
 import { 
     FIELD_NOMBRE_PPS_LANZAMIENTOS,
@@ -30,31 +30,6 @@ const InfoRow: React.FC<{ icon: string; text: string | undefined; }> = ({ icon, 
 
 
 const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInscribir, isEnrolled, isEnrolling }) => {
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const card = cardRef.current;
-    if (!card) return;
-
-    const rect = card.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const { width, height } = rect;
-
-    const rotateX = (y / height - 0.5) * -8; // More subtle rotation
-    const rotateY = (x / width - 0.5) * 8;   // More subtle rotation
-    
-    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.015, 1.015, 1.015)`;
-    card.style.setProperty('--mouse-x', `${x}px`);
-    card.style.setProperty('--mouse-y', `${y}px`);
-  };
-
-  const handleMouseLeave = () => {
-    const card = cardRef.current;
-    if (!card) return;
-    card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
-  };
-
   const { 
     [FIELD_NOMBRE_PPS_LANZAMIENTOS]: nombre, 
     [FIELD_ORIENTACION_LANZAMIENTOS]: orientacion,
@@ -67,28 +42,13 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInsc
 
   return (
     <div 
-      ref={cardRef}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      className="group relative bg-white p-5 rounded-2xl shadow-md shadow-slate-200/50 border border-slate-200/70
+      className="bg-white p-5 rounded-2xl shadow-md shadow-slate-200/50 border border-slate-200/70
                  flex flex-col lg:flex-row items-start lg:items-center gap-6 
-                 transition-transform duration-300 ease-out
-                 transform-style-preserve-3d"
-      style={{ willChange: 'transform' }}
+                 transition-all duration-300 ease-in-out hover:shadow-xl hover:-translate-y-1"
+      style={{ willChange: 'transform, box-shadow' }}
     >
-      {/* Dynamic Glow Effect */}
-      <div 
-        className="absolute inset-0 rounded-2xl transition-opacity duration-500 opacity-0 group-hover:opacity-100"
-        style={{
-          background: `radial-gradient(500px circle at var(--mouse-x) var(--mouse-y), theme(colors.sky.100/0.5), transparent 80%)`,
-          zIndex: 0,
-        }}
-      />
-      
-      {/* Content now sits directly inside, on top of the glow */}
-      
       {/* Left Side: Info */}
-      <div className="flex-grow w-full relative z-10">
+      <div className="flex-grow w-full">
         <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-3">
             <h3 className="text-slate-900 font-bold text-lg leading-tight pr-4">
                 {nombre || 'Convocatoria sin nombre'}
@@ -104,7 +64,7 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInsc
       </div>
       
       {/* Right Side: Action */}
-      <div className="w-full lg:w-56 flex-shrink-0 flex flex-col items-center justify-center lg:border-l lg:pl-6 border-slate-200/60 self-stretch min-h-[80px] relative z-10">
+      <div className="w-full lg:w-56 flex-shrink-0 flex flex-col items-center justify-center lg:border-l lg:pl-6 border-slate-200/60 self-stretch min-h-[80px]">
         {isEnrolled ? (
            <div className="text-center w-full flex flex-col items-center justify-center h-full p-4 bg-blue-50 rounded-lg border border-blue-200/80">
               <div className="flex items-center gap-2 text-blue-700 font-bold text-base">
@@ -120,7 +80,7 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInsc
             className={`w-full font-bold text-base py-3 px-5 rounded-xl transition-all duration-200 ease-in-out shadow-lg flex items-center justify-center gap-2.5
               ${isEnrolling 
                 ? 'bg-slate-400 text-white cursor-wait'
-                : 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transform hover:scale-105 active:scale-100'
+                : 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
               }`}
             aria-label={isEnrolled ? `Inscripto en ${nombre}` : `Postularme para ${nombre}`}
           >
