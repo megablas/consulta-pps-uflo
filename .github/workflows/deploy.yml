@@ -1,0 +1,61 @@
+name: Deploy to GitHub Pages
+
+on:
+  # Se ejecuta en cada push a la rama 'main'
+  push:
+    branches:
+      - main
+  # Te permite ejecutar este workflow manualmente desde la pestaña Actions en GitHub
+  workflow_dispatch:
+
+# Permisos necesarios para que el job pueda interactuar con GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Permite solo un despliegue concurrente, cancelando los anteriores si se hace un nuevo push
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  # Job único para construir y desplegar
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        # Clona tu repositorio para que el workflow pueda acceder a tu código
+        uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        # Configura el entorno de Node.js para poder instalar dependencias y construir
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18 # Puedes usar 18 o 20
+
+      - name: Install dependencies
+        # Instala las dependencias definidas en tu package.json
+        run: npm install
+      
+      - name: Build project
+        # Ejecuta el script 'build' de tu package.json (que llama a 'vite build')
+        run: npm run build
+      
+      - name: Setup Pages
+        # Configura el entorno para el despliegue a GitHub Pages
+        uses: actions/configure-pages@v5
+      
+      - name: Upload artifact
+        # Sube el directorio 'dist' (el resultado de la compilación) como un artefacto
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist'
+          
+      - name: Deploy to GitHub Pages
+        # Despliega el artefacto subido a tu sitio de GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
