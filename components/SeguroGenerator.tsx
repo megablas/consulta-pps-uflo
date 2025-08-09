@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { fetchAirtableData } from '../services/airtableService';
-import { formatDate, normalizeStringForComparison, formatPhoneNumber } from '../utils/formatters';
+import { formatDate, normalizeStringForComparison } from '../utils/formatters';
 import type { Convocatoria, ConvocatoriaFields, EstudianteFields } from '../types';
 import {
     AIRTABLE_TABLE_NAME_CONVOCATORIAS, FIELD_NOMBRE_PPS_CONVOCATORIAS,
@@ -36,6 +36,13 @@ type StudentForReview = {
     duracion: string; // for excel
     tutor: string; // for excel
 };
+
+// Function moved here to resolve a build error
+function formatPhoneNumber(phone?: string): string {
+  if (!phone) return '';
+  // Removes '+54', an optional space, an optional '9', and another optional space from the start.
+  return phone.replace(/^\+54\s?9?\s?/, '').trim();
+}
 
 const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
     const [step, setStep] = useState<'selection' | 'review'>('selection');
