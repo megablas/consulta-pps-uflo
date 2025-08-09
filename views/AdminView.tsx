@@ -26,8 +26,10 @@ interface StudentTab {
 // Function moved here to resolve a build error
 function formatPhoneNumber(phone?: string): string {
   if (!phone) return '';
-  // Removes '+54', an optional space, an optional '9', and another optional space from the start.
-  return phone.replace(/^\+54\s?9?\s?/, '').trim();
+  // Removes a leading '+' and, if present, the Argentine country code '54' and mobile '9'.
+  // Example: +54 9 11... -> 11...
+  // Example: +11... -> 11...
+  return phone.replace(/^\+(54\s?9?\s?)?/, '').trim();
 }
 
 const AdminView: React.FC = () => {
@@ -89,7 +91,7 @@ const AdminView: React.FC = () => {
 
     const handleCleanPhoneNumbers = useCallback(async () => {
         const confirmation = window.confirm(
-            "¿Estás seguro de que quieres limpiar los números de teléfono en la tabla 'Estudiantes'?\n\nEsta acción eliminará el prefijo '+54' de todos los números de teléfono. Esta operación no se puede deshacer."
+            "¿Estás seguro de que quieres limpiar los números de teléfono en la tabla 'Estudiantes'?\n\nEsta acción eliminará cualquier prefijo '+' al inicio de los números (incluyendo '+54'). Es útil para estandarizar los datos. Esta operación no se puede deshacer."
         );
         if (!confirmation) return;
     
@@ -117,7 +119,8 @@ const AdminView: React.FC = () => {
             const recordsToUpdate = allStudents
                 .map(record => {
                     const phone = record.fields[FIELD_TELEFONO_ESTUDIANTES];
-                    if (phone && typeof phone === 'string' && /^\+54/.test(phone)) {
+                    // Check for any number starting with '+'
+                    if (phone && typeof phone === 'string' && /^\+/.test(phone)) {
                         const newPhone = formatPhoneNumber(phone);
                         if (newPhone !== phone) {
                             return { id: record.id, fields: { [FIELD_TELEFONO_ESTUDIANTES]: newPhone }};
@@ -192,7 +195,7 @@ const AdminView: React.FC = () => {
                     <div className="p-5 border-l-4 border-rose-400 bg-rose-50 rounded-r-lg">
                         <h4 className="font-semibold text-rose-800 text-lg">Limpiar Números de Teléfono</h4>
                         <p className="text-sm text-rose-700 mt-1 max-w-xl">
-                            Esta acción recorrerá todos los registros en la tabla 'Estudiantes' y eliminará el prefijo '+54' de los números de teléfono. 
+                            Esta acción recorrerá todos los registros en la tabla 'Estudiantes' y eliminará cualquier prefijo '+' al inicio de los números de teléfono (incluyendo el código de país como '+54').
                             Es útil para estandarizar los datos. <strong>Esta acción es irreversible.</strong>
                         </p>
                         <button

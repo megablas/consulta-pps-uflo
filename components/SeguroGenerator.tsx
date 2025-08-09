@@ -40,8 +40,10 @@ type StudentForReview = {
 // Function moved here to resolve a build error
 function formatPhoneNumber(phone?: string): string {
   if (!phone) return '';
-  // Removes '+54', an optional space, an optional '9', and another optional space from the start.
-  return phone.replace(/^\+54\s?9?\s?/, '').trim();
+  // Removes a leading '+' and, if present, the Argentine country code '54' and mobile '9'.
+  // Example: +54 9 11... -> 11...
+  // Example: +11... -> 11...
+  return phone.replace(/^\+(54\s?9?\s?)?/, '').trim();
 }
 
 const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
