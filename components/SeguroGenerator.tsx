@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { fetchAirtableData } from '../services/airtableService';
-import { formatDate, normalizeStringForComparison } from '../utils/formatters';
+import { formatDate, normalizeStringForComparison, formatPhoneNumber } from '../utils/formatters';
 import type { Convocatoria, ConvocatoriaFields, EstudianteFields } from '../types';
 import {
     AIRTABLE_TABLE_NAME_CONVOCATORIAS, FIELD_NOMBRE_PPS_CONVOCATORIAS,
     FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, FIELD_FECHA_INICIO_CONVOCATORIAS, FIELD_FECHA_FIN_CONVOCATORIAS,
     FIELD_DIRECCION_CONVOCATORIAS, FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS, FIELD_ORIENTACION_CONVOCATORIAS,
     AIRTABLE_TABLE_NAME_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES, FIELD_NOMBRE_ESTUDIANTES,
-    FIELD_DNI_ESTUDIANTES, FIELD_HORARIO_FORMULA_CONVOCATORIAS
+    FIELD_DNI_ESTUDIANTES, FIELD_HORARIO_FORMULA_CONVOCATORIAS, FIELD_CORREO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES
 } from '../constants';
 import Loader from './Loader';
 import EmptyState from './EmptyState';
@@ -26,6 +26,8 @@ type StudentForReview = {
     apellido: string;
     dni: string;
     legajo: string;
+    correo: string;
+    telefono: string;
     institucion: string;
     direccion: string;
     periodo: string;
@@ -89,7 +91,7 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
             group[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] = [...new Set([...group[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]!, ...(fields[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] || [])])];
         });
         
-        const finalConvocatorias = Array.from(groupedConvocatorias.values()).sort((a, b) => new Date(b[FIELD_FECHA_INICIO_CONVOCATORIAS]!).getTime() - new Date(a[FIELD_FECHA_INICIO_CONVOCATORIAS]!).getTime());
+        const finalConvocatorias = Array.from(groupedConvocatorias.values()).sort((a, b) => new Date(b[FIELD_FECHA_INICIO_CONVOCATORIAS]!).getTime() - new Date(a[FIELD_FECHA_INICIO_CONVOCATORIAS]!).getTime()).slice(0, 5);
         setConvocatorias(finalConvocatorias);
     };
 
@@ -122,7 +124,7 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
 
             const formula = `OR(${studentIds.map(id => `RECORD_ID()='${id}'`).join(',')})`;
             const { records: studentRecords, error: studentError } = await fetchAirtableData<EstudianteFields>(
-                AIRTABLE_TABLE_NAME_ESTUDIANTES, [FIELD_NOMBRE_ESTUDIANTES, FIELD_DNI_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES], formula
+                AIRTABLE_TABLE_NAME_ESTUDIANTES, [FIELD_NOMBRE_ESTUDIANTES, FIELD_DNI_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES], formula
             );
             if (studentError) throw new Error(`Error al obtener datos de estudiantes: ${typeof studentError.error === 'string' ? studentError.error : studentError.error.message}`);
             
@@ -152,6 +154,8 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                     studentId, nombre, apellido,
                     dni: student[FIELD_DNI_ESTUDIANTES] || 'N/A',
                     legajo: student[FIELD_LEGAJO_ESTUDIANTES] || 'N/A',
+                    correo: student[FIELD_CORREO_ESTUDIANTES] || 'N/A',
+                    telefono: formatPhoneNumber(student[FIELD_TELEFONO_ESTUDIANTES]),
                     institucion: individualConv[FIELD_NOMBRE_PPS_CONVOCATORIAS] || 'N/A',
                     direccion: direccionValue,
                     periodo: periodoValue,
@@ -216,8 +220,13 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                 XLSX.utils.book_append_sheet(wb, ws, baseSheetName);
             }
 
-            XLSX.writeFile(wb, 'Reporte_Seguro_Alumnos.xlsx');
-            setToastInfo({ message: 'Excel generado exitosamente.', type: 'success' });
+            const ppsName = Array.from(new Set(studentsForReview.map(s => s.institucion)))
+                                 .join(' & ')
+                                 .replace(/[\\/?*[\]]/g, "")
+                                 .substring(0, 100);
+            const fileName = `Seguro (${ppsName || 'PPS'}).xlsx`;
+            XLSX.writeFile(wb, fileName);
+            setToastInfo({ message: 'Excel para seguro generado exitosamente.', type: 'success' });
         } catch (e: any) {
             showModal('Error al Generar Excel', e.message || 'Ocurrió un error inesperado.');
         } finally {
@@ -226,17 +235,74 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
         }
     };
     
+    const handleGenerateSelectionExcel = () => {
+        if (studentsForReview.length === 0) {
+            showModal('Sin Datos', 'No hay estudiantes en la lista para generar el reporte.');
+            return;
+        }
+
+        try {
+            const wb = XLSX.utils.book_new();
+            const studentsByInstitution = studentsForReview.reduce((acc, student) => {
+                const key = student.institucion;
+                if (!acc[key]) acc[key] = [];
+                acc[key].push(student);
+                return acc;
+            }, {} as Record<string, StudentForReview[]>);
+
+            for (const institucion in studentsByInstitution) {
+                const group = studentsByInstitution[institucion];
+                const wsData: (string | number)[][] = [
+                    ['APELLIDO', 'NOMBRE', 'DNI', 'LEGAJO', 'CORREO', 'TELEFONO', 'HORARIO SELECCIONADO']
+                ];
+
+                group.forEach(student => {
+                    wsData.push([
+                        student.apellido,
+                        student.nombre,
+                        student.dni,
+                        student.legajo,
+                        student.correo,
+                        student.telefono,
+                        student.horario
+                    ]);
+                });
+
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                ws['!cols'] = [ {wch:25}, {wch:25}, {wch:12}, {wch:12}, {wch:30}, {wch:20}, {wch:30} ];
+                
+                const headerStyle = { font: { bold: true }, alignment: { horizontal: "center", vertical: "center" }, fill: { fgColor: { rgb: "FFD9E2F3" } }}; // Light blue fill
+                wsData[0].forEach((_, col) => {
+                    const cellRef = XLSX.utils.encode_cell({r: 0, c: col});
+                    if(ws[cellRef]) ws[cellRef].s = headerStyle;
+                });
+                
+                let baseSheetName = institucion.replace(/[\\/?*[\]]/g, "").substring(0, 25);
+                XLSX.utils.book_append_sheet(wb, ws, baseSheetName);
+            }
+
+            const ppsName = Array.from(new Set(studentsForReview.map(s => s.institucion)))
+                                 .join(' & ')
+                                 .replace(/[\\/?*[\]]/g, "")
+                                 .substring(0, 100);
+            const fileName = `Listado de alumnos (${ppsName || 'PPS'}).xlsx`;
+            XLSX.writeFile(wb, fileName);
+            setToastInfo({ message: 'Excel con lista de seleccionados generado.', type: 'success' });
+        } catch (e: any) {
+            showModal('Error al Generar Excel', e.message || 'Ocurrió un error inesperado.');
+        }
+    };
+
     const handleUpdateStudentField = (studentId: string, field: keyof StudentForReview, value: string) => {
         setStudentsForReview(prev => prev.map(s => {
             if (s.studentId === studentId) {
                 const updatedStudent = { ...s, [field]: value };
     
-                // If an editable field that is part of a derived field changes, update the derived field.
                 if (field === 'direccion') {
                     updatedStudent.lugar = `${updatedStudent.institucion} - ${value}`;
                 }
-                if (field === 'horario') {
-                    updatedStudent.duracion = `Período: ${updatedStudent.periodo}. Horario: ${value}`;
+                if (field === 'horario' || field === 'periodo') {
+                    updatedStudent.duracion = `Período: ${updatedStudent.periodo}. Horario: ${updatedStudent.horario}`;
                 }
                 
                 return updatedStudent;
@@ -265,7 +331,7 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
         <>
             <div className="mb-6">
                 <h3 className="text-xl font-bold text-slate-800">Paso 1: Seleccionar Convocatorias</h3>
-                <p className="text-slate-600 max-w-xl mt-1">Seleccione una o más convocatorias para generar el reporte de seguro.</p>
+                <p className="text-slate-600 max-w-xl mt-1">Seleccione una o más de las últimas 5 convocatorias para generar los reportes.</p>
             </div>
 
             {isLoading && !loadingMessage.includes('convocatorias') ? null : (isLoading ? <Loader /> : null)}
@@ -320,12 +386,24 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
         </>
     );
 
-    const renderReviewStep = () => (
+    const renderReviewStep = () => {
+        const institutions = Array.from(new Set(studentsForReview.map(s => s.institucion))).join(', ');
+        const mailToSubject = encodeURIComponent(`Reporte de Seguro - ${institutions}`);
+        const mailToBody = encodeURIComponent(
+            `Hola Sergio,
+
+Te adjunto el seguro de la PPS.
+
+Saludos!`
+        );
+        const mailToLink = `mailto:mesadeayuda.patagonia@uflouniversidad.edu.ar?subject=${mailToSubject}&body=${mailToBody}`;
+
+        return (
         <>
             <div className="flex justify-between items-start mb-6">
                 <div>
                     <h3 className="text-xl font-bold text-slate-800">Paso 2: Revisar y Corregir</h3>
-                    <p className="text-slate-600 max-w-2xl mt-1">Verifica los datos. Los campos de Nombre, Apellido, Dirección y Horario son editables. Puedes eliminar estudiantes antes de generar el reporte final.</p>
+                    <p className="text-slate-600 max-w-2xl mt-1">Verifica los datos. Todos los campos son editables. Puedes eliminar estudiantes antes de generar el reporte final.</p>
                 </div>
                 <button onClick={() => setStep('selection')} className="bg-white hover:bg-slate-100 text-slate-700 font-bold py-2 px-4 rounded-lg text-sm border border-slate-300 transition-colors flex items-center gap-2">
                     <span className="material-icons">arrow_back</span>
@@ -337,13 +415,16 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                  <EmptyState icon="group_off" title="Sin Estudiantes para Revisar" message="No se encontraron estudiantes en las convocatorias seleccionadas." />
             ) : (
                 <div className="border rounded-lg overflow-x-auto border-slate-200/70 bg-white shadow-md">
-                    <table className="w-full min-w-[1200px]">
+                    <table className="w-full min-w-[1400px]">
                         <thead className="bg-slate-100/70 border-b-2 border-slate-200">
                             <tr>
-                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs w-[15%]">Apellido</th>
-                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs w-[15%]">Nombre</th>
+                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs">Apellido</th>
+                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs">Nombre</th>
+                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs">DNI</th>
+                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs">Legajo</th>
+                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs">Correo</th>
+                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs">Teléfono</th>
                                 <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs">Dirección</th>
-                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs">Período</th>
                                 <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs">Horario</th>
                                 <th className="p-3 w-16"></th>
                             </tr>
@@ -351,11 +432,14 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                         <tbody className="divide-y divide-slate-200/60">
                            {studentsForReview.map((student) => (
                                 <tr key={student.studentId} className="transition-colors duration-200 odd:bg-white even:bg-slate-50/50 hover:!bg-blue-50/50">
-                                    <td className="p-2 align-middle"><input type="text" value={student.apellido} onChange={(e) => handleUpdateStudentField(student.studentId, 'apellido', e.target.value)} className="w-full bg-white text-slate-900 text-sm rounded-md border-slate-300 p-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"/></td>
-                                    <td className="p-2 align-middle"><input type="text" value={student.nombre} onChange={(e) => handleUpdateStudentField(student.studentId, 'nombre', e.target.value)} className="w-full bg-white text-slate-900 text-sm rounded-md border-slate-300 p-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"/></td>
-                                    <td className="p-2 align-middle"><input type="text" value={student.direccion} onChange={(e) => handleUpdateStudentField(student.studentId, 'direccion', e.target.value)} className="w-full bg-white text-slate-900 text-sm rounded-md border-slate-300 p-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"/></td>
-                                    <td className="p-3 align-middle text-sm text-slate-700">{student.periodo}</td>
-                                    <td className="p-2 align-middle"><input type="text" value={student.horario} onChange={(e) => handleUpdateStudentField(student.studentId, 'horario', e.target.value)} className="w-full bg-white text-slate-900 text-sm rounded-md border-slate-300 p-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"/></td>
+                                    <td className="p-2 align-middle w-40"><input type="text" value={student.apellido} onChange={(e) => handleUpdateStudentField(student.studentId, 'apellido', e.target.value)} className="w-full bg-white text-slate-900 text-sm rounded-md border-slate-300 p-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"/></td>
+                                    <td className="p-2 align-middle w-40"><input type="text" value={student.nombre} onChange={(e) => handleUpdateStudentField(student.studentId, 'nombre', e.target.value)} className="w-full bg-white text-slate-900 text-sm rounded-md border-slate-300 p-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"/></td>
+                                    <td className="p-2 align-middle w-32"><input type="text" value={student.dni} onChange={(e) => handleUpdateStudentField(student.studentId, 'dni', e.target.value)} className="w-full bg-white text-slate-900 text-sm rounded-md border-slate-300 p-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"/></td>
+                                    <td className="p-2 align-middle w-28"><input type="text" value={student.legajo} onChange={(e) => handleUpdateStudentField(student.studentId, 'legajo', e.target.value)} className="w-full bg-white text-slate-900 text-sm rounded-md border-slate-300 p-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"/></td>
+                                    <td className="p-2 align-middle w-52"><input type="email" value={student.correo} onChange={(e) => handleUpdateStudentField(student.studentId, 'correo', e.target.value)} className="w-full bg-white text-slate-900 text-sm rounded-md border-slate-300 p-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"/></td>
+                                    <td className="p-2 align-middle w-40"><input type="tel" value={student.telefono} onChange={(e) => handleUpdateStudentField(student.studentId, 'telefono', e.target.value)} className="w-full bg-white text-slate-900 text-sm rounded-md border-slate-300 p-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"/></td>
+                                    <td className="p-2 align-middle w-64"><input type="text" value={student.direccion} onChange={(e) => handleUpdateStudentField(student.studentId, 'direccion', e.target.value)} className="w-full bg-white text-slate-900 text-sm rounded-md border-slate-300 p-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"/></td>
+                                    <td className="p-2 align-middle w-52"><input type="text" value={student.horario} onChange={(e) => handleUpdateStudentField(student.studentId, 'horario', e.target.value)} className="w-full bg-white text-slate-900 text-sm rounded-md border-slate-300 p-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"/></td>
                                     <td className="p-2 align-middle text-center">
                                         <button onClick={() => handleRemoveStudent(student.studentId)} className="p-2 rounded-full text-slate-400 hover:bg-rose-100 hover:text-rose-600 transition-colors" aria-label={`Quitar a ${student.nombre}`}>
                                             <span className="material-icons">delete</span>
@@ -368,23 +452,48 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                 </div>
             )}
             
-            <div className="mt-6 flex justify-end">
-                <button onClick={handleGenerateExcel} disabled={isLoading || studentsForReview.length === 0} className="bg-green-600 text-white font-bold py-2.5 px-6 rounded-lg text-sm transition-colors shadow-md disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                     {isLoading ? (
+            <div className="mt-8 pt-6 border-t border-slate-200 flex flex-col sm:flex-row justify-end items-center gap-4">
+                <button 
+                    onClick={handleGenerateSelectionExcel} 
+                    disabled={isLoading || studentsForReview.length === 0} 
+                    className="w-full sm:w-auto bg-blue-600 text-white font-bold py-2.5 px-6 rounded-lg text-sm transition-colors shadow-md disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                     <span className="material-icons">list_alt</span>
+                     <span>Generar Lista (Institución)</span>
+                </button>
+                <button 
+                    onClick={handleGenerateExcel} 
+                    disabled={isLoading || studentsForReview.length === 0} 
+                    className="w-full sm:w-auto bg-green-600 text-white font-bold py-2.5 px-6 rounded-lg text-sm transition-colors shadow-md disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                     {isLoading && loadingMessage.includes('Excel') ? (
                         <>
                             <div className="border-2 border-white/50 border-t-white rounded-full w-5 h-5 animate-spin"></div>
-                            <span>{loadingMessage || 'Generando...'}</span>
+                            <span>{loadingMessage}</span>
                         </>
                     ) : (
                         <>
                             <span className="material-icons">download</span>
-                            <span>Generar Excel</span>
+                            <span>Generar Excel (Seguro)</span>
                         </>
                     )}
                 </button>
+                <a
+                    href={mailToLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`w-full sm:w-auto text-center bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg text-sm transition-colors shadow-md flex items-center justify-center gap-2 ${
+                        (isLoading || studentsForReview.length === 0) 
+                        ? 'bg-slate-400 cursor-not-allowed opacity-50 pointer-events-none' 
+                        : 'hover:bg-slate-800'
+                    }`}
+                    aria-disabled={isLoading || studentsForReview.length === 0}
+                >
+                    <span className="material-icons">email</span>
+                    <span>Enviar Correo (Seguro)</span>
+                </a>
             </div>
         </>
     );
+    }
 
     return (
         <div className="animate-fade-in-up">
