@@ -8,7 +8,7 @@ import {
     FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, FIELD_FECHA_INICIO_CONVOCATORIAS, FIELD_FECHA_FIN_CONVOCATORIAS,
     FIELD_DIRECCION_CONVOCATORIAS, FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS, FIELD_ORIENTACION_CONVOCATORIAS,
     AIRTABLE_TABLE_NAME_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES, FIELD_NOMBRE_ESTUDIANTES,
-    FIELD_DNI_ESTUDIANTES, FIELD_HORARIO_FORMULA_CONVOCATORIAS, FIELD_CORREO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES
+    FIELD_DNI_ESTUDIANTES, FIELD_HORARIO_FORMULA_CONVOCATORIAS, FIELD_CORREO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES, FIELD_NOMBRE_SEPARADO_ESTUDIANTES, FIELD_APELLIDO_SEPARADO_ESTUDIANTES
 } from '../constants';
 import Loader from './Loader';
 import EmptyState from './EmptyState';
@@ -40,11 +40,30 @@ type StudentForReview = {
 // Function moved here to resolve a build error
 function formatPhoneNumber(phone?: string): string {
   if (!phone) return '';
-  // Removes a leading '+' and, if present, the Argentine country code '54' and mobile '9'.
-  // Example: +54 9 11... -> 11...
-  // Example: +11... -> 11...
-  return phone.replace(/^\+(54\s?9?\s?)?/, '').trim();
+  // Removes '+54', an optional space, an optional '9', and another optional space from the start.
+  return phone.replace(/^\+54\s?9?\s?/, '').trim();
 }
+
+const simpleNameSplit = (fullName: string): { nombre: string; apellido: string } => {
+    if (!fullName) return { nombre: '', apellido: '' };
+    let nombre = '';
+    let apellido = '';
+    if (fullName.includes(',')) {
+        const parts = fullName.split(',').map(p => p.trim());
+        apellido = parts[0] || '';
+        nombre = parts[1] || '';
+    } else {
+        const nameParts = fullName.trim().split(' ').filter(Boolean);
+        if (nameParts.length > 1) {
+            apellido = nameParts.pop()!;
+            nombre = nameParts.join(' ');
+        } else {
+            nombre = fullName;
+        }
+    }
+    return { nombre, apellido };
+};
+
 
 const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
     const [step, setStep] = useState<'selection' | 'review'>('selection');
@@ -133,20 +152,27 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
 
             const formula = `OR(${studentIds.map(id => `RECORD_ID()='${id}'`).join(',')})`;
             const { records: studentRecords, error: studentError } = await fetchAirtableData<EstudianteFields>(
-                AIRTABLE_TABLE_NAME_ESTUDIANTES, [FIELD_NOMBRE_ESTUDIANTES, FIELD_DNI_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES], formula
+                AIRTABLE_TABLE_NAME_ESTUDIANTES, [FIELD_NOMBRE_ESTUDIANTES, FIELD_DNI_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES, FIELD_NOMBRE_SEPARADO_ESTUDIANTES, FIELD_APELLIDO_SEPARADO_ESTUDIANTES], formula
             );
             if (studentError) throw new Error(`Error al obtener datos de estudiantes: ${typeof studentError.error === 'string' ? studentError.error : studentError.error.message}`);
             
             const studentMap = new Map(studentRecords.map(r => [r.id, r.fields]));
-
-            setLoadingMessage('Analizando nombres con IA...');
-            const studentsToReviewPromises = studentIds.map(async (studentId) => {
+            
+            const studentsToReview = studentIds.map((studentId) => {
                 const student = studentMap.get(studentId);
                 const individualConv = studentIdToIndividualConvMap.get(studentId);
                 if (!student || !individualConv) return null;
 
                 const fullName = student?.[FIELD_NOMBRE_ESTUDIANTES] || '';
-                const { nombre, apellido } = await splitNameWithAI(fullName);
+                let nombre = student[FIELD_NOMBRE_SEPARADO_ESTUDIANTES] || '';
+                let apellido = student[FIELD_APELLIDO_SEPARADO_ESTUDIANTES] || '';
+                
+                if (!nombre || !apellido) {
+                    const split = simpleNameSplit(fullName);
+                    nombre = split.nombre;
+                    apellido = split.apellido;
+                }
+
                 const orientacionRaw = individualConv[FIELD_ORIENTACION_CONVOCATORIAS] || '';
                 const tutores = new Set<string>();
                  orientacionRaw.split(',').map(o => normalizeStringForComparison(o.trim())).forEach(o => {
@@ -173,9 +199,9 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                     duracion: `Período: ${periodoValue}. Horario: ${horarioValue}`,
                     tutor: tutores.size > 0 ? Array.from(tutores).join(', ') : 'N/A',
                 };
-            });
-            const resolvedStudents = (await Promise.all(studentsToReviewPromises)).filter(Boolean) as StudentForReview[];
-            setStudentsForReview(resolvedStudents);
+            }).filter(Boolean) as StudentForReview[];
+            
+            setStudentsForReview(studentsToReview);
             setStep('review');
 
         } catch(e: any) {
@@ -425,24 +451,24 @@ Saludos!`
             ) : (
                 <div className="border rounded-lg overflow-x-auto border-slate-200/70 bg-white shadow-md">
                     <table className="w-full min-w-[1400px]">
-                        <thead className="bg-slate-100/70 border-b-2 border-slate-200">
+                        <thead className="bg-slate-100/70 border-b-2 border-slate-200 sticky top-0 z-20">
                             <tr>
-                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs">Apellido</th>
-                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs">Nombre</th>
-                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs">DNI</th>
-                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs">Legajo</th>
-                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs">Correo</th>
-                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs">Teléfono</th>
-                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs">Dirección</th>
-                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs">Horario</th>
+                                <th className="sticky left-0 z-10 bg-inherit px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs w-40">Apellido</th>
+                                <th className="sticky left-40 z-10 bg-inherit px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs w-40">Nombre</th>
+                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs w-32">DNI</th>
+                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs w-28">Legajo</th>
+                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs w-52">Correo</th>
+                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs w-40">Teléfono</th>
+                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs w-64">Dirección</th>
+                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs w-52">Horario</th>
                                 <th className="p-3 w-16"></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200/60">
-                           {studentsForReview.map((student) => (
-                                <tr key={student.studentId} className="transition-colors duration-200 odd:bg-white even:bg-slate-50/50 hover:!bg-blue-50/50">
-                                    <td className="p-2 align-middle w-40"><input type="text" value={student.apellido} onChange={(e) => handleUpdateStudentField(student.studentId, 'apellido', e.target.value)} className="w-full bg-white text-slate-900 text-sm rounded-md border-slate-300 p-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"/></td>
-                                    <td className="p-2 align-middle w-40"><input type="text" value={student.nombre} onChange={(e) => handleUpdateStudentField(student.studentId, 'nombre', e.target.value)} className="w-full bg-white text-slate-900 text-sm rounded-md border-slate-300 p-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"/></td>
+                           {studentsForReview.map((student, index) => (
+                                <tr key={student.studentId} className={`transition-colors duration-200 ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} hover:!bg-blue-50/50`}>
+                                    <td className="sticky left-0 z-[1] p-2 align-middle w-40 bg-inherit"><input type="text" value={student.apellido} onChange={(e) => handleUpdateStudentField(student.studentId, 'apellido', e.target.value)} className="w-full bg-white text-slate-900 text-sm rounded-md border-slate-300 p-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"/></td>
+                                    <td className="sticky left-40 z-[1] p-2 align-middle w-40 bg-inherit"><input type="text" value={student.nombre} onChange={(e) => handleUpdateStudentField(student.studentId, 'nombre', e.target.value)} className="w-full bg-white text-slate-900 text-sm rounded-md border-slate-300 p-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"/></td>
                                     <td className="p-2 align-middle w-32"><input type="text" value={student.dni} onChange={(e) => handleUpdateStudentField(student.studentId, 'dni', e.target.value)} className="w-full bg-white text-slate-900 text-sm rounded-md border-slate-300 p-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"/></td>
                                     <td className="p-2 align-middle w-28"><input type="text" value={student.legajo} onChange={(e) => handleUpdateStudentField(student.studentId, 'legajo', e.target.value)} className="w-full bg-white text-slate-900 text-sm rounded-md border-slate-300 p-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"/></td>
                                     <td className="p-2 align-middle w-52"><input type="email" value={student.correo} onChange={(e) => handleUpdateStudentField(student.studentId, 'correo', e.target.value)} className="w-full bg-white text-slate-900 text-sm rounded-md border-slate-300 p-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"/></td>

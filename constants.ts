@@ -33,6 +33,8 @@ export const FIELD_NOTA_PRACTICAS = 'Nota';
 // Field names for Estudiantes Table
 export const FIELD_LEGAJO_ESTUDIANTES = 'Legajo';
 export const FIELD_NOMBRE_ESTUDIANTES = 'Nombre';
+export const FIELD_NOMBRE_SEPARADO_ESTUDIANTES = 'Nombre (Separado)';
+export const FIELD_APELLIDO_SEPARADO_ESTUDIANTES = 'Apellido (Separado)';
 export const FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES = 'Orientación Elegida';
 export const FIELD_DNI_ESTUDIANTES = 'DNI';
 export const FIELD_FECHA_NACIMIENTO_ESTUDIANTES = 'Fecha de Nacimiento';
@@ -61,6 +63,7 @@ export const FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS = 'Estado de Convocatoria';
 export const FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS = 'Lanzamiento Vinculado'; // Link to 'Lanzamientos de PPS'
 export const FIELD_NOMBRE_PPS_CONVOCATORIAS = 'Nombre PPS';
 export const FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS = 'Estudiante Inscripto';
+export const FIELD_NOMBRE_ESTUDIANTE_LOOKUP_CONVOCATORIAS = 'Nombre (de Estudiante Inscripto)'; // Lookup field from Estudiante
 export const FIELD_FECHA_INICIO_CONVOCATORIAS = 'Fecha de Inicio';
 export const FIELD_FECHA_FIN_CONVOCATORIAS = 'Fecha de Finalización';
 export const FIELD_DIRECCION_CONVOCATORIAS = 'Dirección';

@@ -34,6 +34,8 @@ export interface EstudianteFields {
   [key: string]: any;
   'Legajo'?: string;
   'Nombre'?: string;
+  'Nombre (Separado)'?: string;
+  'Apellido (Separado)'?: string;
   'Género'?: 'Varon' | 'Mujer' | 'Otro';
   'Orientación Elegida'?: string;
   'DNI'?: string;
@@ -68,6 +70,7 @@ export interface ConvocatoriaFields {
   'Lanzamiento Vinculado'?: string[]; // Link to Lanzamientos de PPS record
   'Nombre PPS'?: string;
   'Estudiante Inscripto'?: string[]; // Array of record IDs from 'Estudiante Inscripto'
+  'Nombre (de Estudiante Inscripto)'?: string[]; // Lookup field from Estudiante
   'Fecha de Inicio'?: string; // Date string
   'Fecha de Finalización'?: string; // Date string
   'Dirección'?: string;
