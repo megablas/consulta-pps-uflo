@@ -14,13 +14,12 @@ import Loader from './Loader';
 import EmptyState from './EmptyState';
 import Checkbox from './Checkbox';
 import Toast from './Toast';
-import { splitNameWithAI } from '../services/aiService';
 
 interface SeguroGeneratorProps {
     showModal: (title: string, message: string) => void;
 }
 
-type StudentForReview = {
+interface StudentForReview {
     studentId: string;
     nombre: string;
     apellido: string;
@@ -35,6 +34,7 @@ type StudentForReview = {
     lugar: string; // for excel
     duracion: string; // for excel
     tutor: string; // for excel
+    orientacion: string;
 };
 
 // Function moved here to resolve a build error
@@ -174,8 +174,10 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                 }
 
                 const orientacionRaw = individualConv[FIELD_ORIENTACION_CONVOCATORIAS] || '';
+                const uniqueOrientations = Array.from(new Set(orientacionRaw.split(',').map(o => o.trim()).filter(Boolean)));
+
                 const tutores = new Set<string>();
-                 orientacionRaw.split(',').map(o => normalizeStringForComparison(o.trim())).forEach(o => {
+                 uniqueOrientations.map(o => normalizeStringForComparison(o)).forEach(o => {
                     if (o === 'clinica') tutores.add('Selva Estrella');
                     else if (o === 'educacional') tutores.add('Franco Pedraza');
                     else if (o === 'laboral' || o === 'comunitaria') tutores.add('Cynthia Rossi');
@@ -198,6 +200,7 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                     lugar: `${individualConv[FIELD_NOMBRE_PPS_CONVOCATORIAS] || ''} - ${direccionValue}`,
                     duracion: `Período: ${periodoValue}. Horario: ${horarioValue}`,
                     tutor: tutores.size > 0 ? Array.from(tutores).join(', ') : 'N/A',
+                    orientacion: uniqueOrientations.join(', ') || 'N/A',
                 };
             }).filter(Boolean) as StudentForReview[];
             
@@ -230,7 +233,7 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                 const wsData: (string | number | Date | null)[][] = [
                     ['ASEGURADO UNIVERSIDAD DE FLORES'],
                     ['INFORME DE ACTIVIDAD: PPS Presencial'],
-                    [`Orientación: ${firstStudent.tutor}`],
+                    [`Orientación: ${firstStudent.orientacion}`],
                     [`Institución: ${firstStudent.institucion}`],
                     [`Tutor Institucional: ${firstStudent.tutor}`],
                     ['Tramitado por: Lic. Rivera Blas'],
@@ -243,8 +246,17 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                 });
 
                 const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+                // Calculate width for the 'LUGAR' column (index 5)
+                const lugarHeader = wsData[7][5] as string;
+                const lugarData = group.map(student => student.lugar);
+                const maxLugarLength = Math.max(
+                    lugarHeader.length,
+                    ...lugarData.map(l => l.length)
+                );
+                
                 ws['!merges'] = [0,1,2,3,4,5].map(r => ({ s: { r, c: 0 }, e: { r, c: 7 } }));
-                ws['!cols'] = [ {wch:20}, {wch:25}, {wch:12}, {wch:12}, {wch:15}, {wch:45}, {wch:70} ];
+                ws['!cols'] = [ {wch:20}, {wch:25}, {wch:12}, {wch:12}, {wch:15}, {wch: maxLugarLength + 2}, {wch:70} ];
                 const headerStyle = { font: { bold: true }, alignment: { horizontal: "center", vertical: "center" }, fill: { fgColor: { rgb: "FFE0E0E0" } }};
                 wsData[7].forEach((_, col) => {
                     const cellRef = XLSX.utils.encode_cell({r: 7, c: col});
