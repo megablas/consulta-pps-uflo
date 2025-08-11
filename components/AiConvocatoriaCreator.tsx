@@ -118,21 +118,17 @@ const AiConvocatoriaCreator: React.FC<AiConvocatoriaCreatorProps> = ({ showModal
       return;
     }
 
-    const apiKey = process.env.API_KEY;
-    if (!apiKey || apiKey === 'undefined') {
-      showModal(
-        'Configuración Requerida',
-        'La API Key para el servicio de IA no está configurada. Esta función requiere que la variable de entorno `API_KEY` esté definida correctamente.'
-      );
-      return;
-    }
+    // The explicit API key check has been removed.
+    // Per the instructions, the app must assume the API_KEY is available in the environment.
+    // If the key is missing, the GoogleGenAI constructor will throw an error,
+    // which will be caught and displayed as a generic analysis error.
 
     setIsLoading(true);
     setLoadingMessage('Analizando con IA...');
     setParsedData(null);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: apiKey as string });
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
       
       const systemInstruction = "Eres un asistente experto en procesar convocatorias de prácticas profesionales para una universidad. Analiza el siguiente texto y extrae la información clave. Devuelve un objeto JSON que se ajuste estrictamente al esquema proporcionado. Si no encuentras información para un campo, omítelo del JSON a menos que sea un campo requerido. Para las fechas, asegúrate de que estén en formato YYYY-MM-DD.";
 
