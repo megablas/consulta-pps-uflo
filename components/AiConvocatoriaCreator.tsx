@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { GoogleGenAI, Type } from "@google/genai";
 import { createAirtableRecord, fetchAllAirtableData } from '../services/airtableService';
 import type { LanzamientoPPSFields } from '../types';
 import {
@@ -71,6 +72,46 @@ const AiConvocatoriaCreator: React.FC<AiConvocatoriaCreatorProps> = ({ showModal
     fetchInstitutions();
   }, [showModal]);
 
+  const responseSchema = {
+    type: Type.OBJECT,
+    properties: {
+      [FIELD_NOMBRE_PPS_LANZAMIENTOS]: { type: Type.STRING, description: 'El nombre de la Práctica Profesional Supervisada (PPS), sin incluir el prefijo "PPS en".' },
+      [FIELD_FECHA_INICIO_LANZAMIENTOS]: { type: Type.STRING, description: 'La fecha de inicio en formato YYYY-MM-DD.' },
+      [FIELD_FECHA_FIN_LANZAMIENTOS]: { type: Type.STRING, description: 'La fecha de finalización en formato YYYY-MM-DD.' },
+      [FIELD_DIRECCION_LANZAMIENTOS]: { type: Type.STRING, description: 'La dirección donde se realiza la práctica.' },
+      [FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS]: { type: Type.STRING, description: 'Descripción de los horarios, turnos y grupos disponibles. Incluir toda la información relevante sobre la carga horaria semanal.' },
+      [FIELD_ORIENTACION_LANZAMIENTOS]: { type: Type.STRING, description: 'La orientación de la práctica (Ej: Clinica, Laboral, Educacional, Comunitaria).' },
+      [FIELD_HORAS_ACREDITADAS_LANZAMIENTOS]: { type: Type.NUMBER, description: 'El número total de horas que acredita la práctica.' },
+      [FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS]: { type: Type.NUMBER, description: 'El número de cupos o vacantes disponibles.' },
+      [FIELD_DURACION_INSCRIPCION_DIAS_LANZAMIENTOS]: { type: Type.NUMBER, description: 'El número de días que la inscripción estará abierta. Por ejemplo, si dice "inscripción abierta por 15 días", el valor debe ser 15.' },
+      [FIELD_DESCRIPCION_LANZAMIENTOS]: { type: Type.STRING, description: 'Una descripción detallada de la PPS, incluyendo tareas, objetivos, y requisitos. Usar saltos de línea para párrafos.' },
+      [FIELD_ENCUENTRO_INICIAL_LANZAMIENTOS]: { type: Type.STRING, description: 'Información sobre la reunión informativa o encuentro inicial, incluyendo fecha y hora si se especifica.' },
+    },
+    required: [FIELD_NOMBRE_PPS_LANZAMIENTOS, FIELD_DESCRIPCION_LANZAMIENTOS]
+  };
+  
+  const findBestMatch = (name: string, list: string[]): string => {
+    if (!name || list.length === 0) return name;
+
+    const cleanedName = name.toLowerCase().replace('pps en', '').trim();
+    if (!cleanedName) return name;
+
+    let bestMatch = '';
+    let highestScore = 0.5; // Threshold to avoid bad matches
+
+    list.forEach(item => {
+        const cleanedItem = item.toLowerCase();
+        if (cleanedItem.includes(cleanedName)) {
+            const score = cleanedName.length / cleanedItem.length;
+            if (score > highestScore) {
+                highestScore = score;
+                bestMatch = item;
+            }
+        }
+    });
+    return bestMatch || name;
+  };
+
   const handleAnalyze = async () => {
     if (!convocatoriaText.trim()) {
       showModal('Entrada Vacía', 'Por favor, pegue el texto de la convocatoria en el área de texto.');
@@ -81,25 +122,35 @@ const AiConvocatoriaCreator: React.FC<AiConvocatoriaCreatorProps> = ({ showModal
     setParsedData(null);
 
     try {
-      const response = await fetch('/api/ai', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+      
+      const systemInstruction = "Eres un asistente experto en procesar convocatorias de prácticas profesionales para una universidad. Analiza el siguiente texto y extrae la información clave. Devuelve un objeto JSON que se ajuste estrictamente al esquema proporcionado. Si no encuentras información para un campo, omítelo del JSON a menos que sea un campo requerido. Para las fechas, asegúrate de que estén en formato YYYY-MM-DD.";
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: convocatoriaText,
+        config: {
+          systemInstruction,
+          responseMimeType: "application/json",
+          responseSchema: responseSchema,
         },
-        body: JSON.stringify({
-          convocatoriaText,
-          instituciones,
-        }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Error del servidor: ${response.status}`);
+      const jsonText = response.text.trim();
+      let extractedData;
+      try {
+        extractedData = JSON.parse(jsonText);
+      } catch (e) {
+          console.error("Failed to parse AI response as JSON.", "Response text:", jsonText);
+          throw new Error("La respuesta de la IA no es un JSON válido. El texto recibido fue: " + (jsonText.length > 100 ? jsonText.substring(0, 100) + '...' : jsonText));
       }
-
-      const extractedData = await response.json();
+      
+      if (instituciones.length > 0 && extractedData[FIELD_NOMBRE_PPS_LANZAMIENTOS]) {
+        const bestMatch = findBestMatch(extractedData[FIELD_NOMBRE_PPS_LANZAMIENTOS], instituciones);
+        extractedData[FIELD_NOMBRE_PPS_LANZAMIENTOS] = bestMatch;
+      }
+      
       setParsedData(extractedData);
-
     } catch (error: any) {
       console.error('Error al analizar con IA:', error);
       showModal('Error de Análisis', `Ocurrió un error al contactar con el servicio de IA. Detalles: ${error.message || 'Error desconocido'}`);
