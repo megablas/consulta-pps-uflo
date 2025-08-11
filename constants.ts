@@ -25,7 +25,7 @@ export const FIELD_TELEFONO_ESTUDIANTES = 'Teléfono';
 
 // --- Fields for 'Prácticas' table ---
 export const FIELD_NOMBRE_BUSQUEDA_PRACTICAS = 'Nombre busqueda'; // Lookup from Estudiantes
-export const FIELD_NOMBRE_INSTITucion_LOOKUP_PRACTICAS = 'Nombre (de Institución)'; // Lookup from Institucion
+export const FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS = 'Nombre (de Institución)'; // Lookup from Institucion
 export const FIELD_HORAS_PRACTICAS = 'Horas Realizadas';
 export const FIELD_FECHA_INICIO_PRACTICAS = 'Fecha de Inicio';
 export const FIELD_FECHA_FIN_PRACTICAS = 'Fecha de Finalización';
