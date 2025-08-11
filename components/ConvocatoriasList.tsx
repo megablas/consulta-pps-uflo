@@ -9,11 +9,12 @@ interface ConvocatoriasListProps {
   myEnrollments: Convocatoria[];
   studentAirtableId: string | null;
   enrollingId: string | null;
+  loadingSeleccionadosId: string | null;
   onInscribir: (lanzamiento: LanzamientoPPS) => void;
   onVerSeleccionados: (lanzamiento: LanzamientoPPS) => void;
 }
 
-const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myEnrollments, studentAirtableId, enrollingId, onInscribir, onVerSeleccionados }) => {
+const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myEnrollments, studentAirtableId, enrollingId, loadingSeleccionadosId, onInscribir, onVerSeleccionados }) => {
 
     if (lanzamientos.length === 0) {
         return (
@@ -34,6 +35,7 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myE
         
             const enrollmentStatus = enrollment ? enrollment[FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS] : null;
             const isEnrolling = enrollingId === lanzamiento.id;
+            const isVerSeleccionadosLoading = loadingSeleccionadosId === lanzamiento.id;
             
             return (
               <ConvocatoriaCard 
@@ -41,6 +43,7 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myE
                   lanzamiento={lanzamiento}
                   enrollmentStatus={enrollmentStatus}
                   isEnrolling={isEnrolling}
+                  isVerSeleccionadosLoading={isVerSeleccionadosLoading}
                   onInscribir={onInscribir}
                   onVerSeleccionados={onVerSeleccionados}
               />

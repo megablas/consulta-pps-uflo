@@ -39,21 +39,21 @@ const StudentView: React.FC = () => {
     } = useData();
 
     const [activeTab, setActiveTab] = useState('convocatorias');
-    const [isFetchingSeleccionados, setIsFetchingSeleccionados] = useState(false);
+    const [loadingSeleccionadosId, setLoadingSeleccionadosId] = useState<string | null>(null);
 
     useEffect(() => {
         fetchStudentData();
     }, [fetchStudentData]);
 
     const handleVerSeleccionados = async (lanzamiento: LanzamientoPPS) => {
-        setIsFetchingSeleccionados(true);
+        setLoadingSeleccionadosId(lanzamiento.id);
         try {
             const ppsName = lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS]?.replace(/'/g, "\\'");
             const ppsStartDate = lanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS];
 
             if (!ppsName || !ppsStartDate) {
                 showModal('Error', 'La convocatoria seleccionada no tiene un nombre o fecha de inicio válidos.');
-                setIsFetchingSeleccionados(false);
+                setLoadingSeleccionadosId(null);
                 return;
             }
 
@@ -85,7 +85,7 @@ const StudentView: React.FC = () => {
             if (studentIds.length === 0) {
                  const message = 'Aún no se ha publicado la lista o no hay seleccionados para esta PPS.';
                  showModal(`Seleccionados para: ${lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS]}`, message);
-                 setIsFetchingSeleccionados(false);
+                 setLoadingSeleccionadosId(null);
                  return;
             }
 
@@ -117,7 +117,7 @@ const StudentView: React.FC = () => {
         } catch (e: any) {
             showModal('Error', e.message);
         } finally {
-            setIsFetchingSeleccionados(false);
+            setLoadingSeleccionadosId(null);
         }
     };
 
@@ -151,7 +151,8 @@ const StudentView: React.FC = () => {
                     studentAirtableId={studentAirtableId}
                     onInscribir={handleInscribir}
                     onVerSeleccionados={handleVerSeleccionados}
-                    enrollingId={enrollingId || (isFetchingSeleccionados ? 'loading' : null)}
+                    enrollingId={enrollingId}
+                    loadingSeleccionadosId={loadingSeleccionadosId}
                 />
             )
         },

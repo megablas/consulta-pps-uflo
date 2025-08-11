@@ -19,6 +19,7 @@ interface ConvocatoriaCardProps {
   onVerSeleccionados: (lanzamiento: LanzamientoPPS) => void;
   enrollmentStatus: string | null;
   isEnrolling: boolean;
+  isVerSeleccionadosLoading: boolean;
 }
 
 const InfoRow: React.FC<{ icon: string; text: string | undefined; }> = ({ icon, text }) => {
@@ -32,7 +33,7 @@ const InfoRow: React.FC<{ icon: string; text: string | undefined; }> = ({ icon, 
 };
 
 
-const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInscribir, onVerSeleccionados, enrollmentStatus, isEnrolling }) => {
+const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInscribir, onVerSeleccionados, enrollmentStatus, isEnrolling, isVerSeleccionadosLoading }) => {
   const { userGender } = useData();
   const { 
     [FIELD_NOMBRE_PPS_LANZAMIENTOS]: nombre, 
@@ -48,8 +49,6 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInsc
   const hasEnrollment = !!enrollmentStatus;
   const normalizedStatus = normalizeStringForComparison(enrollmentStatus);
   const isConvocatoriaCerrada = normalizeStringForComparison(estadoConvocatoria) === 'cerrado';
-  const isFetchingSeleccionados = isEnrolling && isConvocatoriaCerrada;
-
 
   const renderStatusBlock = () => {
     if (!hasEnrollment) return null;
@@ -120,14 +119,14 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInsc
            {statusDisplay}
            <button
             onClick={() => onVerSeleccionados(lanzamiento)}
-            disabled={isFetchingSeleccionados}
+            disabled={isVerSeleccionadosLoading}
             className={`w-full font-bold text-sm py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2
-              ${isFetchingSeleccionados 
+              ${isVerSeleccionadosLoading
                 ? 'bg-slate-200 text-slate-500 cursor-wait'
                 : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300 shadow-sm'
               }`}
           >
-            {isFetchingSeleccionados ? (
+            {isVerSeleccionadosLoading ? (
               <>
                 <div className="border-2 border-slate-400 border-t-slate-600 rounded-full w-4 h-4 animate-spin"></div>
                 <span>Cargando...</span>
