@@ -1,17 +1,9 @@
-import { defineConfig, Plugin } from 'vite'
+import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import express from './api/index';
-
-const expressApiPlugin = (): Plugin => ({
-  name: 'express-api-plugin',
-  configureServer: (server) => {
-    server.middlewares.use('/api', express);
-  }
-});
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), expressApiPlugin()],
+  plugins: [react()],
   // Esto es crucial para GitHub Pages. Le dice a Vite que la aplicación
   // se servirá desde una subcarpeta llamada '/consulta-pps-uflo/'.
   // Todas las rutas de los assets en el index.html construido tendrán este prefijo.
@@ -32,4 +24,7 @@ export default defineConfig({
       ],
     },
   },
+  define: {
+    'process.env.API_KEY': JSON.stringify(process.env.API_KEY)
+  }
 })
