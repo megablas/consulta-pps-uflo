@@ -3,18 +3,15 @@ import { fetchAllAirtableData, fetchAirtableData } from '../services/airtableSer
 import {
   AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
   AIRTABLE_TABLE_NAME_PRACTICAS,
-  AIRTABLE_TABLE_NAME_CONVOCATORIAS,
   AIRTABLE_TABLE_NAME_ESTUDIANTES,
-  FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS,
-  FIELD_HORAS_PRACTICAS,
+  FIELD_FECHA_INICIO_LANZAMIENTOS,
   FIELD_NOMBRE_BUSQUEDA_PRACTICAS,
-  FIELD_NOMBRE_PPS_CONVOCATORIAS,
-  FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS,
   FIELD_NOMBRE_ESTUDIANTES,
-  FIELD_FECHA_INICIO_CONVOCATORIAS,
-  HORAS_OBJETIVO_TOTAL
+  FIELD_ESTADO_PRACTICA,
+  FIELD_NOMBRE_INSTITucion_LOOKUP_PRACTICAS,
+  EXCLUDED_PPS_NAME,
 } from '../constants';
-import type { LanzamientoPPSFields, PracticaFields, ConvocatoriaFields, EstudianteFields } from '../types';
+import type { LanzamientoPPSFields, PracticaFields, EstudianteFields } from '../types';
 import EmptyState from './EmptyState';
 import { SkeletonBox } from './Skeletons';
 
@@ -23,12 +20,6 @@ interface Stat {
   label: string;
   icon: string;
   color: string;
-}
-
-interface LatestEnrollment {
-  id: string;
-  studentName: string;
-  ppsName: string;
 }
 
 const StatCard: React.FC<{ stat: Stat; isLoading: boolean }> = ({ stat, isLoading }) => {
@@ -56,10 +47,9 @@ const StatCard: React.FC<{ stat: Stat; isLoading: boolean }> = ({ stat, isLoadin
 
 const AdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<Stat[]>([
-    { value: 0, label: 'Convocatorias Abiertas', icon: 'campaign', color: 'bg-sky-500' },
-    { value: 0, label: 'Estudiantes Finalizados', icon: 'school', color: 'bg-emerald-500' },
+    { value: 0, label: 'Lanzamientos PPS (2025)', icon: 'rocket_launch', color: 'bg-sky-500' },
+    { value: 0, label: 'Nuevos Estudiantes Sin PPS Realizadas', icon: 'person_add', color: 'bg-amber-500' },
   ]);
-  const [latestEnrollments, setLatestEnrollments] = useState<LatestEnrollment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,78 +58,46 @@ const AdminDashboard: React.FC = () => {
       setIsLoading(true);
       setError(null);
       try {
-        const [openConvocatoriasRes, practicasRes, enrollmentsRes] = await Promise.all([
+        const currentYear = new Date().getFullYear();
+
+        const [lanzamientos2025Res, newStudentsRes, completedPracticesRes] = await Promise.all([
+          // 1. Get PPS launches in 2025
           fetchAirtableData<LanzamientoPPSFields>(
             AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
             [],
-            `OR({${FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS}} = 'Abierta', {${FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS}} = 'Abierto')`
+            `AND(IS_AFTER({${FIELD_FECHA_INICIO_LANZAMIENTOS}}, '2024-12-31'), IS_BEFORE({${FIELD_FECHA_INICIO_LANZAMIENTOS}}, '2026-01-01'))`
           ),
-          fetchAllAirtableData<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS, [
-            FIELD_HORAS_PRACTICAS,
-            FIELD_NOMBRE_BUSQUEDA_PRACTICAS,
-          ]),
-          fetchAirtableData<ConvocatoriaFields>(
-            AIRTABLE_TABLE_NAME_CONVOCATORIAS,
-            [FIELD_NOMBRE_PPS_CONVOCATORIAS, FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, FIELD_FECHA_INICIO_CONVOCATORIAS],
-            undefined,
-            5,
-            [{ field: FIELD_FECHA_INICIO_CONVOCATORIAS, direction: 'desc' }]
+          // 2. Get students created this year
+          fetchAllAirtableData<EstudianteFields>(
+            AIRTABLE_TABLE_NAME_ESTUDIANTES,
+            [FIELD_NOMBRE_ESTUDIANTES],
+            `IS_AFTER(CREATED_TIME(), '${currentYear}-01-01')`
+          ),
+          // 3. Get all completed practices, excluding the specific one
+          fetchAllAirtableData<PracticaFields>(
+            AIRTABLE_TABLE_NAME_PRACTICAS,
+            [FIELD_NOMBRE_BUSQUEDA_PRACTICAS],
+            `AND({${FIELD_ESTADO_PRACTICA}} = 'Finalizada', {${FIELD_NOMBRE_INSTITucion_LOOKUP_PRACTICAS}} != '${EXCLUDED_PPS_NAME}')`
           ),
         ]);
 
-        // Process stats
-        const studentHours: { [key: string]: number } = {};
-        if (practicasRes.records) {
-          practicasRes.records.forEach(p => {
-            const studentName = p.fields[FIELD_NOMBRE_BUSQUEDA_PRACTICAS]?.[0];
-            const hours = p.fields[FIELD_HORAS_PRACTICAS] || 0;
-            if (studentName) {
-              studentHours[studentName] = (studentHours[studentName] || 0) + hours;
-            }
-          });
-        }
-        const completedStudentsCount = Object.values(studentHours).filter(total => total >= HORAS_OBJETIVO_TOTAL).length;
+        if (lanzamientos2025Res.error) throw new Error("Error fetching 2025 launches");
+        if (newStudentsRes.error) throw new Error("Error fetching new students");
+        if (completedPracticesRes.error) throw new Error("Error fetching completed practices");
+
+        // Process new students with zero PPS
+        const studentsWithCompletedPPS = new Set(
+          completedPracticesRes.records.map(p => p.fields[FIELD_NOMBRE_BUSQUEDA_PRACTICAS]?.[0]).filter(Boolean)
+        );
+
+        const newStudentsWithZeroPPSCount = newStudentsRes.records.filter(
+          student => !studentsWithCompletedPPS.has(student.fields[FIELD_NOMBRE_ESTUDIANTES])
+        ).length;
 
         setStats([
-          { value: openConvocatoriasRes.records.length, label: 'Convocatorias Abiertas', icon: 'campaign', color: 'bg-sky-500' },
-          { value: completedStudentsCount, label: 'Estudiantes Finalizados', icon: 'school', color: 'bg-emerald-500' },
+          { value: lanzamientos2025Res.records.length, label: 'Lanzamientos PPS (2025)', icon: 'rocket_launch', color: 'bg-sky-500' },
+          { value: newStudentsWithZeroPPSCount, label: `Nuevos Estudiantes (${currentYear}) Sin PPS`, icon: 'person_add', color: 'bg-amber-500' },
         ]);
-
-        // Process latest enrollments
-        if (enrollmentsRes.records) {
-            const studentIds = Array.from(new Set(
-                enrollmentsRes.records.flatMap(r => r.fields[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] || [])
-            ));
-
-            const studentNamesMap = new Map<string, string>();
-            if (studentIds.length > 0) {
-                const formula = `OR(${studentIds.map(id => `RECORD_ID()='${id}'`).join(',')})`;
-                const { records: studentRecords } = await fetchAirtableData<EstudianteFields>(
-                  AIRTABLE_TABLE_NAME_ESTUDIANTES,
-                  [FIELD_NOMBRE_ESTUDIANTES],
-                  formula
-                );
-
-                if (studentRecords) {
-                    studentRecords.forEach(record => {
-                        studentNamesMap.set(record.id, record.fields[FIELD_NOMBRE_ESTUDIANTES] || 'Nombre desconocido');
-                    });
-                }
-            }
-            
-            const enrollmentsData: LatestEnrollment[] = enrollmentsRes.records
-                .map(r => {
-                    const studentId = r.fields[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]?.[0];
-                    const studentName = studentId ? (studentNamesMap.get(studentId) || 'Nombre no encontrado') : 'Nombre no encontrado';
-                    return {
-                        id: r.id,
-                        studentName: studentName,
-                        ppsName: r.fields[FIELD_NOMBRE_PPS_CONVOCATORIAS] || 'PPS sin nombre',
-                    };
-                })
-                .filter(e => e.studentName !== 'Nombre no encontrado');
-            setLatestEnrollments(enrollmentsData);
-        }
 
       } catch (e: any) {
         setError('No se pudieron cargar las estadísticas. ' + (e.message || 'Error desconocido.'));
@@ -167,45 +125,6 @@ const AdminDashboard: React.FC = () => {
         {stats.map(stat => (
           <StatCard key={stat.label} stat={stat} isLoading={isLoading} />
         ))}
-      </div>
-
-      <div className="bg-white p-6 rounded-2xl shadow-md shadow-slate-200/50 border border-slate-200/60">
-        <h4 className="text-lg font-bold text-slate-800 mb-4">Últimas Inscripciones</h4>
-        <div className="flow-root">
-          {isLoading ? (
-            <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <SkeletonBox className="h-10 w-10 rounded-full" />
-                  <div className="flex-grow space-y-1.5">
-                    <SkeletonBox className="h-4 w-3/4" />
-                    <SkeletonBox className="h-3 w-1/2" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : latestEnrollments.length > 0 ? (
-            <ul role="list" className="divide-y divide-slate-200/70">
-              {latestEnrollments.map(enrollment => (
-                <li key={enrollment.id} className="py-3 sm:py-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex-shrink-0 bg-blue-100 text-blue-600 rounded-full size-10 flex items-center justify-center">
-                      <span className="material-icons !text-xl">how_to_reg</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-900 truncate">{enrollment.studentName}</p>
-                      <p className="text-sm text-slate-500 truncate">
-                        Se inscribió a <span className="font-medium text-slate-600">{enrollment.ppsName}</span>
-                      </p>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyState icon="person_add_disabled" title="Sin Inscripciones Recientes" message="No se han registrado nuevas inscripciones últimamente." />
-          )}
-        </div>
       </div>
     </div>
   );

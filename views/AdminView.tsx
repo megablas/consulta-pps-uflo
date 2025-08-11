@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import AdminSearch from '../components/AdminSearch';
 import SeguroGenerator from '../components/SeguroGenerator';
+import AiConvocatoriaCreator from '../components/AiConvocatoriaCreator';
 import Dashboard from '../components/Dashboard';
 import { DataProvider } from '../contexts/DataContext';
 import { AuthUser } from '../contexts/AuthContext';
@@ -101,6 +102,13 @@ const AdminView: React.FC = () => {
             icon: 'shield',
             isClosable: false,
             content: <SeguroGenerator showModal={handleShowModal} />
+        },
+        {
+            id: 'ai-creator',
+            label: 'Crear con IA',
+            icon: 'auto_awesome',
+            isClosable: false,
+            content: <AiConvocatoriaCreator showModal={handleShowModal} />
         },
         ...studentTabs.map(student => ({
             id: student.id,
