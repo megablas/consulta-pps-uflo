@@ -79,6 +79,7 @@ export interface ConvocatoriaFields {
   'Fecha de Finalización'?: string; // Date string
   'Dirección'?: string;
   'Horario'?: string; // Text field to store selected schedule(s)
+  'Horas Acreditadas'?: number;
   'Estado de Convocatoria'?: string; // e.g. 'Abierta', 'Cerrada'
   'Estado'?: string; // e.g. 'No seleccionado', 'Seleccionado', 'Inscripto'
   'Orientación'?: string;
@@ -153,4 +154,3 @@ export interface AirtableErrorResponse {
     type: string;
     message: string;
   } | string; // Airtable sometimes returns a string error
-}
