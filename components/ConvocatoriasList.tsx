@@ -10,9 +10,10 @@ interface ConvocatoriasListProps {
   studentAirtableId: string | null;
   enrollingId: string | null;
   onInscribir: (lanzamiento: LanzamientoPPS) => void;
+  onVerSeleccionados: (lanzamiento: LanzamientoPPS) => void;
 }
 
-const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myEnrollments, studentAirtableId, enrollingId, onInscribir }) => {
+const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myEnrollments, studentAirtableId, enrollingId, onInscribir, onVerSeleccionados }) => {
 
     if (lanzamientos.length === 0) {
         return (
@@ -41,6 +42,7 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myE
                   enrollmentStatus={enrollmentStatus}
                   isEnrolling={isEnrolling}
                   onInscribir={onInscribir}
+                  onVerSeleccionados={onVerSeleccionados}
               />
             );
           })}
