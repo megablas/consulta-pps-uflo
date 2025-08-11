@@ -117,12 +117,22 @@ const AiConvocatoriaCreator: React.FC<AiConvocatoriaCreatorProps> = ({ showModal
       showModal('Entrada Vacía', 'Por favor, pegue el texto de la convocatoria en el área de texto.');
       return;
     }
+
+    const apiKey = process.env.API_KEY;
+    if (!apiKey || apiKey === 'undefined') {
+      showModal(
+        'Configuración Requerida',
+        'La API Key para el servicio de IA no está configurada. Esta función requiere que la variable de entorno `API_KEY` esté definida correctamente.'
+      );
+      return;
+    }
+
     setIsLoading(true);
     setLoadingMessage('Analizando con IA...');
     setParsedData(null);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+      const ai = new GoogleGenAI({ apiKey: apiKey as string });
       
       const systemInstruction = "Eres un asistente experto en procesar convocatorias de prácticas profesionales para una universidad. Analiza el siguiente texto y extrae la información clave. Devuelve un objeto JSON que se ajuste estrictamente al esquema proporcionado. Si no encuentras información para un campo, omítelo del JSON a menos que sea un campo requerido. Para las fechas, asegúrate de que estén en formato YYYY-MM-DD.";
 
