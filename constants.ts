@@ -96,5 +96,5 @@ export const ALERT_DISCLAIMER_TEXT = 'La información de este panel se actualiza
 
 // --- Misc ---
 export const EXCLUDED_PPS_NAME = "Práctica Profesional Supervisada I";
-export const EMAIL_SEGUROS = 'sergio.rivera@uflouniversidad.edu.ar';
+export const EMAIL_SEGUROS = 'mesadeayuda.patagonia@uflouniversidad.edu.ar';
 export const TEMPLATE_PPS_NAME = 'Colegio Virgen de Luján';
