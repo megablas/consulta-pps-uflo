@@ -8,7 +8,7 @@ import {
   FIELD_NOMBRE_BUSQUEDA_PRACTICAS,
   FIELD_NOMBRE_ESTUDIANTES,
   FIELD_ESTADO_PRACTICA,
-  FIELD_NOMBRE_INSTITucion_LOOKUP_PRACTICAS,
+  FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS,
   EXCLUDED_PPS_NAME,
 } from '../constants';
 import type { LanzamientoPPSFields, PracticaFields, EstudianteFields } from '../types';
@@ -77,7 +77,7 @@ const AdminDashboard: React.FC = () => {
           fetchAllAirtableData<PracticaFields>(
             AIRTABLE_TABLE_NAME_PRACTICAS,
             [FIELD_NOMBRE_BUSQUEDA_PRACTICAS],
-            `AND({${FIELD_ESTADO_PRACTICA}} = 'Finalizada', {${FIELD_NOMBRE_INSTITucion_LOOKUP_PRACTICAS}} != '${EXCLUDED_PPS_NAME}')`
+            `AND({${FIELD_ESTADO_PRACTICA}} = 'Finalizada', {${FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS}} != '${EXCLUDED_PPS_NAME}')`
           ),
         ]);
 
