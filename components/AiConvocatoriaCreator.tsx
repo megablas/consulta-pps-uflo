@@ -117,11 +117,14 @@ const AiConvocatoriaCreator: React.FC<AiConvocatoriaCreatorProps> = ({ showModal
       showModal('Entrada Vacía', 'Por favor, pegue el texto de la convocatoria en el área de texto.');
       return;
     }
-
-    // The explicit API key check has been removed.
-    // Per the instructions, the app must assume the API_KEY is available in the environment.
-    // If the key is missing, the GoogleGenAI constructor will throw an error,
-    // which will be caught and displayed as a generic analysis error.
+    
+    if (!process.env.API_KEY) {
+      showModal(
+        'Configuración Requerida',
+        'La clave API para el servicio de IA no está configurada en el entorno de esta aplicación. Esta función no puede operar sin ella. El administrador del sistema debe configurar la variable de entorno `API_KEY` para habilitar esta función.'
+      );
+      return;
+    }
 
     setIsLoading(true);
     setLoadingMessage('Analizando con IA...');
