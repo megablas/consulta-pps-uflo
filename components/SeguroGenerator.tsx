@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { fetchAirtableData } from '../services/airtableService';
+import { fetchAirtableData, updateAirtableRecords } from '../services/airtableService';
 import { formatDate, normalizeStringForComparison } from '../utils/formatters';
-import type { Convocatoria, ConvocatoriaFields, EstudianteFields } from '../types';
+import type { Convocatoria, ConvocatoriaFields, EstudianteFields, LanzamientoPPSFields } from '../types';
 import {
     AIRTABLE_TABLE_NAME_CONVOCATORIAS, FIELD_NOMBRE_PPS_CONVOCATORIAS,
     FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, FIELD_FECHA_INICIO_CONVOCATORIAS, FIELD_FECHA_FIN_CONVOCATORIAS,
     FIELD_DIRECCION_CONVOCATORIAS, FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS, FIELD_ORIENTACION_CONVOCATORIAS,
     AIRTABLE_TABLE_NAME_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES, FIELD_NOMBRE_ESTUDIANTES,
-    FIELD_DNI_ESTUDIANTES, FIELD_HORARIO_FORMULA_CONVOCATORIAS, FIELD_CORREO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES, FIELD_NOMBRE_SEPARADO_ESTUDIANTES, FIELD_APELLIDO_SEPARADO_ESTUDIANTES
+    FIELD_DNI_ESTUDIANTES, FIELD_HORARIO_FORMULA_CONVOCATORIAS, FIELD_CORREO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES, FIELD_NOMBRE_SEPARADO_ESTUDIANTES, FIELD_APELLIDO_SEPARADO_ESTUDIANTES,
+    FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
+    AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
+    FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS
 } from '../constants';
 import Loader from './Loader';
 import EmptyState from './EmptyState';
@@ -92,7 +95,7 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
             [
                 FIELD_NOMBRE_PPS_CONVOCATORIAS, FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, FIELD_FECHA_INICIO_CONVOCATORIAS,
                 FIELD_FECHA_FIN_CONVOCATORIAS, FIELD_DIRECCION_CONVOCATORIAS, FIELD_HORARIO_FORMULA_CONVOCATORIAS,
-                FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS, FIELD_ORIENTACION_CONVOCATORIAS,
+                FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS, FIELD_ORIENTACION_CONVOCATORIAS, FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
             ],
             `AND({${FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS}} != '', {${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}} = 'Seleccionado')`,
             200, [{ field: FIELD_FECHA_INICIO_CONVOCATORIAS, direction: 'desc' }]
@@ -117,6 +120,7 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
             }
             const group = groupedConvocatorias.get(key)!;
             group[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] = [...new Set([...group[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]!, ...(fields[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] || [])])];
+            group[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] = [...new Set([...(group[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || []), ...(fields[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])])];
         });
         
         const finalConvocatorias = Array.from(groupedConvocatorias.values()).sort((a, b) => new Date(b[FIELD_FECHA_INICIO_CONVOCATORIAS]!).getTime() - new Date(a[FIELD_FECHA_INICIO_CONVOCATORIAS]!).getTime()).slice(0, 5);
@@ -175,6 +179,8 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
 
                 const orientacionRaw = individualConv[FIELD_ORIENTACION_CONVOCATORIAS] || '';
                 const uniqueOrientations = Array.from(new Set(orientacionRaw.split(',').map(o => o.trim()).filter(Boolean)));
+                 const orientacionFinal = uniqueOrientations.length > 0 ? uniqueOrientations[0] : 'N/A';
+
 
                 const tutores = new Set<string>();
                  uniqueOrientations.map(o => normalizeStringForComparison(o)).forEach(o => {
@@ -200,7 +206,7 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                     lugar: `${individualConv[FIELD_NOMBRE_PPS_CONVOCATORIAS] || ''} - ${direccionValue}`,
                     duracion: `Período: ${periodoValue}. Horario: ${horarioValue}`,
                     tutor: tutores.size > 0 ? Array.from(tutores).join(', ') : 'N/A',
-                    orientacion: uniqueOrientations.join(', ') || 'N/A',
+                    orientacion: orientacionFinal,
                 };
             }).filter(Boolean) as StudentForReview[];
             
@@ -215,7 +221,7 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
         }
     };
     
-    const handleGenerateExcel = () => {
+    const handleGenerateExcel = async () => {
         setIsLoading(true);
         setLoadingMessage('Construyendo archivo Excel...');
         try {
@@ -247,12 +253,11 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
 
                 const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-                // Calculate width for the 'LUGAR' column (index 5)
                 const lugarHeader = wsData[7][5] as string;
                 const lugarData = group.map(student => student.lugar);
                 const maxLugarLength = Math.max(
                     lugarHeader.length,
-                    ...lugarData.map(l => l.length)
+                    ...lugarData.map(l => (l || '').length)
                 );
                 
                 ws['!merges'] = [0,1,2,3,4,5].map(r => ({ s: { r, c: 0 }, e: { r, c: 7 } }));
@@ -273,7 +278,32 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                                  .substring(0, 100);
             const fileName = `Seguro (${ppsName || 'PPS'}).xlsx`;
             XLSX.writeFile(wb, fileName);
-            setToastInfo({ message: 'Excel para seguro generado exitosamente.', type: 'success' });
+            
+            // After generating Excel, close the convocatorias
+            setLoadingMessage('Cerrando convocatorias...');
+            const selectedGroups = convocatorias.filter(c => selectedConvocatorias.has(c.id));
+            const lanzamientoIdsToUpdate = Array.from(new Set(selectedGroups.flatMap(c => c[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])));
+
+            if (lanzamientoIdsToUpdate.length > 0) {
+                const recordsToUpdate = lanzamientoIdsToUpdate.map(id => ({
+                    id: id,
+                    fields: { [FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]: 'Cerrado' }
+                }));
+                
+                const { error } = await updateAirtableRecords<LanzamientoPPSFields>(
+                    AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
+                    recordsToUpdate
+                );
+                
+                if (error) {
+                     setToastInfo({ message: 'Excel generado, pero falló al cerrar convocatorias.', type: 'error' });
+                } else {
+                     setToastInfo({ message: 'Excel generado y convocatorias cerradas.', type: 'success' });
+                }
+            } else {
+                 setToastInfo({ message: 'Excel para seguro generado exitosamente.', type: 'success' });
+            }
+
         } catch (e: any) {
             showModal('Error al Generar Excel', e.message || 'Ocurrió un error inesperado.');
         } finally {
@@ -511,7 +541,7 @@ Saludos!`
                     onClick={handleGenerateExcel} 
                     disabled={isLoading || studentsForReview.length === 0} 
                     className="w-full sm:w-auto bg-green-600 text-white font-bold py-2.5 px-6 rounded-lg text-sm transition-colors shadow-md disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                     {isLoading && loadingMessage.includes('Excel') ? (
+                     {isLoading ? (
                         <>
                             <div className="border-2 border-white/50 border-t-white rounded-full w-5 h-5 animate-spin"></div>
                             <span>{loadingMessage}</span>

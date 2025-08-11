@@ -8,6 +8,7 @@ import {
     FIELD_FECHA_FIN_LANZAMIENTOS,
     FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS,
     FIELD_HORAS_ACREDITADAS_LANZAMIENTOS,
+    FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS,
 } from '../constants';
 import { formatDate, getEspecialidadClasses, normalizeStringForComparison } from '../utils/formatters';
 import { useData } from '../contexts/DataContext';
@@ -15,6 +16,7 @@ import { useData } from '../contexts/DataContext';
 interface ConvocatoriaCardProps {
   lanzamiento: LanzamientoPPS;
   onInscribir: (lanzamiento: LanzamientoPPS) => void;
+  onVerSeleccionados: (lanzamiento: LanzamientoPPS) => void;
   enrollmentStatus: string | null;
   isEnrolling: boolean;
 }
@@ -30,7 +32,7 @@ const InfoRow: React.FC<{ icon: string; text: string | undefined; }> = ({ icon, 
 };
 
 
-const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInscribir, enrollmentStatus, isEnrolling }) => {
+const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInscribir, onVerSeleccionados, enrollmentStatus, isEnrolling }) => {
   const { userGender } = useData();
   const { 
     [FIELD_NOMBRE_PPS_LANZAMIENTOS]: nombre, 
@@ -40,38 +42,17 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInsc
     [FIELD_FECHA_INICIO_LANZAMIENTOS]: fechaInicio,
     [FIELD_FECHA_FIN_LANZAMIENTOS]: fechaFin,
     [FIELD_HORAS_ACREDITADAS_LANZAMIENTOS]: horas,
+    [FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]: estadoConvocatoria,
   } = lanzamiento;
   
   const hasEnrollment = !!enrollmentStatus;
   const normalizedStatus = normalizeStringForComparison(enrollmentStatus);
+  const isConvocatoriaCerrada = normalizeStringForComparison(estadoConvocatoria) === 'cerrado';
+  const isFetchingSeleccionados = isEnrolling && isConvocatoriaCerrada;
+
 
   const renderStatusBlock = () => {
-    if (!hasEnrollment) {
-      return (
-        <button
-            onClick={() => onInscribir(lanzamiento)}
-            disabled={isEnrolling}
-            className={`w-full font-bold text-base py-3 px-5 rounded-xl transition-all duration-200 ease-in-out shadow-lg flex items-center justify-center gap-2.5
-              ${isEnrolling 
-                ? 'bg-slate-400 text-white cursor-wait'
-                : 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
-              }`}
-            aria-label={`Postularme para ${nombre}`}
-          >
-            {isEnrolling ? (
-              <>
-                <div className="border-2 border-white/50 border-t-white rounded-full w-5 h-5 animate-spin"></div>
-                <span>Procesando...</span>
-              </>
-            ) : (
-              <>
-                <span className="material-icons !text-xl">rocket_launch</span>
-                <span>Postularme</span>
-              </>
-            )}
-          </button>
-      );
-    }
+    if (!hasEnrollment) return null;
 
     let statusStyles = 'bg-slate-100 border-slate-200/80';
     let textStyles = 'text-slate-700';
@@ -130,6 +111,69 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInsc
     );
   };
 
+  const renderActionBlock = () => {
+    const statusDisplay = renderStatusBlock();
+
+    if (isConvocatoriaCerrada) {
+      return (
+        <div className="flex flex-col gap-2 w-full">
+           {statusDisplay}
+           <button
+            onClick={() => onVerSeleccionados(lanzamiento)}
+            disabled={isFetchingSeleccionados}
+            className={`w-full font-bold text-sm py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2
+              ${isFetchingSeleccionados 
+                ? 'bg-slate-200 text-slate-500 cursor-wait'
+                : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300 shadow-sm'
+              }`}
+          >
+            {isFetchingSeleccionados ? (
+              <>
+                <div className="border-2 border-slate-400 border-t-slate-600 rounded-full w-4 h-4 animate-spin"></div>
+                <span>Cargando...</span>
+              </>
+            ) : (
+              <>
+                 <span className="material-icons !text-lg">groups</span>
+                 <span>Ver Seleccionados</span>
+              </>
+            )}
+          </button>
+        </div>
+      );
+    }
+    
+    // Convocatoria Abierta
+    if (hasEnrollment) {
+      return statusDisplay;
+    }
+
+    return (
+       <button
+          onClick={() => onInscribir(lanzamiento)}
+          disabled={isEnrolling}
+          className={`w-full font-bold text-base py-3 px-5 rounded-xl transition-all duration-200 ease-in-out shadow-lg flex items-center justify-center gap-2.5
+            ${isEnrolling 
+              ? 'bg-slate-400 text-white cursor-wait'
+              : 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+            }`}
+          aria-label={`Postularme para ${nombre}`}
+        >
+          {isEnrolling ? (
+            <>
+              <div className="border-2 border-white/50 border-t-white rounded-full w-5 h-5 animate-spin"></div>
+              <span>Procesando...</span>
+            </>
+          ) : (
+            <>
+              <span className="material-icons !text-xl">rocket_launch</span>
+              <span>Postularme</span>
+            </>
+          )}
+        </button>
+    );
+  }
+
   return (
     <div 
       className="bg-white p-5 rounded-2xl shadow-md shadow-slate-200/50 border border-slate-200/70
@@ -155,7 +199,7 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInsc
       
       {/* Right Side: Action */}
       <div className="w-full lg:w-56 flex-shrink-0 flex flex-col items-center justify-center lg:border-l lg:pl-6 border-slate-200/60 self-stretch min-h-[80px]">
-        {renderStatusBlock()}
+        {renderActionBlock()}
       </div>
     </div>
   );
