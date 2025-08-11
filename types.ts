@@ -149,8 +149,11 @@ export interface AirtableResponse<T> {
   offset?: string;
 }
 
+export interface AirtableErrorObject {
+  type: string;
+  message: string;
+}
+
 export interface AirtableErrorResponse {
-  error: {
-    type: string;
-    message: string;
-  } | string; // Airtable sometimes returns a string error
+  error: AirtableErrorObject | string; // Airtable sometimes returns a string error
+}
