@@ -62,6 +62,7 @@ export interface LanzamientoPPSFields {
   'Descripcion'?: string; // Corrected field for detailed description (rich text/Markdown)
   'Encuentro Inicial'?: string; // New field for initial meeting details
   'Plazo Inscripción (días)'?: number;
+  'Plantilla Seguro'?: { url: string }[];
 }
 
 export interface InstitucionFields {
@@ -80,6 +81,7 @@ export interface ConvocatoriaFields {
   'Dirección'?: string;
   'Horario'?: string; // Text field to store selected schedule(s)
   'Horas Acreditadas'?: number;
+  'Cupos disponibles'?: number;
   'Estado de Convocatoria'?: string; // e.g. 'Abierta', 'Cerrada'
   'Estado'?: string; // e.g. 'No seleccionado', 'Seleccionado', 'Inscripto'
   'Orientación'?: string;

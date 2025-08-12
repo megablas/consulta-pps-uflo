@@ -73,6 +73,7 @@ export const FIELD_FECHA_FIN_CONVOCATORIAS = 'Fecha de Finalización';
 export const FIELD_DIRECCION_CONVOCATORIAS = 'Dirección';
 export const FIELD_HORARIO_FORMULA_CONVOCATORIAS = 'Horario';
 export const FIELD_HORAS_ACREDITADAS_CONVOCATORIAS = 'Horas Acreditadas';
+export const FIELD_CUPOS_DISPONIBLES_CONVOCATORIAS = 'Cupos disponibles';
 export const FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS = 'Estado'; // e.g., 'Inscripto', 'Seleccionado'
 export const FIELD_ORIENTACION_CONVOCATORIAS = 'Orientación';
 export const FIELD_TERMINO_CURSAR_CONVOCATORIAS = '¿Terminó de cursar?';
@@ -96,5 +97,5 @@ export const ALERT_DISCLAIMER_TEXT = 'La información de este panel se actualiza
 
 // --- Misc ---
 export const EXCLUDED_PPS_NAME = "Práctica Profesional Supervisada I";
-export const EMAIL_SEGUROS = 'mesadeayuda.patagonia@uflouniversidad.edu.ar';
+export const EMAIL_SEGUROS = 'sergio.rivera@uflouniversidad.edu.ar';
 export const TEMPLATE_PPS_NAME = 'Colegio Virgen de Luján';
