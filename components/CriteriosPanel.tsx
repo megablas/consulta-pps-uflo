@@ -1,10 +1,10 @@
 import React from 'react';
 import { Orientacion, ALL_ORIENTACIONES } from '../types';
 import { HORAS_OBJETIVO_TOTAL, HORAS_OBJETIVO_ORIENTACION } from '../constants';
-import ProgressBar from './ProgressBar.tsx';
-import RotationTracker from './RotationTracker.tsx';
+import ProgressBar from './ProgressBar';
+import RotationTracker from './RotationTracker';
 import { useData } from '../contexts/DataContext';
-import ProgressCircle from './ProgressCircle.tsx';
+import ProgressCircle from './ProgressCircle';
 
 const CriteriosPanel: React.FC = () => {
   const { 
