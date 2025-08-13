@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import AdminSearch from '../components/AdminSearch';
 import SeguroGenerator from '../components/SeguroGenerator';
-import AiConvocatoriaCreator from '../components/AiConvocatoriaCreator';
 import Dashboard from '../components/Dashboard';
 import { DataProvider } from '../contexts/DataContext';
 import { AuthUser } from '../contexts/AuthContext';
@@ -15,7 +14,7 @@ import {
     FIELD_NOMBRE_ESTUDIANTES,
 } from '../constants';
 import type { EstudianteFields } from '../types';
-import AdminDashboard from '../components/AdminDashboard';
+import ConvocatoriaManager from '../components/ConvocatoriaManager';
 
 
 interface StudentTab {
@@ -27,7 +26,7 @@ interface StudentTab {
 
 const AdminView: React.FC = () => {
     const [studentTabs, setStudentTabs] = useState<StudentTab[]>([]);
-    const [activeTabId, setActiveTabId] = useState('dashboard');
+    const [activeTabId, setActiveTabId] = useState('manager');
     
     const [isLoading, setIsLoading] = useState(false);
     const [modalInfo, setModalInfo] = React.useState<{title: string, message: string} | null>(null);
@@ -77,17 +76,17 @@ const AdminView: React.FC = () => {
         setStudentTabs(prev => prev.filter(s => s.id !== tabId));
         // If the closed tab was active, switch to the search tab
         if (activeTabId === tabId) {
-            setActiveTabId('dashboard');
+            setActiveTabId('manager');
         }
     }, [activeTabId]);
 
     const allTabs = [
         {
-            id: 'dashboard',
-            label: 'Dashboard',
-            icon: 'dashboard',
+            id: 'manager',
+            label: 'Gestionar PPS',
+            icon: 'tune',
             isClosable: false,
-            content: <AdminDashboard />
+            content: <ConvocatoriaManager />
         },
         {
             id: 'search',
@@ -102,13 +101,6 @@ const AdminView: React.FC = () => {
             icon: 'shield',
             isClosable: false,
             content: <SeguroGenerator showModal={handleShowModal} />
-        },
-        {
-            id: 'ai-creator',
-            label: 'Crear con IA',
-            icon: 'auto_awesome',
-            isClosable: false,
-            content: <AiConvocatoriaCreator showModal={handleShowModal} />
         },
         ...studentTabs.map(student => ({
             id: student.id,

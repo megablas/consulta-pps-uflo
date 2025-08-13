@@ -18,10 +18,10 @@ const SortableHeader: React.FC<{
   const icon = isActive ? (sortConfig.direction === 'ascending' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more';
 
   return (
-    <th className={`px-4 py-3 ${className} cursor-pointer select-none group transition-colors hover:bg-slate-100 text-slate-500 font-semibold text-xs tracking-wider uppercase`} onClick={() => requestSort(sortKey)}>
+    <th className={`px-5 py-4 ${className} cursor-pointer select-none group transition-colors hover:bg-slate-100 text-slate-600 font-bold text-xs tracking-wider uppercase`} onClick={() => requestSort(sortKey)}>
       <div className="flex items-center justify-center gap-2">
         <span>{label}</span>
-        <span className={`material-icons !text-base transition-opacity ${isActive ? 'opacity-90 text-slate-700' : 'opacity-40 group-hover:opacity-70'}`}>{icon}</span>
+        <span className={`material-icons !text-base transition-opacity ${isActive ? 'opacity-90 text-slate-800' : 'opacity-40 group-hover:opacity-70'}`}>{icon}</span>
       </div>
     </th>
   );
@@ -119,7 +119,7 @@ const PracticasTable: React.FC = () => {
               <SortableHeader label="Horas" sortKey="horas" sortConfig={sortConfig} requestSort={requestSort} />
               <SortableHeader label="Periodo" sortKey="fechaInicio" sortConfig={sortConfig} requestSort={requestSort} />
               <SortableHeader label="Estado" sortKey="estado" sortConfig={sortConfig} requestSort={requestSort} />
-              <th className="px-4 py-3 text-center text-slate-500 font-semibold text-xs tracking-wider uppercase">
+              <th className="px-5 py-4 text-center text-slate-600 font-bold text-xs tracking-wider uppercase">
                 <div className="flex items-center justify-center gap-2">
                     <span>Nota</span>
                     <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded-full border border-blue-200/80">Nuevo</span>
@@ -137,27 +137,27 @@ const PracticasTable: React.FC = () => {
 
               return (
               <tr key={practica.id} className="transition-colors duration-200 hover:bg-slate-50/50 border-t border-slate-200/70">
-                <td className="p-4 align-middle text-sm text-slate-800 font-medium break-words">{institucion || 'N/A'}</td>
-                <td className="p-4 align-middle text-center">
-                    <span className={getEspecialidadClasses(practica[FIELD_ESPECIALIDAD_PRACTICAS])}>
+                <td className="p-5 align-middle text-sm text-slate-800 font-medium break-words">{institucion || 'N/A'}</td>
+                <td className="p-5 align-middle text-center">
+                    <span className={getEspecialidadClasses(practica[FIELD_ESPECIALIDAD_PRACTICAS]).tag}>
                         {practica[FIELD_ESPECIALIDAD_PRACTICAS] || 'N/A'}
                     </span>
                 </td>
-                <td className="p-4 text-sm text-center align-middle text-slate-600 font-semibold">{practica[FIELD_HORAS_PRACTICAS] || 0}</td>
-                <td className="p-4 text-sm text-center align-middle text-slate-600">
+                <td className="p-5 text-sm text-center align-middle text-slate-600 font-semibold">{practica[FIELD_HORAS_PRACTICAS] || 0}</td>
+                <td className="p-5 text-sm text-center align-middle text-slate-600">
                   {formatDate(practica[FIELD_FECHA_INICIO_PRACTICAS])} - {formatDate(practica[FIELD_FECHA_FIN_PRACTICAS])}
                 </td>
-                <td className="p-4 align-middle text-center">
+                <td className="p-5 align-middle text-center">
                    <span className={`${statusVisuals.labelClass} gap-1.5`}>
                         <span className="material-icons !text-sm">{statusVisuals.icon}</span>
                         <span>{status || 'N/A'}</span>
                    </span>
                 </td>
-                <td className="p-2 align-middle w-48">
+                <td className="p-3 align-middle w-48">
                     <select
                         value={practica[FIELD_NOTA_PRACTICAS] || 'Sin calificar'}
                         onChange={(e) => handleLocalNotaChange(practica.id, e.target.value)}
-                        className={`w-full text-sm rounded-lg border-slate-300/80 p-2 text-slate-800 bg-white shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all ${savingNotaId === practica.id ? 'ring-2 ring-blue-400 border-blue-400' : ''}`}
+                        className={`w-full text-sm rounded-lg border-slate-300/80 p-2.5 text-slate-800 bg-white shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all ${savingNotaId === practica.id ? 'ring-2 ring-blue-400 border-blue-400' : ''}`}
                         aria-label={`Calificación para ${institucion}`}
                     >
                         {NOTA_OPTIONS.map(option => (

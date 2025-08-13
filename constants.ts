@@ -56,8 +56,6 @@ export const FIELD_ORIENTACION_LANZAMIENTOS = 'Orientación';
 export const FIELD_HORAS_ACREDITADAS_LANZAMIENTOS = 'Horas Acreditadas';
 export const FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS = 'Cupos disponibles';
 export const FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS = 'Estado de Convocatoria';
-export const FIELD_DESCRIPCION_LANZAMIENTOS = 'Descripcion';
-export const FIELD_ENCUENTRO_INICIAL_LANZAMIENTOS = 'Encuentro Inicial';
 export const FIELD_DURACION_INSCRIPCION_DIAS_LANZAMIENTOS = 'Plazo Inscripción (días)';
 export const FIELD_PLANTILLA_SEGURO_LANZAMIENTOS = 'Plantilla Seguro';
 
@@ -88,14 +86,13 @@ export const FIELD_TELEFONO_CONVOCATORIAS = 'Teléfono'; // Lookup
 
 // --- Academic criteria constants ---
 export const HORAS_OBJETIVO_TOTAL = 250;
-export const HORAS_OBJETIVO_ORIENTACION = 100;
+export const HORAS_OBJETIVO_ORIENTACION = 70;
 export const ROTACION_OBJETIVO_ORIENTACIONES = 3;
 
 // --- UI text constants ---
-export const ALERT_DISCLAIMER_TITLE = 'Importante: Verificación de Datos';
-export const ALERT_DISCLAIMER_TEXT = 'La información de este panel se actualiza periódicamente desde los registros oficiales. Si encuentras alguna discrepancia o crees que tus datos no están al día, por favor, ponte en contacto con nosotros para solicitar una corrección.';
+export const ALERT_DISCLAIMER_TITLE = 'Aviso Importante';
+export const ALERT_DISCLAIMER_TEXT = 'La información visualizada es una herramienta de seguimiento interno y no constituye un registro académico oficial; puede contener errores. Para solicitar una corrección, es indispensable enviar un correo electrónico adjuntando la documentación que respalde el cambio (ej: planillas, certificados). No se procesarán solicitudes que no incluyan la documentación requerida.';
 
 // --- Misc ---
-export const EXCLUDED_PPS_NAME = "Práctica Profesional Supervisada I";
 export const EMAIL_SEGUROS = 'sergio.rivera@uflouniversidad.edu.ar';
 export const TEMPLATE_PPS_NAME = 'Colegio Virgen de Luján';

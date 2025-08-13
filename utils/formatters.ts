@@ -16,24 +16,55 @@ export function formatDate(dateString?: string): string {
     }
 }
 
-export function getEspecialidadClasses(especialidad?: string): string {
-    if (!especialidad) return 'bg-slate-100 text-slate-800 border-slate-200';
-    
+export function getEspecialidadClasses(especialidad?: string): { 
+    tag: string; 
+    gradient: string; 
+    textOnDark: string;
+    headerBg: string;
+    headerText: string;
+} {
     const baseClasses = "inline-flex items-center font-semibold py-1 px-2.5 rounded-full text-xs border";
     const normalizedEspecialidad = normalizeStringForComparison(especialidad);
 
-    switch (normalizedEspecialidad) {
-        case 'clinica':
-            return `${baseClasses} bg-green-100 text-green-800 border-green-200`;
-        case 'educacional':
-            return `${baseClasses} bg-sky-100 text-sky-800 border-sky-200`;
-        case 'laboral':
-            return `${baseClasses} bg-rose-100 text-rose-800 border-rose-200`;
-        case 'comunitaria':
-            return `${baseClasses} bg-violet-100 text-violet-800 border-violet-200`;
-        default:
-            return `${baseClasses} bg-slate-100 text-slate-800 border-slate-200`;
-    }
+    const styles = {
+        clinica: {
+            tag: `${baseClasses} bg-green-100 text-green-800 border-green-200`,
+            gradient: 'from-green-500 to-teal-500',
+            textOnDark: 'text-green-100',
+            headerBg: 'bg-green-50',
+            headerText: 'text-green-900',
+        },
+        educacional: {
+            tag: `${baseClasses} bg-sky-100 text-sky-800 border-sky-200`,
+            gradient: 'from-sky-500 to-blue-600',
+            textOnDark: 'text-sky-100',
+            headerBg: 'bg-sky-50',
+            headerText: 'text-sky-900',
+        },
+        laboral: {
+            tag: `${baseClasses} bg-rose-100 text-rose-800 border-rose-200`,
+            gradient: 'from-rose-500 to-red-600',
+            textOnDark: 'text-rose-100',
+            headerBg: 'bg-rose-50',
+            headerText: 'text-rose-900',
+        },
+        comunitaria: {
+            tag: `${baseClasses} bg-violet-100 text-violet-800 border-violet-200`,
+            gradient: 'from-violet-500 to-purple-600',
+            textOnDark: 'text-violet-100',
+            headerBg: 'bg-violet-50',
+            headerText: 'text-violet-900',
+        },
+        default: {
+            tag: `${baseClasses} bg-slate-100 text-slate-800 border-slate-200`,
+            gradient: 'from-slate-500 to-slate-600',
+            textOnDark: 'text-slate-100',
+            headerBg: 'bg-slate-50',
+            headerText: 'text-slate-900',
+        },
+    };
+
+    return (styles as any)[normalizedEspecialidad] || styles.default;
 }
 
 export function getStatusVisuals(status?: string): { icon: string; iconContainerClass: string; labelClass: string; } {
@@ -101,7 +132,7 @@ export function getStatusVisuals(status?: string): { icon: string; iconContainer
             labelClass: `${baseLabel} bg-indigo-100 text-indigo-800`,
         };
     }
-    if (normalizedStatus.includes('abierta')) {
+    if (normalizedStatus.includes('abierta') || normalizedStatus.includes('abierto')) {
         return {
             icon: 'door_open',
             iconContainerClass: `${baseIconContainer} bg-green-100 text-green-600`,
@@ -122,6 +153,23 @@ export function getStatusVisuals(status?: string): { icon: string; iconContainer
             labelClass: `${baseLabel} bg-sky-100 text-sky-800`,
         };
     }
+
+    // --- PRIORITY 4: ADMIN / METADATA STATES ---
+    if (normalizedStatus.includes('cerrado')) {
+        return {
+            icon: 'lock',
+            iconContainerClass: `${baseIconContainer} bg-slate-100 text-slate-500`,
+            labelClass: `${baseLabel} bg-slate-100 text-slate-800`,
+        };
+    }
+    if (normalizedStatus.includes('oculto')) {
+        return {
+            icon: 'visibility_off',
+            iconContainerClass: `${baseIconContainer} bg-neutral-100 text-neutral-500`,
+            labelClass: `${baseLabel} bg-neutral-100 text-neutral-800`,
+        };
+    }
+
 
     // --- DEFAULT FALLBACK ---
     return {

@@ -10,10 +10,23 @@ import { CriteriosPanelSkeleton, TableSkeleton } from '../components/Skeletons';
 import { useData } from '../contexts/DataContext';
 import EnrollmentForm from '../components/EnrollmentForm';
 import Modal from '../components/Modal';
+import SeleccionadosModal, { GroupedSeleccionados } from '../components/SeleccionadosModal';
 import { LanzamientoPPS, ConvocatoriaFields, EstudianteFields } from '../types';
 import { fetchAirtableData } from '../services/airtableService';
-import { AIRTABLE_TABLE_NAME_CONVOCATORIAS, FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS, FIELD_FECHA_INICIO_LANZAMIENTOS, FIELD_NOMBRE_PPS_LANZAMIENTOS, FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, AIRTABLE_TABLE_NAME_ESTUDIANTES, FIELD_NOMBRE_ESTUDIANTES, FIELD_FECHA_INICIO_CONVOCATORIAS, FIELD_NOMBRE_PPS_CONVOCATORIAS, FIELD_LEGAJO_ESTUDIANTES, FIELD_HORARIO_FORMULA_CONVOCATORIAS } from '../constants';
+import { AIRTABLE_TABLE_NAME_CONVOCATORIAS, FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS, FIELD_FECHA_INICIO_LANZAMIENTOS, FIELD_NOMBRE_PPS_LANZAMIENTOS, FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, AIRTABLE_TABLE_NAME_ESTUDIANTES, FIELD_NOMBRE_ESTUDIANTES, FIELD_FECHA_INICIO_CONVOCATORIAS, FIELD_NOMBRE_PPS_CONVOCATORIAS, FIELD_LEGAJO_ESTUDIANTES, FIELD_HORARIO_FORMULA_CONVOCATORIAS, FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS } from '../constants';
 import { normalizeStringForComparison } from '../utils/formatters';
+import Footer from '../components/Footer';
+
+const WelcomeHeader: React.FC<{ studentName: string }> = ({ studentName }) => (
+    <div className="text-center mb-12 animate-fade-in-up">
+        <h1 className="text-4xl md:text-5xl font-extrabold text-slate-800 tracking-tight">
+            ¡Hola, <span className="text-blue-600">{studentName.split(' ')[0]}</span>!
+        </h1>
+        <p className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">
+            Este es tu centro de mando para las Prácticas Profesionales. Sigue tu progreso y encuentra nuevas oportunidades.
+        </p>
+    </div>
+);
 
 const StudentView: React.FC = () => {
     const { 
@@ -35,11 +48,15 @@ const StudentView: React.FC = () => {
         myEnrollments,
         studentAirtableId,
         enrollingId,
+        studentNameForPanel,
         handleInscribir
     } = useData();
 
     const [activeTab, setActiveTab] = useState('convocatorias');
     const [loadingSeleccionadosId, setLoadingSeleccionadosId] = useState<string | null>(null);
+    const [isSeleccionadosModalOpen, setIsSeleccionadosModalOpen] = useState(false);
+    const [seleccionadosData, setSeleccionadosData] = useState<GroupedSeleccionados | null>(null);
+    const [convocatoriaForModal, setConvocatoriaForModal] = useState('');
 
     useEffect(() => {
         fetchStudentData();
@@ -47,6 +64,8 @@ const StudentView: React.FC = () => {
 
     const handleVerSeleccionados = async (lanzamiento: LanzamientoPPS) => {
         setLoadingSeleccionadosId(lanzamiento.id);
+        setConvocatoriaForModal(lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'Convocatoria');
+
         try {
             const ppsName = lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS]?.replace(/'/g, "\\'");
             const ppsStartDate = lanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS];
@@ -57,7 +76,6 @@ const StudentView: React.FC = () => {
                 return;
             }
 
-            // Step 1: Fetch convocatoria records to get student IDs and their assigned schedules.
             const { records: convocatoriaRecords, error: convocatoriaError } = await fetchAirtableData<ConvocatoriaFields>(
                 AIRTABLE_TABLE_NAME_CONVOCATORIAS,
                 [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, FIELD_HORARIO_FORMULA_CONVOCATORIAS],
@@ -70,7 +88,6 @@ const StudentView: React.FC = () => {
 
             if (convocatoriaError) throw new Error("No se pudo obtener la información de la convocatoria.");
             
-            // Step 2: Create a map of student record ID to their schedule and collect all IDs.
             const studentHorarioMap = new Map<string, string>();
             const studentIds: string[] = [];
             convocatoriaRecords.forEach(record => {
@@ -83,13 +100,12 @@ const StudentView: React.FC = () => {
             });
 
             if (studentIds.length === 0) {
-                 const message = 'Aún no se ha publicado la lista o no hay seleccionados para esta PPS.';
-                 showModal(`Seleccionados para: ${lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS]}`, message);
+                 setSeleccionadosData(null);
+                 setIsSeleccionadosModalOpen(true);
                  setLoadingSeleccionadosId(null);
                  return;
             }
 
-            // Step 3: Fetch student names and legajos from 'Estudiantes' table using the collected IDs.
             const uniqueStudentIds = [...new Set(studentIds)];
             const formula = `OR(${uniqueStudentIds.map(id => `RECORD_ID()='${id}'`).join(',')})`;
             const { records: studentRecords, error: studentError } = await fetchAirtableData<EstudianteFields>(
@@ -100,19 +116,23 @@ const StudentView: React.FC = () => {
 
             if (studentError) throw new Error("No se pudo cargar la lista de estudiantes seleccionados.");
             
-            // Step 4: Combine data and construct the message for the modal.
             const studentInfoList = studentRecords.map(student => ({
                 nombre: student.fields[FIELD_NOMBRE_ESTUDIANTES] || 'Nombre no encontrado',
                 legajo: student.fields[FIELD_LEGAJO_ESTUDIANTES] || 'N/A',
-                horario: studentHorarioMap.get(student.id) || 'No especificado',
-            })).sort((a, b) => a.nombre.localeCompare(b.nombre));
+                horario: studentHorarioMap.get(student.id) || 'Horario no especificado',
+            }));
 
-            const message = studentInfoList.length > 0
-                ? `Los siguientes estudiantes fueron seleccionados:\n\n` + 
-                  studentInfoList.map(s => `• ${s.nombre} (Legajo: ${s.legajo})\n  Horario: ${s.horario}`).join('\n\n')
-                : 'Aún no se ha publicado la lista o no hay seleccionados para esta PPS.';
-            
-            showModal(`Seleccionados para: ${lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS]}`, message);
+            const grouped: GroupedSeleccionados = studentInfoList.reduce((acc, student) => {
+                const { horario, ...rest } = student;
+                if (!acc[horario]) {
+                    acc[horario] = [];
+                }
+                acc[horario].push(rest);
+                return acc;
+            }, {} as GroupedSeleccionados);
+
+            setSeleccionadosData(grouped);
+            setIsSeleccionadosModalOpen(true);
 
         } catch (e: any) {
             showModal('Error', e.message);
@@ -123,20 +143,23 @@ const StudentView: React.FC = () => {
 
 
     const horariosStr = selectedLanzamientoForEnrollment?.['Horario Seleccionado'] || '';
-    const horariosArray = horariosStr ? horariosStr.split(/[,;]/).map(h => h.trim()).filter(Boolean) : [];
+    const horariosArray = horariosStr ? horariosStr.split('\n').map(h => h.trim()).filter(Boolean) : [];
     
     const today = new Date();
     const visibleLanzamientos = lanzamientos.filter(l => {
         const startDateString = l[FIELD_FECHA_INICIO_LANZAMIENTOS];
-        if (!startDateString) return true; // Keep if no start date
+        if (!startDateString) return false; 
         
         const startDate = new Date(startDateString);
-        if (isNaN(startDate.getTime())) return true; // Keep if date is invalid
+        if (isNaN(startDate.getTime())) return false;
 
         const cutoffDate = new Date(startDate);
-        cutoffDate.setDate(startDate.getDate() + 2); // 2 days after start
+        cutoffDate.setDate(startDate.getDate() + 1);
 
-        return today < cutoffDate;
+        const status = normalizeStringForComparison(l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]);
+        const isVisibleStatus = status === 'abierta' || status === 'abierto' || status === 'cerrado';
+        
+        return isVisibleStatus && today < cutoffDate;
     });
 
     const tabs = [
@@ -202,6 +225,7 @@ const StudentView: React.FC = () => {
         if (initialLoadCompleted && practicas.length === 0 && solicitudes.length === 0 && lanzamientos.length === 0) {
             return (
                  <div className="space-y-8 animate-fade-in-up">
+                    <WelcomeHeader studentName={studentNameForPanel} />
                     <CriteriosPanel />
                     <div className="mt-8">
                          <EmptyState 
@@ -215,7 +239,8 @@ const StudentView: React.FC = () => {
         }
     
         return (
-            <div className="space-y-8 animate-fade-in-up">
+            <div className="space-y-12 animate-fade-in-up">
+                <WelcomeHeader studentName={studentNameForPanel} />
                 <CriteriosPanel />
                 <Card>
                     <Tabs
@@ -228,6 +253,7 @@ const StudentView: React.FC = () => {
         );
     }
 
+    const shouldShowFooter = activeTab === 'practicas';
 
     return (
         <>
@@ -246,6 +272,13 @@ const StudentView: React.FC = () => {
               horariosDisponibles={horariosArray}
               isSubmitting={isSubmitting}
             />
+            <SeleccionadosModal
+                isOpen={isSeleccionadosModalOpen}
+                onClose={() => setIsSeleccionadosModalOpen(false)}
+                seleccionados={seleccionadosData}
+                convocatoriaName={convocatoriaForModal}
+            />
+            {shouldShowFooter && <Footer />}
         </>
     );
 };

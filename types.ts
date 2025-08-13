@@ -59,8 +59,6 @@ export interface LanzamientoPPSFields {
   'Horas Acreditadas'?: number;
   'Cupos disponibles'?: number;
   'Estado de Convocatoria'?: string;
-  'Descripcion'?: string; // Corrected field for detailed description (rich text/Markdown)
-  'Encuentro Inicial'?: string; // New field for initial meeting details
   'Plazo Inscripción (días)'?: number;
   'Plantilla Seguro'?: { url: string }[];
 }
