@@ -1,146 +1,109 @@
 import React from 'react';
 import { Orientacion, ALL_ORIENTACIONES } from '../types';
-import { HORAS_OBJETIVO_TOTAL, HORAS_OBJETIVO_ORIENTACION, ROTACION_OBJETIVO_ORIENTACIONES } from '../constants';
+import { HORAS_OBJETIVO_TOTAL, HORAS_OBJETIVO_ORIENTACION } from '../constants';
 import ProgressBar from './ProgressBar';
 import RotationTracker from './RotationTracker';
-import CriterionCard from './CriterionCard';
-import Card from './Card';
 import { useData } from '../contexts/DataContext';
-import { useAuth } from '../contexts/AuthContext';
-
+import ProgressCircle from './ProgressCircle';
 
 const CriteriosPanel: React.FC = () => {
   const { 
     criterios, 
     selectedOrientacion, 
     handleOrientacionChange, 
-    showSaveConfirmation,
-    studentNameForPanel,
-    userGender
+    showSaveConfirmation
   } = useData();
-  const { isSuperUserMode } = useAuth();
-
 
   const todosLosCriteriosCumplidos = criterios.cumpleHorasTotales && criterios.cumpleRotacion && criterios.cumpleHorasOrientacion;
 
-  const orientacionControls = (
-    <>
-      <div className={`transition-opacity duration-300 h-4 text-center ${showSaveConfirmation ? 'opacity-100' : 'opacity-0'}`}>
-        <span className="text-xs font-semibold text-blue-500">Guardado ✓</span>
+  const orientacionSelector = (
+     <div className="animate-fade-in-up">
+        <h3 className="text-slate-800 font-semibold text-base leading-tight mb-2">
+          Define tu Especialidad
+        </h3>
+        <p className="text-sm text-slate-500 mb-3">
+          Selecciona tu orientación para ver el progreso de las {HORAS_OBJETIVO_ORIENTACION}hs.
+        </p>
+        <div className="relative">
+             <div className={`transition-opacity duration-300 h-4 text-center mb-1 ${showSaveConfirmation ? 'opacity-100' : 'opacity-0'}`}>
+                <span className="text-xs font-semibold text-blue-500">Guardado ✓</span>
+             </div>
+            <select 
+              id="orientacion-elegida-select" 
+              value={selectedOrientacion}
+              onChange={(e) => handleOrientacionChange(e.target.value as Orientacion | "")}
+              className="appearance-none w-full rounded-md border border-slate-300/80 p-2.5 pr-10 text-sm text-slate-800 bg-slate-50 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors"
+              aria-label="Seleccionar orientación principal"
+            >
+              <option value="">Seleccionar orientación...</option>
+              {ALL_ORIENTACIONES.map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 top-7">
+                <span className="material-icons !text-base">unfold_more</span>
+            </div>
       </div>
-      <div className="relative mt-1">
-        <select 
-          id="orientacion-elegida-select" 
-          value={selectedOrientacion}
-          onChange={(e) => handleOrientacionChange(e.target.value as Orientacion | "")}
-          className="appearance-none w-full rounded-md border border-slate-300/80 p-2.5 pr-10 text-sm text-slate-800 bg-white shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors"
-          aria-label="Seleccionar orientación principal"
-        >
-          <option value="">Seleccione orientación...</option>
-          {ALL_ORIENTACIONES.map(o => <option key={o} value={o}>{o}</option>)}
-        </select>
-        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
-            <span className="material-icons !text-base">unfold_more</span>
-        </div>
-      </div>
-    </>
+     </div>
   );
-  
-  const getWelcomeMessage = () => {
-    const name = studentNameForPanel;
-    switch (userGender) {
-        case 'masculino': return `¡Bienvenido, ${name}!`;
-        case 'femenino': return `¡Bienvenida, ${name}!`;
-        default: return `¡Bienvenido/a, ${name}!`;
-    }
-  };
-
-  const title = isSuperUserMode ? `Panel de: ${studentNameForPanel}` : getWelcomeMessage();
-  const description = isSuperUserMode 
-    ? 'Este es el checklist del estudiante para finalizar el recorrido de prácticas.'
-    : 'Este es tu checklist para finalizar el recorrido de prácticas.';
 
   return (
-    <Card 
-      title={title} 
-      titleClassName="text-blue-700"
-      icon="dashboard"
-      description={description}
-      titleAs="h1"
-    >
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <CriterionCard isComplete={criterios.cumpleHorasTotales}>
-          <ProgressBar 
-            label={`Horas Totales`}
-            value={criterios.horasTotales}
-            max={HORAS_OBJETIVO_TOTAL}
-            unit="hs"
-          />
-        </CriterionCard>
-
-        <CriterionCard isComplete={criterios.cumpleRotacion}>
-           <RotationTracker
-            label={`Rotación de Orientaciones`}
-            count={criterios.orientacionesCursadasCount}
-            total={ROTACION_OBJETIVO_ORIENTACIONES}
-            orientacionesUnicas={criterios.orientacionesUnicas}
-          />
-        </CriterionCard>
+    <section>
+        <h2 className="text-3xl font-bold text-slate-800 mb-6 tracking-tight">Tu Progreso General</h2>
         
-        <CriterionCard 
-            isComplete={criterios.cumpleHorasOrientacion} 
-            controls={!selectedOrientacion ? orientacionControls : undefined}
-        >
-          {selectedOrientacion ? (
-            <ProgressBar
-              label={`Horas en ${selectedOrientacion}`}
-              value={criterios.horasOrientacionElegida}
-              max={HORAS_OBJETIVO_ORIENTACION}
-              unit="hs"
-            />
-          ) : (
-            <div className="flex flex-col gap-3 w-full">
-                <div className="flex justify-between items-baseline">
-                    <p className="text-slate-800 font-semibold text-sm leading-tight">
-                    Completa {HORAS_OBJETIVO_ORIENTACION} hs en tu orientación
+        <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/70 shadow-lg shadow-slate-500/5 
+                grid grid-cols-1 md:grid-cols-5 gap-x-8 gap-y-6">
+            
+            {/* Left Column: Main Progress */}
+            <div className="md:col-span-3 flex flex-col sm:flex-row items-center gap-6">
+                 <ProgressCircle
+                    value={criterios.horasTotales}
+                    max={HORAS_OBJETIVO_TOTAL}
+                />
+                <div className="flex-1 text-center sm:text-left">
+                    <h3 className="text-2xl font-bold text-slate-900">Horas Totales de Práctica</h3>
+                    <p className="text-slate-500 mt-1">
+                        Has completado <span className="font-bold text-slate-700">{Math.round(criterios.horasTotales)}</span> de <span className="font-bold text-slate-700">{HORAS_OBJETIVO_TOTAL}</span> horas requeridas.
+                        {criterios.cumpleHorasTotales 
+                            ? <span className="block text-green-600 font-semibold mt-1">¡Objetivo de horas totales cumplido!</span>
+                            : <span className="block text-blue-600 font-semibold mt-1">¡Sigue así, estás cada vez más cerca!</span>
+                        }
                     </p>
+                     {todosLosCriteriosCumplidos && (
+                        <a
+                            href="https://airtable.com/appBY8PYhPZ1X2ka1/paglLBxubDedzl1qz/form"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-4 inline-flex items-center gap-2 bg-blue-600 text-white font-bold text-sm py-2.5 px-5 rounded-lg transition-all hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-white shadow-lg hover:shadow-blue-500/30 hover:-translate-y-0.5"
+                        >
+                            <span className="material-icons !text-base">school</span>
+                            <span>Solicitar Acreditación</span>
+                        </a>
+                    )}
                 </div>
-                <div className="rounded-full h-3.5 bg-slate-200/70" />
-                <div className="text-center mt-1">
-                    <p className="text-slate-500 text-xs font-medium">
-                    Selecciona una orientación para ver tu progreso.
-                    </p>
+            </div>
+
+            {/* Right Column: Secondary Criteria */}
+            <div className="md:col-span-2 flex flex-col justify-center gap-8 border-t md:border-t-0 md:border-l border-slate-200/70 pt-6 md:pt-0 md:pl-8">
+                <RotationTracker
+                    count={criterios.orientacionesCursadasCount}
+                    orientacionesUnicas={criterios.orientacionesUnicas}
+                />
+                
+                <div className="h-full flex flex-col">
+                    {selectedOrientacion ? (
+                        <ProgressBar
+                            label={`Horas en ${selectedOrientacion}`}
+                            value={criterios.horasOrientacionElegida}
+                            max={HORAS_OBJETIVO_ORIENTACION}
+                            unit="hs"
+                            isComplete={criterios.cumpleHorasOrientacion}
+                        />
+                    ) : (
+                        <>{orientacionSelector}</>
+                    )}
                 </div>
             </div>
-          )}
-        </CriterionCard>
-      </div>
-
-
-      {todosLosCriteriosCumplidos && (
-        <div className="mt-8 border-t border-slate-200/80 pt-6 animate-fade-in-up">
-          <div className="p-5 bg-blue-50/50 border border-blue-500/20 text-blue-900 rounded-xl shadow-sm flex items-start gap-4">
-            <div className="flex-shrink-0 pt-1">
-              <span className="material-icons text-blue-500 !text-3xl animate-pulse">celebration</span>
-            </div>
-            <div>
-              <h3 className="font-bold text-lg">¡Felicitaciones! Has cumplido todos los criterios.</h3>
-              <p className="mt-1 text-sm">
-                Si aún no lo has hecho, puedes solicitar la acreditación de tus horas.
-              </p>
-              <a
-                href="https://airtable.com/appBY8PYhPZ1X2ka1/paglLBxubDedzl1qz/form"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-4 inline-block bg-blue-500 text-white font-bold text-sm py-2.5 px-5 rounded-lg transition-all hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-blue-50"
-              >
-                Solicitar Acreditación
-              </a>
-            </div>
-          </div>
         </div>
-      )}
-    </Card>
+    </section>
   );
 };
 
