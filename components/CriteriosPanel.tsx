@@ -162,7 +162,7 @@ const CriteriosPanel: React.FC = () => {
                     orientacionesUnicas={criterios.orientacionesUnicas}
                 />
                 
-                <div className="h-full flex flex-col">
+                <div className="flex flex-col">
                     {selectedOrientacion ? (
                         <ProgressBar
                             label={`Horas en ${selectedOrientacion}`}
