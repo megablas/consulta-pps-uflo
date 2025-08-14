@@ -1,137 +1,18 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Consulta de PPS y Prácticas</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet">
-    <style>
-      :root {
-        --color-primary: 37 99 235; /* blue-600 */
-        --color-slate-50: 248 250 252;
-        --color-slate-100: 241 245 249;
-        --color-slate-800: 30 41 59;
-        --color-slate-900: 15 23 42;
-      }
-      html {
-        scroll-behavior: smooth;
-      }
-      body {
-        font-family: 'Inter', sans-serif;
-        background-color: rgb(var(--color-slate-50));
-        color: rgb(var(--color-slate-800));
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-        /* New subtle gradient background */
-        background-image: linear-gradient(175deg, rgb(var(--color-slate-50)) 0%, #fff 70%);
-      }
-      #root {
-        min-height: 100vh;
-        width: 100%;
-      }
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import { AuthProvider } from './contexts/AuthContext';
 
-      /* -- Custom Animations -- */
-      @keyframes fadeInUp {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-      .animate-fade-in-up {
-        animation: fadeInUp 0.6s cubic-bezier(0.39, 0.58, 0.57, 1) forwards;
-        opacity: 0;
-        will-change: transform, opacity;
-      }
-      
-      @keyframes scaleIn {
-        from { opacity: 0; transform: scale(0.95); }
-        to { opacity: 1; transform: scale(1); }
-      }
-       .animate-scale-in {
-        animation: scaleIn 0.4s cubic-bezier(0.39, 0.58, 0.57, 1) forwards;
-        will-change: transform, opacity;
-      }
-      
-      @keyframes backgroundShine {
-        from { background-position: 200% 0; }
-        to { background-position: -200% 0; }
-      }
-      .animate-background-shine {
-        animation: backgroundShine 1.5s linear infinite;
-        background: linear-gradient(110deg, theme(colors.slate.200) 8%, theme(colors.slate.100) 18%, theme(colors.slate.200) 33%);
-        background-size: 200% 100%;
-        will-change: background-position;
-      }
-      
-      @keyframes pulse-glow {
-        0%, 100% { box-shadow: 0 0 15px -3px rgba(59, 130, 246, 0.4); } /* blue-500 */
-        50% { box-shadow: 0 0 25px 5px rgba(59, 130, 246, 0.4); }
-      }
-      .animate-pulse-glow {
-        animation: pulse-glow 2.5s infinite ease-in-out;
-      }
-      
-      /* -- Prose styles for AI-generated content (good practice) -- */
-      .prose {
-          color: theme(colors.slate.700);
-          line-height: 1.7;
-          max-width: none;
-      }
-      .prose p {
-          margin-bottom: 1em;
-      }
-      .prose h1, .prose h2, .prose h3 {
-          color: theme(colors.slate.900);
-          line-height: 1.3;
-          font-weight: 700;
-          margin-bottom: 0.8em;
-          margin-top: 1.5em;
-      }
-      .prose h2 {
-          font-size: 1.5em;
-          padding-bottom: 0.4em;
-          border-bottom: 1px solid theme(colors.slate.200);
-      }
-      .prose h3 {
-          font-size: 1.25em;
-      }
-      .prose strong {
-          font-weight: 600;
-          color: theme(colors.slate.800);
-      }
-      .prose ul {
-          list-style-type: disc;
-          padding-left: 1.5em;
-          margin-top: 1em;
-          margin-bottom: 1em;
-      }
-      .prose li {
-          margin-bottom: 0.5em;
-      }
-      .prose hr {
-          margin-top: 2em;
-          margin-bottom: 2em;
-          border-top: 1px solid theme(colors.slate.200);
-      }
-    </style>
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^18.3.0",
-    "react-dom/": "https://esm.sh/react-dom@^18.3.0/",
-    "react/": "https://esm.sh/react@^18.3.0/",
-    "xlsx": "https://esm.sh/xlsx@^0.18.5",
-    "react-dom": "https://esm.sh/react-dom@^18.3.0",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.0.0",
-    "vite": "https://esm.sh/vite@^7.1.1"
-  }
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+  throw new Error("Could not find root element to mount to");
 }
-</script>
-</head>
-<body class="text-slate-800">
-    <div id="root"></div>
-    <script type="module" src="./index.tsx"></script>
-</body>
-</html>
+
+const root = ReactDOM.createRoot(rootElement);
+root.render(
+  <React.StrictMode>
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  </React.StrictMode>
+);
