@@ -1,5 +1,14 @@
+
 import { AIRTABLE_PAT, AIRTABLE_BASE_ID } from '../constants';
 import type { AirtableResponse, AirtableErrorResponse, AirtableRecord } from '../types';
+
+// Use window.location.hostname to determine if in development,
+// as import.meta.env is not available in the project's setup.
+const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+const API_BASE = isDevelopment
+    ? `/airtable-api/v0/${AIRTABLE_BASE_ID}`
+    : `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}`;
 
 const fetchDataGeneric = async <T>(url: string): Promise<{ data: AirtableResponse<T> | null, error: AirtableErrorResponse | null }> => {
     try {
@@ -41,7 +50,7 @@ const fetchDataGeneric = async <T>(url: string): Promise<{ data: AirtableRespons
 
     } catch (networkError) {
         console.error('[fetchDataGeneric] Network or Fetch Error:', networkError, "URL:", url);
-        return { data: null, error: { error: { type: 'NETWORK_ERROR', message: 'No se pudo conectar con el servidor. Revisa tu conexión a internet.' } } };
+        return { data: null, error: { error: { type: 'NETWORK_ERROR', message: 'No se pudo conectar con el servidor. Revisa tu conexión a internet. Si el problema persiste, intenta desactivar extensiones del navegador (ej: bloqueadores de anuncios).' } } };
     }
 }
 
@@ -50,7 +59,7 @@ const createAirtableRecord = async <TFields>(
   fields: TFields
 ): Promise<{ record: AirtableRecord<TFields> | null, error: AirtableErrorResponse | null }> => {
   
-  const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(tableName)}`;
+  const url = `${API_BASE}/${encodeURIComponent(tableName)}`;
   
   try {
     const response = await fetch(url, {
@@ -96,7 +105,7 @@ const updateAirtableRecord = async <TFields>(
   fields: Partial<TFields>
 ): Promise<{ record: AirtableRecord<TFields> | null, error: AirtableErrorResponse | null }> => {
   
-  const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(tableName)}/${recordId}`;
+  const url = `${API_BASE}/${encodeURIComponent(tableName)}/${recordId}`;
   
   try {
     const response = await fetch(url, {
@@ -136,7 +145,7 @@ const updateAirtableRecords = async <TFields>(
   records: { id: string; fields: Partial<TFields> }[]
 ): Promise<{ records: AirtableRecord<TFields>[] | null, error: AirtableErrorResponse | null }> => {
   
-  const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(tableName)}`;
+  const url = `${API_BASE}/${encodeURIComponent(tableName)}`;
   
   try {
     const response = await fetch(url, {
@@ -192,7 +201,7 @@ const fetchAllAirtableData = async <TFields>(
                 });
             }
 
-            const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(tableName)}?${params.toString()}`;
+            const url = `${API_BASE}/${encodeURIComponent(tableName)}?${params.toString()}`;
             
             const { data: pageData, error: pageError } = await fetchDataGeneric<TFields>(url);
 
@@ -223,7 +232,7 @@ const fetchAirtableData = async <TFields>(
     sort?: { field: string; direction: 'asc' | 'desc' }[]
 ): Promise<{ records: AirtableRecord<TFields>[], error: AirtableErrorResponse | null }> => {
     
-    let url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(tableName)}`;
+    let url = `${API_BASE}/${encodeURIComponent(tableName)}`;
     const params = new URLSearchParams();
 
     fields.forEach(field => params.append('fields[]', field));

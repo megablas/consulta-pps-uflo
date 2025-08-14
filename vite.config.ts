@@ -1,3 +1,4 @@
+
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -8,6 +9,15 @@ export default defineConfig({
   // se servirá desde una subcarpeta llamada '/consulta-pps-uflo/'.
   // Todas las rutas de los assets en el index.html construido tendrán este prefijo.
   base: '/consulta-pps-uflo/',
+  server: {
+    proxy: {
+      '/airtable-api': {
+        target: 'https://api.airtable.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/airtable-api/, ''),
+      },
+    },
+  },
   build: {
     rollupOptions: {
       // Especifica los módulos que deben dejarse como externos y no empaquetarse.
