@@ -189,6 +189,8 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
               FIELD_HORAS_ACREDITADAS_LANZAMIENTOS, FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS,
               FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS,
           ];
+          
+          const lanzamientosFormula = `AND({${FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS}}, NOT(LOWER({${FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS}}) = 'oculto'))`;
 
           const [practicasResult, solicitudesResult, lanzamientosResult, enrollmentsResult] = await Promise.all([
               fetchAirtableData<PracticaFields>(
@@ -204,7 +206,7 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
               fetchAirtableData<LanzamientoPPSFields>(
                   AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, 
                   lanzamientosFieldsToFetch,
-                  `OR(OR({${FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS}} = 'Abierta', {${FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS}} = 'Abierto'), {${FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS}} = 'Cerrado')`
+                  lanzamientosFormula
               ),
               fetchAirtableData<ConvocatoriaFields>(
                   AIRTABLE_TABLE_NAME_CONVOCATORIAS, 

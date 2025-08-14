@@ -39,7 +39,7 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInsc
   const isConvocatoriaCerrada = normalizedEstadoConvocatoria === 'cerrado';
 
   // --- Style & Content Definitions ---
-  const primaryButtonBaseClasses = "w-full sm:w-auto font-bold text-sm py-2.5 px-5 rounded-lg transition-all duration-300 ease-in-out shadow-md flex items-center justify-center gap-2.5 group";
+  const primaryButtonBaseClasses = "w-full sm:w-72 font-bold text-sm py-2.5 px-5 rounded-lg transition-all duration-300 ease-in-out shadow-md flex items-center justify-center gap-2.5 group whitespace-nowrap";
 
   let statusInfo = {
     text: estadoConvocatoria || 'Cerrada',
