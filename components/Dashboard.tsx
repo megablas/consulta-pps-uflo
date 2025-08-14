@@ -9,7 +9,7 @@ import Card from './Card';
 import { CriteriosPanelSkeleton, TableSkeleton } from './Skeletons';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import StudentInfoHeader from './StudentInfoHeader.tsx';
+import StudentInfoHeader from './StudentInfoHeader';
 
 const Dashboard: React.FC = () => {
     const { 
