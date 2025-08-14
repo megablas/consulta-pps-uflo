@@ -7,26 +7,31 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet">
     <style>
+      :root {
+        --color-primary: 37 99 235; /* blue-600 */
+        --color-slate-50: 248 250 252;
+        --color-slate-100: 241 245 249;
+        --color-slate-800: 30 41 59;
+        --color-slate-900: 15 23 42;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
       body {
         font-family: 'Inter', sans-serif;
-        /* Updated professional background */
-        background-color: #f9fafb; /* bg-gray-50 */
-        background-image:
-          linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
-        background-size: 20px 20px;
-      }
-      html, body {
-        width: 100%;
-        margin: 0;
-        padding: 0;
-        scroll-behavior: smooth;
+        background-color: rgb(var(--color-slate-50));
+        color: rgb(var(--color-slate-800));
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        /* New subtle gradient background */
+        background-image: linear-gradient(175deg, rgb(var(--color-slate-50)) 0%, #fff 70%);
       }
       #root {
         min-height: 100vh;
+        width: 100%;
       }
 
       /* -- Custom Animations -- */
@@ -35,38 +40,40 @@
         to { opacity: 1; transform: translateY(0); }
       }
       .animate-fade-in-up {
-        animation: fadeInUp 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-        opacity: 0; /* Start hidden */
+        animation: fadeInUp 0.6s cubic-bezier(0.39, 0.58, 0.57, 1) forwards;
+        opacity: 0;
         will-change: transform, opacity;
       }
       
-      /* Subtle scale-in for modals and cards */
       @keyframes scaleIn {
-        from { opacity: 0; transform: scale(0.96); }
+        from { opacity: 0; transform: scale(0.95); }
         to { opacity: 1; transform: scale(1); }
       }
        .animate-scale-in {
-        animation: scaleIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        animation: scaleIn 0.4s cubic-bezier(0.39, 0.58, 0.57, 1) forwards;
         will-change: transform, opacity;
       }
-
-      /* Shimmer effect for loading placeholders */
-      @keyframes background-shine {
-        from {
-          background-position: 200% 0;
-        }
-        to {
-          background-position: -200% 0;
-        }
+      
+      @keyframes backgroundShine {
+        from { background-position: 200% 0; }
+        to { background-position: -200% 0; }
       }
       .animate-background-shine {
-        animation: background-shine 1.5s linear infinite;
-        background: linear-gradient(110deg, theme(colors.slate.200/50) 8%, theme(colors.slate.100/80) 18%, theme(colors.slate.200/50) 33%);
+        animation: backgroundShine 1.5s linear infinite;
+        background: linear-gradient(110deg, theme(colors.slate.200) 8%, theme(colors.slate.100) 18%, theme(colors.slate.200) 33%);
         background-size: 200% 100%;
         will-change: background-position;
       }
       
-      /* -- Prose styles for AI-generated content -- */
+      @keyframes pulse-glow {
+        0%, 100% { box-shadow: 0 0 15px -3px rgba(59, 130, 246, 0.4); } /* blue-500 */
+        50% { box-shadow: 0 0 25px 5px rgba(59, 130, 246, 0.4); }
+      }
+      .animate-pulse-glow {
+        animation: pulse-glow 2.5s infinite ease-in-out;
+      }
+      
+      /* -- Prose styles for AI-generated content (good practice) -- */
       .prose {
           color: theme(colors.slate.700);
           line-height: 1.7;
@@ -117,16 +124,15 @@
     "react-dom/": "https://esm.sh/react-dom@^18.3.0/",
     "react/": "https://esm.sh/react@^18.3.0/",
     "xlsx": "https://esm.sh/xlsx@^0.18.5",
-    "@google/genai": "https://esm.sh/@google/genai",
     "react-dom": "https://esm.sh/react-dom@^18.3.0",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.0.0",
     "vite": "https://esm.sh/vite@^7.1.1"
   }
 }
 </script>
-  <script type="module" crossorigin src="/consulta-pps-uflo/assets/index-CVPjhW4s.js"></script>
+  <script type="module" crossorigin src="/consulta-pps-uflo/assets/index-MBrI8mY7.js"></script>
 </head>
-<body class="bg-gray-50 text-slate-800">
+<body class="text-slate-800">
     <div id="root"></div>
 </body>
 </html>
