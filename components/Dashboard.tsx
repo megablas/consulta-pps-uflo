@@ -6,10 +6,68 @@ import SolicitudesList from './SolicitudesList';
 import EmptyState from './EmptyState';
 import Tabs from './Tabs';
 import Card from './Card';
-import { CriteriosPanelSkeleton, TableSkeleton } from './Skeletons';
+import { CriteriosPanelSkeleton, TableSkeleton, SkeletonBox } from './Skeletons';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import StudentInfoHeader from './StudentInfoHeader';
+import { FIELD_LEGAJO_ESTUDIANTES, FIELD_DNI_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES } from '../constants';
+
+
+// --- INLINED StudentInfoHeader ---
+// Componente integrado para resolver un error de compilación persistente de resolución de módulos.
+
+const InfoItem: React.FC<{ icon: string; label: string; value?: string | number | null; }> = ({ icon, label, value }) => {
+    if (!value) return null;
+    return (
+        <div className="flex items-center gap-3">
+            <span className="material-icons text-slate-400 !text-xl">{icon}</span>
+            <div>
+                <p className="text-xs text-slate-500 font-medium">{label}</p>
+                <p className="text-sm text-slate-800 font-semibold">{value}</p>
+            </div>
+        </div>
+    );
+};
+
+const StudentInfoHeader: React.FC = () => {
+    const { studentDetails, isLoading, initialLoadCompleted } = useData();
+    const { 
+        [FIELD_LEGAJO_ESTUDIANTES]: legajo,
+        [FIELD_DNI_ESTUDIANTES]: dni,
+        [FIELD_CORREO_ESTUDIANTES]: correo,
+        [FIELD_TELEFONO_ESTUDIANTES]: telefono,
+    } = studentDetails || {};
+
+    // Don't render anything if there are no details and it's not the initial load phase.
+    if (!studentDetails && !isLoading && initialLoadCompleted) {
+        return null;
+    }
+
+    if (isLoading && !initialLoadCompleted) {
+        return (
+            <div className="bg-white rounded-2xl p-5 mb-8 border border-slate-200/60 shadow-sm">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4">
+                    <SkeletonBox className="h-10 w-full" />
+                    <SkeletonBox className="h-10 w-full" />
+                    <SkeletonBox className="h-10 w-full" />
+                    <SkeletonBox className="h-10 w-full" />
+                </div>
+            </div>
+        );
+    }
+    
+    return (
+        <div className="bg-white rounded-2xl p-5 mb-8 border border-slate-200/60 shadow-sm animate-fade-in-up">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4">
+                <InfoItem icon="badge" label="Legajo" value={legajo} />
+                <InfoItem icon="fingerprint" label="DNI" value={dni} />
+                <InfoItem icon="email" label="Correo" value={correo} />
+                <InfoItem icon="phone" label="Teléfono" value={telefono} />
+            </div>
+        </div>
+    );
+};
+// --- END INLINED StudentInfoHeader ---
+
 
 const Dashboard: React.FC = () => {
     const { 
