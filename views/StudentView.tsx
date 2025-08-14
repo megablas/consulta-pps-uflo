@@ -18,11 +18,11 @@ import { normalizeStringForComparison } from '../utils/formatters';
 import Footer from '../components/Footer';
 
 const WelcomeHeader: React.FC<{ studentName: string }> = ({ studentName }) => (
-    <div className="text-center mb-12 animate-fade-in-up">
-        <h1 className="text-4xl md:text-5xl font-extrabold text-slate-800 tracking-tight">
+    <div className="mb-12 animate-fade-in-up">
+        <h1 className="text-4xl md:text-5xl font-black text-slate-800 tracking-tight">
             ¡Hola, <span className="text-blue-600">{studentName.split(' ')[0]}</span>!
         </h1>
-        <p className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">
+        <p className="mt-3 text-lg text-slate-600 max-w-2xl">
             Este es tu centro de mando para las Prácticas Profesionales. Sigue tu progreso y encuentra nuevas oportunidades.
         </p>
     </div>
@@ -154,7 +154,7 @@ const StudentView: React.FC = () => {
         if (isNaN(startDate.getTime())) return false;
 
         const cutoffDate = new Date(startDate);
-        cutoffDate.setDate(startDate.getDate() + 1);
+        cutoffDate.setDate(startDate.getDate() + 14); // Show for 2 weeks after start
 
         const status = normalizeStringForComparison(l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]);
         const isVisibleStatus = status === 'abierta' || status === 'abierto' || status === 'cerrado';
@@ -253,8 +253,6 @@ const StudentView: React.FC = () => {
         );
     }
 
-    const shouldShowFooter = activeTab === 'practicas';
-
     return (
         <>
             <Modal
@@ -278,7 +276,7 @@ const StudentView: React.FC = () => {
                 seleccionados={seleccionadosData}
                 convocatoriaName={convocatoriaForModal}
             />
-            {shouldShowFooter && <Footer />}
+            <Footer />
         </>
     );
 };

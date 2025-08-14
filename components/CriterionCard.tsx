@@ -27,7 +27,7 @@ const CriterionCard: React.FC<CriterionCardProps> = ({ children, isComplete, con
          </div>
       )}
       
-      <div className="flex-grow flex flex-col">
+      <div className="flex-grow flex flex-col justify-center">
         {children}
       </div>
 

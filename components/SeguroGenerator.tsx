@@ -364,10 +364,10 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
 
 
     const renderSelectionStep = () => (
-        <>
-            <div className="mb-6">
+        <div className="space-y-6">
+            <div>
                 <h3 className="text-xl font-bold text-slate-800">Paso 1: Seleccionar Convocatorias</h3>
-                <p className="text-slate-600 max-w-xl mt-1">Seleccione una o más de las últimas 5 convocatorias para generar los reportes.</p>
+                <p className="text-slate-600 max-w-xl mt-1">Seleccione una o más de las últimas convocatorias con alumnos seleccionados para generar los reportes.</p>
             </div>
 
             {isLoading && !loadingMessage.includes('convocatorias') ? null : (isLoading ? <Loader /> : null)}
@@ -377,21 +377,21 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
             )}
 
             {!isLoading && convocatorias.length > 0 && (
-                <div className="border rounded-lg overflow-x-auto border-slate-200/70 bg-white shadow-md">
-                    <table className="w-full min-w-[800px]">
-                        <thead className="bg-slate-100/70 border-b-2 border-slate-200">
-                            <tr>
-                                <th className="p-4 w-16">
+                <div className="overflow-x-auto">
+                    <table className="w-full min-w-[800px] border-collapse">
+                        <thead>
+                            <tr className="border-b-2 border-slate-200">
+                                <th className="p-4 w-16 text-left">
                                     <Checkbox id="select-all" name="select-all" checked={selectedConvocatorias.size > 0 && selectedConvocatorias.size === convocatorias.length} onChange={() => setSelectedConvocatorias(selectedConvocatorias.size === convocatorias.length ? new Set() : new Set(convocatorias.map(c => c.id)))} label="" />
                                 </th>
-                                <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs">Institución</th>
-                                <th className="px-4 py-3 text-center font-semibold text-slate-600 uppercase text-xs">Nº Estudiantes</th>
-                                <th className="px-4 py-3 text-center font-semibold text-slate-600 uppercase text-xs">Período</th>
+                                <th className="p-4 text-left font-semibold text-slate-500 uppercase text-xs tracking-wider">Institución</th>
+                                <th className="p-4 text-center font-semibold text-slate-500 uppercase text-xs tracking-wider">Nº Estudiantes</th>
+                                <th className="p-4 text-center font-semibold text-slate-500 uppercase text-xs tracking-wider">Período</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-200/60">
+                        <tbody>
                             {convocatorias.map((convocatoria) => (
-                                <tr key={convocatoria.id} className="transition-colors duration-200 odd:bg-white even:bg-slate-50/50 hover:!bg-blue-50/50">
+                                <tr key={convocatoria.id} className="transition-colors duration-200 hover:bg-slate-50/50 border-b border-slate-200/60 last:border-b-0">
                                     <td className="p-4 align-middle">
                                         <Checkbox id={`conv-${convocatoria.id}`} name="convocatoria" checked={selectedConvocatorias.has(convocatoria.id)} onChange={() => toggleSelection(convocatoria.id)} label="" />
                                     </td>
@@ -405,7 +405,7 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                 </div>
             )}
              <div className="mt-6 flex justify-end">
-                <button onClick={handleProceedToReview} disabled={isProceedDisabled} className="bg-blue-600 text-white font-bold py-2.5 px-6 rounded-lg text-sm transition-colors shadow-md disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                <button onClick={handleProceedToReview} disabled={isProceedDisabled} className="bg-blue-600 text-white font-bold py-2.5 px-6 rounded-lg text-sm transition-colors shadow-md disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-blue-700">
                     {isLoading ? (
                         <>
                             <div className="border-2 border-white/50 border-t-white rounded-full w-5 h-5 animate-spin"></div>
@@ -419,7 +419,7 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                     )}
                 </button>
             </div>
-        </>
+        </div>
     );
 
     const renderReviewStep = () => {
@@ -483,11 +483,8 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
         const handleSendEmail = (group: { institucion: string; students: StudentForReview[] }) => {
             if (group.students.length === 0) return;
 
-            // Using subject and body format from the user-provided 'old' file, but adapted for a single group.
             const mailToSubject = `Reporte de Seguro - ${group.institucion}`;
             const mailToBody = `Hola Sergio,\n\nTe adjunto el seguro de la PPS.\n\nSaludos!`;
-
-            // Keeping the current, correct email address for "Sergio" from the constant.
             const mailtoLink = `mailto:${EMAIL_SEGUROS}?subject=${encodeURIComponent(mailToSubject)}&body=${encodeURIComponent(mailToBody)}`;
             
             window.location.href = mailtoLink;
@@ -522,42 +519,42 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 self-start sm:self-center">
                                   <button onClick={() => handleDownloadBlankInsurance(group.institucion)} disabled={!blankTemplateUrl} className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-md hover:bg-green-700 flex items-center gap-2 justify-center disabled:bg-green-300 disabled:cursor-not-allowed">
                                       <span className="material-icons !text-base">download</span>
-                                      <span>Descargar Seguro en Blanco</span>
+                                      <span>Descargar Seguro</span>
                                   </button>
                                   <button onClick={() => handleCopyToClipboard(group.students)} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-md hover:bg-blue-700 flex items-center gap-2 justify-center">
                                       <span className="material-icons !text-base">content_copy</span>
-                                      <span>Copiar Datos de Alumnos</span>
+                                      <span>Copiar Datos</span>
                                   </button>
                                   <button onClick={() => handleSendEmail(group)} className="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-md hover:bg-purple-700 flex items-center gap-2 justify-center">
                                       <span className="material-icons !text-base">email</span>
-                                      <span>Enviar a Sergio</span>
+                                      <span>Enviar Mail</span>
                                   </button>
                               </div>
                           </div>
                           
                           <div className="overflow-x-auto border-t border-slate-200 pt-4">
-                              <table className="w-full min-w-[1200px] text-sm text-left">
+                              <table className="w-full min-w-[1200px] text-sm text-left border-collapse">
                                   <thead className="text-xs text-slate-500 uppercase">
-                                      <tr>
-                                          <th className="px-4 py-2">Apellido</th>
-                                          <th className="px-4 py-2">Nombre</th>
-                                          <th className="px-4 py-2">DNI</th>
-                                          <th className="px-4 py-2">Legajo</th>
-                                          <th className="px-4 py-2">Cargo</th>
-                                          <th className="px-4 py-2">Lugar (Nombre-Dirección)</th>
-                                          <th className="px-4 py-2">Duración (Período, Días y Horario)</th>
+                                      <tr className="border-b-2 border-slate-200">
+                                          <th className="p-3">Apellido</th>
+                                          <th className="p-3">Nombre</th>
+                                          <th className="p-3">DNI</th>
+                                          <th className="p-3">Legajo</th>
+                                          <th className="p-3">Cargo</th>
+                                          <th className="p-3">Lugar (Nombre-Dirección)</th>
+                                          <th className="p-3">Duración (Período, Días y Horario)</th>
                                       </tr>
                                   </thead>
                                   <tbody className="text-slate-800">
                                       {group.students.map(student => (
-                                          <tr key={student.studentId} className="border-b border-slate-200/60 hover:bg-slate-50/50">
-                                              <td className="px-4 py-3 font-medium">{student.apellido}</td>
-                                              <td className="px-4 py-3 font-medium">{student.nombre}</td>
-                                              <td className="px-4 py-3">{student.dni}</td>
-                                              <td className="px-4 py-3">{student.legajo}</td>
-                                              <td className="px-4 py-3">Estudiante</td>
-                                              <td className="px-4 py-3">{student.lugar}</td>
-                                              <td className="px-4 py-3">{student.duracion}</td>
+                                          <tr key={student.studentId} className="border-b border-slate-200/60 hover:bg-slate-50/50 last:border-b-0">
+                                              <td className="p-3 font-medium">{student.apellido}</td>
+                                              <td className="p-3 font-medium">{student.nombre}</td>
+                                              <td className="p-3">{student.dni}</td>
+                                              <td className="p-3">{student.legajo}</td>
+                                              <td className="p-3">Estudiante</td>
+                                              <td className="p-3">{student.lugar}</td>
+                                              <td className="p-3">{student.duracion}</td>
                                           </tr>
                                       ))}
                                   </tbody>

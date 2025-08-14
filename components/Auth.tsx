@@ -228,20 +228,24 @@ const Auth: React.FC<AuthProps> = ({ showModal }) => {
   }
 
   return (
-    <div className="w-full bg-white md:grid md:grid-cols-2 min-h-[80vh] rounded-2xl shadow-2xl shadow-slate-200/40 overflow-hidden border border-slate-200/60">
+    <div className="w-full bg-white md:grid md:grid-cols-2 min-h-[85vh] rounded-2xl shadow-2xl shadow-slate-200/40 overflow-hidden border border-slate-200/60">
       
       {/* Left Panel */}
-      <div className="hidden md:flex flex-col justify-between p-8 lg:p-12 bg-slate-900 text-white">
-          <div className="flex-shrink-0 animate-fade-in-up" style={{ animationDelay: '0ms' }}><MiPanelLogo className="h-16 w-auto" variant="dark" /></div>
-          <div className="flex-grow flex flex-col justify-center">
-            <h1 className="text-5xl lg:text-6xl font-extrabold tracking-tighter leading-tight animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-              Tu Panel<br/>Académico.
-            </h1>
-            <p className="mt-4 text-slate-300 text-lg lg:text-xl max-w-sm animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-              El portal centralizado para el seguimiento de tus Prácticas Profesionales Supervisadas.
-            </p>
+      <div className="hidden md:flex flex-col justify-between p-8 lg:p-12 bg-slate-900 text-white relative overflow-hidden">
+          <div className="absolute -top-1/4 -right-1/4 w-1/2 h-1/2 bg-blue-600/30 rounded-full filter blur-3xl" />
+          <div className="absolute -bottom-1/4 -left-1/4 w-1/2 h-1/2 bg-indigo-600/30 rounded-full filter blur-3xl" />
+          <div className="relative z-10">
+            <div className="flex-shrink-0 animate-fade-in-up" style={{ animationDelay: '0ms' }}><MiPanelLogo className="h-16 w-auto" variant="dark" /></div>
+            <div className="flex-grow flex flex-col justify-center mt-20">
+              <h1 className="text-5xl lg:text-6xl font-black tracking-tighter leading-tight animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+                Tu Panel<br/>Académico.
+              </h1>
+              <p className="mt-4 text-slate-300 text-lg lg:text-xl max-w-sm animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+                El portal centralizado para el seguimiento de tus Prácticas Profesionales Supervisadas.
+              </p>
+            </div>
           </div>
-          <div className="flex-shrink-0 animate-fade-in-up" style={{ animationDelay: '300ms' }}><UfloLogo className="h-16 w-auto" variant="dark" /></div>
+          <div className="relative z-10 flex-shrink-0 animate-fade-in-up" style={{ animationDelay: '300ms' }}><UfloLogo className="h-16 w-auto" variant="dark" /></div>
       </div>
       
       {/* Right Panel */}

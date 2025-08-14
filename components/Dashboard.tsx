@@ -9,6 +9,7 @@ import Card from './Card';
 import { CriteriosPanelSkeleton, TableSkeleton } from './Skeletons';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
+import StudentInfoHeader from './StudentInfoHeader';
 
 const Dashboard: React.FC = () => {
     const { 
@@ -22,8 +23,6 @@ const Dashboard: React.FC = () => {
     const { isSuperUserMode } = useAuth();
     const [activeTab, setActiveTab] = useState('solicitudes');
     
-    // This useEffect will run when the Dashboard component is mounted for a student in the admin view.
-    // The DataProvider is keyed, so a new Dashboard mounts for each student tab, triggering this fetch.
     useEffect(() => {
         fetchStudentData();
     }, [fetchStudentData]);
@@ -31,6 +30,7 @@ const Dashboard: React.FC = () => {
     if (isLoading && !initialLoadCompleted) {
         return (
             <div className="space-y-8">
+                <StudentInfoHeader />
                 <CriteriosPanelSkeleton />
                 <Card>
                     <div className="border-b border-slate-200">
@@ -59,6 +59,7 @@ const Dashboard: React.FC = () => {
     if (initialLoadCompleted && practicas.length === 0 && solicitudes.length === 0 && isSuperUserMode) {
         return (
              <div className="space-y-8 animate-fade-in-up">
+                <StudentInfoHeader />
                 <CriteriosPanel />
                 <div className="mt-8">
                     <EmptyState 
@@ -88,6 +89,7 @@ const Dashboard: React.FC = () => {
 
     return (
         <div className="space-y-8 animate-fade-in-up">
+            <StudentInfoHeader />
             <CriteriosPanel />
             <Card>
                  <Tabs

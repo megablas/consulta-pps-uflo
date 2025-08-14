@@ -38,7 +38,7 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeTabId, onTabChange, onTabClose,
       <div className="relative border-b border-slate-200">
         <nav ref={tabsRef} className="-mb-px flex space-x-1 sm:space-x-2 overflow-x-auto" aria-label="Tabs">
           {tabs.map(tab => (
-            <div key={tab.id} data-tab-id={tab.id} className="relative group">
+            <div key={tab.id} data-tab-id={tab.id} className="relative group flex-shrink-0">
               <button
                 onClick={() => onTabChange(tab.id)}
                 className={`
@@ -47,8 +47,8 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeTabId, onTabChange, onTabClose,
                   focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 z-10
                   ${
                     activeTabId === tab.id
-                      ? 'bg-white font-semibold text-blue-600'
-                      : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700 font-medium'
+                      ? 'font-semibold text-blue-600'
+                      : 'text-slate-500 hover:bg-slate-100/70 hover:text-slate-700 font-medium'
                   }
                   ${tab.isClosable && onTabClose ? 'pr-9' : ''}
                 `}
@@ -77,7 +77,7 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeTabId, onTabChange, onTabClose,
            style={gliderStyle}
         />
       </div>
-      <div className="pt-6 animate-fade-in-up">
+      <div className="pt-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
         {activeTabContent}
       </div>
     </div>

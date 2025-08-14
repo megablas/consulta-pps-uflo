@@ -90,6 +90,15 @@ const CriteriosPanel: React.FC = () => {
 
   const todosLosCriteriosCumplidos = criterios.cumpleHorasTotales && criterios.cumpleRotacion && criterios.cumpleHorasOrientacion;
 
+  const cardContainerClasses = `
+    bg-white p-6 sm:p-8 rounded-2xl border shadow-lg transition-all duration-500
+    ${todosLosCriteriosCumplidos 
+        ? 'border-blue-300 shadow-blue-500/20 animate-pulse-glow' 
+        : 'border-slate-200/70 shadow-slate-500/5'
+    }
+    grid grid-cols-1 md:grid-cols-5 gap-x-8 gap-y-6
+  `;
+
   const orientacionSelector = (
      <div className="animate-fade-in-up">
         <h3 className="text-slate-800 font-semibold text-base leading-tight mb-2">
@@ -121,10 +130,11 @@ const CriteriosPanel: React.FC = () => {
 
   return (
     <section>
-        <h2 className="text-3xl font-bold text-slate-800 mb-6 tracking-tight">Tu Progreso General</h2>
+        <h2 className="text-3xl font-bold text-slate-800 mb-6 tracking-tight">
+             {todosLosCriteriosCumplidos ? '¡Felicitaciones, objetivo cumplido!' : 'Tu Progreso General'}
+        </h2>
         
-        <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/70 shadow-lg shadow-slate-500/5 
-                grid grid-cols-1 md:grid-cols-5 gap-x-8 gap-y-6">
+        <div className={cardContainerClasses}>
             
             {/* Left Column: Main Progress */}
             <div className="md:col-span-3 flex flex-col sm:flex-row items-center gap-6">
@@ -133,11 +143,13 @@ const CriteriosPanel: React.FC = () => {
                     max={HORAS_OBJETIVO_TOTAL}
                 />
                 <div className="flex-1 text-center sm:text-left">
-                    <h3 className="text-2xl font-bold text-slate-900">Horas Totales de Práctica</h3>
+                    <h3 className="text-2xl font-bold text-slate-900">
+                        {criterios.cumpleHorasTotales ? 'Horas Totales Completadas' : 'Horas Totales de Práctica'}
+                    </h3>
                     <p className="text-slate-500 mt-1">
                         Has completado <span className="font-bold text-slate-700">{Math.round(criterios.horasTotales)}</span> de <span className="font-bold text-slate-700">{HORAS_OBJETIVO_TOTAL}</span> horas requeridas.
                         {criterios.cumpleHorasTotales 
-                            ? <span className="block text-green-600 font-semibold mt-1">¡Objetivo de horas totales cumplido!</span>
+                            ? <span className="block text-green-600 font-semibold mt-1">¡Excelente trabajo!</span>
                             : <span className="block text-blue-600 font-semibold mt-1">¡Sigue así, estás cada vez más cerca!</span>
                         }
                     </p>
@@ -146,10 +158,10 @@ const CriteriosPanel: React.FC = () => {
                             href="https://airtable.com/appBY8PYhPZ1X2ka1/paglLBxubDedzl1qz/form"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="mt-4 inline-flex items-center gap-2 bg-blue-600 text-white font-bold text-sm py-2.5 px-5 rounded-lg transition-all hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-white shadow-lg hover:shadow-blue-500/30 hover:-translate-y-0.5"
+                            className="mt-4 inline-flex items-center gap-2 bg-green-600 text-white font-bold text-sm py-2.5 px-5 rounded-lg transition-all hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 focus:ring-offset-white shadow-lg hover:shadow-green-500/30 hover:-translate-y-0.5"
                         >
                             <span className="material-icons !text-base">school</span>
-                            <span>Solicitar Acreditación</span>
+                            <span>Solicitar Acreditación Final</span>
                         </a>
                     )}
                 </div>

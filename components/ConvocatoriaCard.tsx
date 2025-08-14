@@ -39,13 +39,13 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInsc
   const isConvocatoriaCerrada = normalizedEstadoConvocatoria === 'cerrado';
 
   // --- Style & Content Definitions ---
-  const primaryButtonBaseClasses = "w-full sm:w-auto font-bold text-base py-3 px-5 rounded-xl transition-all duration-300 ease-in-out shadow-lg flex items-center justify-center gap-2.5 group";
+  const primaryButtonBaseClasses = "w-full sm:w-auto font-bold text-sm py-2.5 px-5 rounded-lg transition-all duration-300 ease-in-out shadow-md flex items-center justify-center gap-2.5 group";
 
   let statusInfo = {
     text: estadoConvocatoria || 'Cerrada',
     icon: convocatoriaStatusVisuals.icon,
-    style: 'bg-slate-200 text-slate-800',
-    ring: 'focus:ring-slate-300'
+    style: 'bg-slate-200 text-slate-800 ring-1 ring-slate-300',
+    hover: ''
   };
 
   if (hasEnrollment) {
@@ -53,22 +53,22 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInsc
       statusInfo = {
         text: userGender === 'femenino' ? 'Seleccionada' : 'Seleccionado',
         icon: 'verified',
-        style: 'bg-indigo-200 text-indigo-800',
-        ring: 'focus:ring-indigo-300'
+        style: 'bg-indigo-100 text-indigo-700 ring-1 ring-indigo-300',
+        hover: 'hover:bg-indigo-200'
       };
     } else if (normalizedStatus.includes('inscripto')) {
       statusInfo = {
         text: userGender === 'femenino' ? 'Inscripta' : 'Inscripto',
         icon: 'how_to_reg',
-        style: 'bg-sky-200 text-sky-800',
-        ring: 'focus:ring-sky-300'
+        style: 'bg-sky-100 text-sky-700 ring-1 ring-sky-300',
+        hover: 'hover:bg-sky-200'
       };
     } else if (normalizedStatus.includes('no seleccionado')) {
       statusInfo = {
         text: `No ${userGender === 'femenino' ? 'seleccionada' : 'seleccionado'}`,
         icon: 'cancel',
-        style: 'bg-rose-200 text-rose-800',
-        ring: 'focus:ring-rose-300'
+        style: 'bg-rose-100 text-rose-700 ring-1 ring-rose-300',
+        hover: 'hover:bg-rose-200'
       };
     }
   }
@@ -88,7 +88,6 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInsc
                 {orientacion}
               </span>
             )}
-            {/* Show status tag on mobile, it's implicit on desktop */}
             {estadoConvocatoria && (
               <span className={`${convocatoriaStatusVisuals.labelClass} gap-1.5 sm:hidden`}>
                   <span className="material-icons !text-sm">{convocatoriaStatusVisuals.icon}</span>
@@ -115,7 +114,7 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInsc
                 disabled={isEnrolling}
                 className={`${primaryButtonBaseClasses} ${isEnrolling
                     ? 'bg-slate-400 text-white cursor-wait'
-                    : 'text-white bg-blue-600 hover:bg-blue-700 hover:shadow-xl hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-blue-300'
+                    : 'text-white bg-blue-600 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-blue-300'
                   }`}
                 aria-label={`Postularme para ${nombre}`}
               >
@@ -126,7 +125,7 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInsc
                   </>
                 ) : (
                   <>
-                    <span className="material-icons !text-xl transition-transform duration-300 group-hover:rotate-12">rocket_launch</span>
+                    <span className="material-icons !text-lg transition-transform duration-300 group-hover:rotate-12">rocket_launch</span>
                     <span>Postularme</span>
                   </>
                 )}
@@ -137,7 +136,7 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInsc
                   <button
                     onClick={() => onVerSeleccionados(lanzamiento)}
                     disabled={isVerSeleccionadosLoading}
-                    className={`${primaryButtonBaseClasses} ${statusInfo.style} hover:shadow-xl hover:-translate-y-1 focus:outline-none focus:ring-4 ${statusInfo.ring}`}
+                    className={`${primaryButtonBaseClasses} ${statusInfo.style} ${statusInfo.hover} hover:shadow-lg hover:-translate-y-0.5 focus:outline-none focus:ring-4`}
                     aria-label={`Ver seleccionados para ${nombre}`}
                   >
                     {isVerSeleccionadosLoading ? (
@@ -147,17 +146,17 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({ lanzamiento, onInsc
                       </>
                     ) : (
                       <>
-                        <span className="material-icons !text-xl">{statusInfo.icon}</span>
+                        <span className="material-icons !text-lg">{statusInfo.icon}</span>
                         <span className="font-semibold">{statusInfo.text}</span>
                         <span className="mx-1.5 h-4 w-px bg-current opacity-30" aria-hidden="true"></span>
-                        <span className="font-normal text-sm opacity-90">Ver Seleccionados</span>
+                        <span className="font-normal text-sm opacity-90">Ver Lista</span>
                         <span className="material-icons !text-lg opacity-90 transition-transform duration-300 group-hover:translate-x-0.5">arrow_forward</span>
                       </>
                     )}
                   </button>
                 ) : (
                   <div className={`${primaryButtonBaseClasses} ${statusInfo.style} cursor-default`}>
-                    <span className="material-icons !text-xl">{statusInfo.icon}</span>
+                    <span className="material-icons !text-lg">{statusInfo.icon}</span>
                     <span className="font-semibold">{statusInfo.text}</span>
                   </div>
                 )}

@@ -85,23 +85,23 @@ const ConvocatoriaManager: React.FC = () => {
             return <EmptyState icon="upcoming_off" title="Sin Convocatorias" message="No se encontraron lanzamientos de PPS en Airtable." />;
         }
         return (
-            <div className="border rounded-lg overflow-x-auto border-slate-200/70 bg-white shadow-md">
-                <table className="w-full min-w-[800px]">
-                    <thead className="bg-slate-100/70 border-b-2 border-slate-200">
-                        <tr>
-                            <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase text-xs">Nombre PPS</th>
-                            <th className="px-4 py-3 text-center font-semibold text-slate-600 uppercase text-xs">Orientación</th>
-                            <th className="px-4 py-3 text-center font-semibold text-slate-600 uppercase text-xs">Fecha Inicio</th>
-                            <th className="px-4 py-3 text-center font-semibold text-slate-600 uppercase text-xs">Estado Actual</th>
-                            <th className="px-4 py-3 text-center font-semibold text-slate-600 uppercase text-xs">Cambiar Estado</th>
+            <div className="overflow-x-auto">
+                <table className="w-full min-w-[800px] border-collapse">
+                    <thead>
+                        <tr className="border-b-2 border-slate-200">
+                            <th className="p-4 text-left font-semibold text-slate-500 uppercase text-xs tracking-wider">Nombre PPS</th>
+                            <th className="p-4 text-center font-semibold text-slate-500 uppercase text-xs tracking-wider">Orientación</th>
+                            <th className="p-4 text-center font-semibold text-slate-500 uppercase text-xs tracking-wider">Fecha Inicio</th>
+                            <th className="p-4 text-center font-semibold text-slate-500 uppercase text-xs tracking-wider">Estado Actual</th>
+                            <th className="p-4 text-center font-semibold text-slate-500 uppercase text-xs tracking-wider">Cambiar Estado</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200/60">
+                    <tbody>
                         {lanzamientos.map(l => {
                             const status = l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS] || 'N/A';
                             const visuals = getStatusVisuals(status);
                             return (
-                                <tr key={l.id} className="transition-colors duration-200 odd:bg-white even:bg-slate-50/50 hover:!bg-blue-50/50">
+                                <tr key={l.id} className="transition-colors duration-200 hover:bg-slate-50/50 border-b border-slate-200/60 last:border-b-0">
                                     <td className="p-4 align-middle font-semibold text-slate-800">{l[FIELD_NOMBRE_PPS_LANZAMIENTOS]}</td>
                                     <td className="p-4 align-middle text-center">
                                         <span className={getEspecialidadClasses(l[FIELD_ORIENTACION_LANZAMIENTOS]).tag}>
