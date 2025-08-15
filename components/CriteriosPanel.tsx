@@ -20,16 +20,15 @@ interface MotivationalMessageConfig {
   threshold: number;
   message: string;
   variant: 'success' | 'primary' | 'secondary' | 'neutral';
-  icon?: string;
 }
 
 // Configuración de mensajes motivacionales mejorada
 const MOTIVATIONAL_MESSAGES: MotivationalMessageConfig[] = [
-  { threshold: 100, message: "¡Excelente trabajo! 🎉", variant: 'success', icon: 'celebration' },
-  { threshold: 80, message: "¡Ya casi lo lográs! 🚀", variant: 'primary', icon: 'trending_up' },
-  { threshold: 50, message: "¡Vas por la mitad! 💪", variant: 'primary', icon: 'show_chart' },
-  { threshold: 25, message: "¡Buen avance, seguí así! ⭐", variant: 'secondary', icon: 'star' },
-  { threshold: 0, message: "¡Recién empezás, vamos! 🌟", variant: 'neutral', icon: 'rocket_launch' }
+  { threshold: 100, message: "¡Excelente trabajo! Has completado todos los requisitos.", variant: 'success' },
+  { threshold: 80, message: "¡Ya casi lo lográs! Estás muy cerca del objetivo.", variant: 'primary' },
+  { threshold: 50, message: "¡Vas por la mitad del camino! Buen progreso.", variant: 'primary' },
+  { threshold: 25, message: "¡Buen avance, seguí así!", variant: 'secondary' },
+  { threshold: 0, message: "Todo gran viaje comienza con un primer paso.", variant: 'neutral' }
 ];
 
 // --- Componente ProgressCircle Mejorado ---
@@ -56,10 +55,10 @@ const ProgressCircle: React.FC<ProgressCircleProps> = React.memo(({
       glow: 'shadow-blue-500/30'
     },
     success: {
-      track: 'text-emerald-200',
-      progress: 'from-emerald-400 via-emerald-500 to-emerald-600',
-      text: 'text-emerald-700',
-      glow: 'shadow-emerald-500/30'
+      track: 'text-slate-200',
+      progress: 'from-blue-400 via-blue-500 to-blue-600',
+      text: 'text-blue-800',
+      glow: 'shadow-blue-500/30'
     },
     warning: {
       track: 'text-amber-200',
@@ -81,8 +80,8 @@ const ProgressCircle: React.FC<ProgressCircleProps> = React.memo(({
       aria-valuemax={max}
       aria-label={`Progreso: ${Math.round(percentage)}% completado`}
     >
-      {/* Background glow effect */}
-      <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${styles.progress} opacity-10 blur-xl transition-all duration-700 ${isComplete ? 'animate-pulse' : ''}`} />
+      {/* Outer pulse effect on completion */}
+      <div className={`absolute inset-0 rounded-full transition-all duration-700 ${isComplete ? 'animate-pulse-glow' : ''}`} />
       
       <svg 
         className={`w-full h-full transform -rotate-90 relative z-10 ${animated ? 'transition-transform duration-300 group-hover:scale-[1.02]' : ''}`} 
@@ -135,22 +134,7 @@ const ProgressCircle: React.FC<ProgressCircleProps> = React.memo(({
           <span className="text-sm font-semibold text-slate-500 -mt-1 tracking-wide">
             COMPLETADO
           </span>
-          {isComplete && (
-            <div className="mt-1">
-              <span className="material-icons text-emerald-500 !text-xl animate-bounce">
-                check_circle
-              </span>
-            </div>
-          )}
         </div>
-      )}
-      
-      {/* Enhanced glow effect when complete */}
-      {isComplete && (
-        <>
-          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-400/20 to-blue-400/20 animate-pulse" style={{ animationDuration: '2s'}}/>
-          <div className="absolute inset-2 rounded-full border-2 border-emerald-400/30 animate-ping" style={{ animationDuration: '3s'}}/>
-        </>
       )}
     </div>
   );
@@ -241,11 +225,11 @@ const CertificationButton: React.FC = React.memo(() => {
         rel="noopener noreferrer"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="group relative overflow-hidden inline-flex items-center gap-3 bg-gradient-to-r from-emerald-600 via-emerald-700 to-emerald-800 hover:from-emerald-700 hover:via-emerald-800 hover:to-emerald-900 text-white font-bold text-sm py-4 px-8 rounded-xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-emerald-300 focus:ring-offset-2 shadow-xl hover:shadow-2xl hover:shadow-emerald-500/40 hover:-translate-y-1 active:transform active:scale-95"
+        className="group relative overflow-hidden inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 via-indigo-700 to-indigo-800 hover:from-blue-700 hover:via-indigo-800 hover:to-indigo-900 text-white font-bold text-sm py-4 px-8 rounded-xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-300 focus:ring-offset-2 shadow-xl hover:shadow-2xl hover:shadow-blue-500/40 hover:-translate-y-1 active:transform active:scale-95"
         aria-label="Solicitar acreditación final - Se abrirá en nueva ventana"
       >
         {/* Background animation */}
-        <div className="absolute inset-0 bg-gradient-to-r from-emerald-400/0 via-white/10 to-emerald-400/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-400/0 via-white/10 to-blue-400/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
         
         <span 
           className={`material-icons !text-lg transition-all duration-300 relative z-10 ${isHovered ? 'rotate-12 scale-125' : ''}`}
@@ -268,7 +252,7 @@ const CertificationButton: React.FC = React.memo(() => {
           {[...Array(6)].map((_, i) => (
             <div
               key={i}
-              className="absolute w-1 h-1 bg-emerald-400 rounded-full animate-ping opacity-75"
+              className="absolute w-1 h-1 bg-blue-400 rounded-full animate-ping opacity-75"
               style={{
                 left: `${20 + i * 15}%`,
                 top: `${Math.random() * 100}%`,
@@ -302,20 +286,13 @@ const CriteriosPanel: React.FC = () => {
     };
   }, [criterios]);
 
-  const { horasTotalesPercent, todosLosCriteriosCumplidos, motivationalMessage } = progressData;
-
-  const messageVariantStyles = {
-    success: 'text-emerald-700 bg-gradient-to-r from-emerald-50 to-emerald-100 border-2 border-emerald-200 px-4 py-2 rounded-xl shadow-lg',
-    primary: 'text-blue-700 bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-200 px-4 py-2 rounded-xl shadow-lg',
-    secondary: 'text-indigo-700 bg-gradient-to-r from-indigo-50 to-indigo-100 border-2 border-indigo-200 px-4 py-2 rounded-xl shadow-lg',
-    neutral: 'text-slate-700 bg-gradient-to-r from-slate-50 to-slate-100 border-2 border-slate-200 px-4 py-2 rounded-xl shadow-lg'
-  };
+  const { todosLosCriteriosCumplidos } = progressData;
 
   return (
     <section className="animate-fade-in-up">
       <div className={`relative bg-gradient-to-br from-white/80 via-white/70 to-slate-50/70 backdrop-blur-xl p-8 sm:p-10 rounded-3xl border shadow-2xl transition-all duration-700 grid grid-cols-1 lg:grid-cols-5 gap-x-10 gap-y-8 overflow-hidden ${
         todosLosCriteriosCumplidos 
-          ? 'border-emerald-300/80 shadow-emerald-500/20 bg-gradient-to-br from-emerald-50/50 via-white/70 to-blue-50/50' 
+          ? 'border-blue-300/50 shadow-blue-500/10' 
           : 'border-slate-200 shadow-slate-500/10 hover:shadow-2xl hover:border-slate-300'
       }`}>
         
@@ -326,24 +303,24 @@ const CriteriosPanel: React.FC = () => {
         {todosLosCriteriosCumplidos && (
           <>
             <div 
-              className="absolute inset-0 opacity-30"
+              className="absolute inset-0 opacity-15"
               style={{
-                backgroundImage: 'radial-gradient(circle at 1px 1px, theme(colors.emerald.200) 1px, transparent 0)',
+                backgroundImage: 'radial-gradient(circle at 1px 1px, theme(colors.blue.200) 1px, transparent 0)',
                 backgroundSize: '2rem 2rem',
-                animation: 'pan-bg 60s linear infinite'
+                animation: 'slow-pan 60s linear infinite'
               }}
             />
             {/* Celebration sparkles */}
             <div className="absolute inset-0 pointer-events-none">
-              {[...Array(12)].map((_, i) => (
+              {[...Array(8)].map((_, i) => (
                 <div
                   key={i}
-                  className="absolute w-2 h-2 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full animate-ping"
+                  className="absolute w-1 h-1 bg-gradient-to-r from-sky-400 to-blue-400 rounded-full animate-pulse"
                   style={{
                     left: `${Math.random() * 100}%`,
                     top: `${Math.random() * 100}%`,
                     animationDelay: `${i * 0.5}s`,
-                    animationDuration: '2s'
+                    animationDuration: '3s'
                   }}
                 />
               ))}
@@ -368,31 +345,20 @@ const CriteriosPanel: React.FC = () => {
               </h3>
             </div>
             
-            <div className="bg-gradient-to-r from-slate-50 to-slate-100 p-4 rounded-xl border border-slate-200 mb-4">
-              <p className="text-slate-700 leading-relaxed font-medium">
-                Has completado{' '}
-                <span className="font-black text-blue-600 bg-blue-100 px-2 py-1 rounded-lg shadow-sm">
-                  {Math.round(criterios.horasTotales)}
-                </span>{' '}
-                de{' '}
-                <span className="font-black text-slate-800 bg-slate-200 px-2 py-1 rounded-lg shadow-sm">
-                  {HORAS_OBJETIVO_TOTAL}
-                </span>{' '}
-                horas requeridas
-              </p>
-            </div>
-
-            <div className={`inline-flex items-center gap-2 font-bold text-sm ${messageVariantStyles[motivationalMessage.variant]}`}>
-              {motivationalMessage.icon && (
-                <span className="material-icons !text-base">
-                  {motivationalMessage.icon}
-                </span>
-              )}
-              {motivationalMessage.message}
-            </div>
+            <p className="text-slate-700 text-lg leading-relaxed mb-4">
+              Has completado{' '}
+              <strong className="font-black text-blue-600 text-xl">
+                {Math.round(criterios.horasTotales)}
+              </strong>{' '}
+              de{' '}
+              <strong className="font-black text-slate-800 text-xl">
+                {HORAS_OBJETIVO_TOTAL}
+              </strong>{' '}
+              horas requeridas.
+            </p>
             
             {todosLosCriteriosCumplidos && (
-              <div className="mt-6 animate-bounce">
+              <div className="mt-6 animate-[subtle-bob_2.5s_ease-in-out_infinite]">
                 <CertificationButton />
               </div>
             )}
