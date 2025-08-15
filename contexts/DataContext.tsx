@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback, ReactNode, use
 import { 
   Practica, SolicitudPPS, CriteriosCalculados, Orientacion, LanzamientoPPS, 
   Convocatoria, EstudianteFields, PracticaFields, SolicitudPPSFields, 
-  LanzamientoPPSFields, ConvocatoriaFields, ALL_ORIENTACIONES
+  LanzamientoPPSFields, ConvocatoriaFields, ALL_ORIENTACIONES, GroupedSeleccionados
 } from '../types';
 import { HORAS_OBJETIVO_TOTAL, HORAS_OBJETIVO_ORIENTACION, ROTACION_OBJETIVO_ORIENTACIONES, AIRTABLE_TABLE_NAME_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES, FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES, AIRTABLE_TABLE_NAME_PRACTICAS, FIELD_NOMBRE_BUSQUEDA_PRACTICAS, FIELD_HORAS_PRACTICAS, FIELD_NOTA_PRACTICAS, FIELD_ESPECIALIDAD_PRACTICAS, AIRTABLE_TABLE_NAME_PPS, FIELD_LEGAJO_PPS, FIELD_EMPRESA_PPS_SOLICITUD, FIELD_ESTADO_PPS, FIELD_NOTAS_PPS, FIELD_ULTIMA_ACTUALIZACION_PPS, AIRTABLE_TABLE_NAME_CONVOCATORIAS, FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_NOMBRE_PPS_CONVOCATORIAS, FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS, FIELD_FECHA_INICIO_LANZAMIENTOS, FIELD_NOMBRE_PPS_LANZAMIENTOS, FIELD_FECHA_FIN_LANZAMIENTOS, FIELD_DIRECCION_LANZAMIENTOS, FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS, FIELD_ORIENTACION_LANZAMIENTOS, FIELD_HORAS_ACREDITADAS_LANZAMIENTOS, FIELD_DNI_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_FECHA_NACIMIENTO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES, FIELD_TERMINO_CURSAR_CONVOCATORIAS, FIELD_CURSANDO_ELECTIVAS_CONVOCATORIAS, FIELD_FINALES_ADEUDA_CONVOCATORIAS, FIELD_OTRA_SITUACION_CONVOCATORIAS, FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS, FIELD_DNI_CONVOCATORIAS, FIELD_CORREO_CONVOCATORIAS, FIELD_FECHA_NACIMIENTO_CONVOCATORIAS, FIELD_TELEFONO_CONVOCATORIAS, FIELD_LEGAJO_CONVOCATORIAS, FIELD_FECHA_INICIO_CONVOCATORIAS, FIELD_FECHA_FIN_CONVOCATORIAS, FIELD_DIRECCION_CONVOCATORIAS, FIELD_HORARIO_FORMULA_CONVOCATORIAS, FIELD_ORIENTACION_CONVOCATORIAS, FIELD_NOMBRE_ESTUDIANTES, FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS, FIELD_FECHA_INICIO_PRACTICAS, FIELD_FECHA_FIN_PRACTICAS, FIELD_ESTADO_PRACTICA, FIELD_GENERO_ESTUDIANTES, FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS, FIELD_HORAS_ACREDITADAS_CONVOCATORIAS, FIELD_CUPOS_DISPONIBLES_CONVOCATORIAS } from '../constants';
 import { fetchAirtableData, updateAirtableRecord, createAirtableRecord } from '../services/airtableService';
@@ -43,6 +43,14 @@ interface DataContextType {
   modalInfo: { title: string; message: string } | null;
   showModal: (title: string, message: string) => void;
   closeModal: () => void;
+
+  // Seleccionados Modal State
+  isSeleccionadosModalOpen: boolean;
+  seleccionadosData: GroupedSeleccionados | null;
+  convocatoriaForModal: string;
+  loadingSeleccionadosId: string | null;
+  handleVerSeleccionados: (lanzamiento: LanzamientoPPS) => void;
+  closeSeleccionadosModal: () => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -99,8 +107,18 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
   
   const [modalInfo, setModalInfo] = useState<{ title: string; message: string; } | null>(null);
 
+  // State for Seleccionados Modal
+  const [isSeleccionadosModalOpen, setIsSeleccionadosModalOpen] = useState(false);
+  const [seleccionadosData, setSeleccionadosData] = useState<GroupedSeleccionados | null>(null);
+  const [convocatoriaForModal, setConvocatoriaForModal] = useState('');
+  const [loadingSeleccionadosId, setLoadingSeleccionadosId] = useState<string | null>(null);
+
   const showModal = (title: string, message: string) => setModalInfo({ title, message });
   const closeModal = () => setModalInfo(null);
+
+  const closeSeleccionadosModal = useCallback(() => {
+    setIsSeleccionadosModalOpen(false);
+  }, []);
 
   const calculateCriterios = useCallback((allPracticas: Practica[], orientacionElegida: Orientacion | "") => {
       const horasTotales = allPracticas.reduce((acc, p) => acc + (p[FIELD_HORAS_PRACTICAS] || 0), 0);
@@ -331,6 +349,85 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
       }
   }, [selectedLanzamientoForEnrollment, studentAirtableId, studentDetails, user.legajo]);
 
+  const handleVerSeleccionados = useCallback(async (lanzamiento: LanzamientoPPS) => {
+    setLoadingSeleccionadosId(lanzamiento.id);
+    setConvocatoriaForModal(lanzamiento['Nombre PPS'] || 'Convocatoria');
+
+    try {
+        const ppsName = lanzamiento['Nombre PPS']?.replace(/'/g, "\\'");
+        const ppsStartDate = lanzamiento['Fecha de Inicio'];
+
+        if (!ppsName || !ppsStartDate) {
+            showModal('Error', 'La convocatoria seleccionada no tiene un nombre o fecha de inicio válidos.');
+            setLoadingSeleccionadosId(null);
+            return;
+        }
+
+        const { records: convocatoriaRecords, error: convocatoriaError } = await fetchAirtableData<ConvocatoriaFields>(
+            AIRTABLE_TABLE_NAME_CONVOCATORIAS,
+            [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, FIELD_HORARIO_FORMULA_CONVOCATORIAS],
+            `AND(
+                {${FIELD_NOMBRE_PPS_CONVOCATORIAS}} = '${ppsName}',
+                IS_SAME({${FIELD_FECHA_INICIO_CONVOCATORIAS}}, '${ppsStartDate}', 'day'),
+                {${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}} = 'Seleccionado'
+            )`
+        );
+
+        if (convocatoriaError) throw new Error("No se pudo obtener la información de la convocatoria.");
+        
+        const studentHorarioMap = new Map<string, string>();
+        const studentIds: string[] = [];
+        convocatoriaRecords.forEach(record => {
+            const studentId = (record.fields[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] || [])[0];
+            if (studentId) {
+                studentIds.push(studentId);
+                const horario = record.fields[FIELD_HORARIO_FORMULA_CONVOCATORIAS] || 'No especificado';
+                studentHorarioMap.set(studentId, horario);
+            }
+        });
+
+        if (studentIds.length === 0) {
+             setSeleccionadosData(null);
+             setIsSeleccionadosModalOpen(true);
+             setLoadingSeleccionadosId(null);
+             return;
+        }
+
+        const uniqueStudentIds = [...new Set(studentIds)];
+        const formula = `OR(${uniqueStudentIds.map(id => `RECORD_ID()='${id}'`).join(',')})`;
+        const { records: studentRecords, error: studentError } = await fetchAirtableData<EstudianteFields>(
+            AIRTABLE_TABLE_NAME_ESTUDIANTES,
+            [FIELD_NOMBRE_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES],
+            formula
+        );
+
+        if (studentError) throw new Error("No se pudo cargar la lista de estudiantes seleccionados.");
+        
+        const studentInfoList = studentRecords.map(student => ({
+            nombre: student.fields[FIELD_NOMBRE_ESTUDIANTES] || 'Nombre no encontrado',
+            legajo: student.fields[FIELD_LEGAJO_ESTUDIANTES] || 'N/A',
+            horario: studentHorarioMap.get(student.id) || 'Horario no especificado',
+        }));
+
+        const grouped: GroupedSeleccionados = studentInfoList.reduce((acc, student) => {
+            const { horario, ...rest } = student;
+            if (!acc[horario]) {
+                acc[horario] = [];
+            }
+            acc[horario].push(rest);
+            return acc;
+        }, {} as GroupedSeleccionados);
+
+        setSeleccionadosData(grouped);
+        setIsSeleccionadosModalOpen(true);
+
+    } catch (e: any) {
+        showModal('Error', e.message);
+    } finally {
+        setLoadingSeleccionadosId(null);
+    }
+  }, []);
+
   const value: DataContextType = {
     practicas,
     solicitudes,
@@ -359,6 +456,12 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
     modalInfo,
     showModal,
     closeModal,
+    isSeleccionadosModalOpen,
+    seleccionadosData,
+    convocatoriaForModal,
+    loadingSeleccionadosId,
+    handleVerSeleccionados,
+    closeSeleccionadosModal,
   };
 
   return (

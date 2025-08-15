@@ -129,7 +129,7 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({
 
   const LocationInfo: React.FC = () => (
     direccion ? (
-      <p className="mt-2 flex items-center gap-2 text-sm text-slate-600 transition-colors duration-200 hover:text-slate-800">
+      <p className="mt-2 flex items-center gap-2 text-sm text-slate-600 transition-colors duration-200 group-hover:text-slate-800">
         <span className="material-icons !text-base text-slate-400">location_on</span>
         <span>{direccion}</span>
       </p>
@@ -212,8 +212,8 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({
 
   return (
     <article
-      className="bg-white rounded-2xl shadow-lg shadow-slate-200/40 border border-slate-200/60
-                 transition-all duration-300 ease-in-out hover:shadow-xl hover:shadow-slate-300/50 hover:-translate-y-1 p-5 sm:p-6
+      className="group bg-white rounded-2xl shadow-lg shadow-slate-200/40 border border-slate-200/60
+                 transition-all duration-300 ease-in-out hover:shadow-xl hover:shadow-slate-300/50 hover:-translate-y-1 p-6
                  focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2"
       style={{ willChange: 'transform, box-shadow' }}
     >
@@ -230,7 +230,7 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({
             )}
           </div>
           
-          <h3 className="text-xl font-bold text-slate-900 leading-tight mb-1 hover:text-blue-700 transition-colors duration-200">
+          <h3 className="text-xl font-bold text-slate-900 leading-tight mb-1 group-hover:text-blue-700 transition-colors duration-200">
             {nombre || 'Convocatoria sin nombre'}
           </h3>
           

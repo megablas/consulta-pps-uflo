@@ -47,7 +47,7 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeTabId, onTabChange, onTabClose,
                   focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 z-10
                   ${
                     activeTabId === tab.id
-                      ? 'font-semibold text-blue-600'
+                      ? 'font-bold text-blue-600'
                       : 'text-slate-500 hover:bg-slate-100/70 hover:text-slate-700 font-medium'
                   }
                   ${tab.isClosable && onTabClose ? 'pr-9' : ''}
@@ -73,7 +73,7 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeTabId, onTabChange, onTabClose,
           ))}
         </nav>
         <div 
-           className="absolute bottom-0 h-0.5 bg-blue-500 rounded-full transition-all duration-300 ease-out"
+           className="absolute bottom-0 h-0.5 bg-blue-500 rounded-full transition-all duration-500 ease-in-out"
            style={gliderStyle}
         />
       </div>

@@ -28,7 +28,7 @@ const Card: React.FC<CardProps> = ({
 
   return (
     <div
-      className={`bg-white rounded-2xl shadow-lg shadow-slate-200/40 p-6 sm:p-8 border border-slate-200/60 ${className}`}
+      className={`bg-white rounded-2xl shadow-lg shadow-slate-200/40 p-6 sm:p-8 border border-slate-200/60 transition-all duration-300 ${className}`}
       style={style}
     >
       {(title || description || actions) && (
@@ -47,7 +47,7 @@ const Card: React.FC<CardProps> = ({
                   </TitleTag>
                 )}
                 {description && (
-                  <p className="text-slate-500 mt-1 max-w-2xl">{description}</p>
+                  <p className="text-slate-600 mt-1 max-w-2xl">{description}</p>
                 )}
               </div>
             </div>

@@ -20,23 +20,24 @@ interface MotivationalMessageConfig {
   threshold: number;
   message: string;
   variant: 'success' | 'primary' | 'secondary' | 'neutral';
+  icon?: string;
 }
 
-// Configuración de mensajes motivacionales
+// Configuración de mensajes motivacionales mejorada
 const MOTIVATIONAL_MESSAGES: MotivationalMessageConfig[] = [
-  { threshold: 100, message: "¡Excelente trabajo!", variant: 'success' },
-  { threshold: 80, message: "¡Ya casi lo lográs!", variant: 'primary' },
-  { threshold: 50, message: "¡Vas por la mitad!", variant: 'primary' },
-  { threshold: 25, message: "¡Buen avance, seguí así!", variant: 'secondary' },
-  { threshold: 0, message: "¡Recién empezás, vamos!", variant: 'neutral' }
+  { threshold: 100, message: "¡Excelente trabajo! 🎉", variant: 'success', icon: 'celebration' },
+  { threshold: 80, message: "¡Ya casi lo lográs! 🚀", variant: 'primary', icon: 'trending_up' },
+  { threshold: 50, message: "¡Vas por la mitad! 💪", variant: 'primary', icon: 'show_chart' },
+  { threshold: 25, message: "¡Buen avance, seguí así! ⭐", variant: 'secondary', icon: 'star' },
+  { threshold: 0, message: "¡Recién empezás, vamos! 🌟", variant: 'neutral', icon: 'rocket_launch' }
 ];
 
 // --- Componente ProgressCircle Mejorado ---
 const ProgressCircle: React.FC<ProgressCircleProps> = React.memo(({ 
   value, 
   max, 
-  size = 160, 
-  strokeWidth = 14,
+  size = 180, 
+  strokeWidth = 16,
   animated = true,
   showPercentage = true,
   variant = 'default'
@@ -50,18 +51,21 @@ const ProgressCircle: React.FC<ProgressCircleProps> = React.memo(({
   const variantStyles = {
     default: {
       track: 'text-slate-200',
-      progress: isComplete ? 'text-emerald-500' : 'text-blue-500',
-      text: isComplete ? 'text-emerald-700' : 'text-blue-800'
+      progress: 'from-blue-400 via-blue-500 to-blue-600',
+      text: 'text-blue-800',
+      glow: 'shadow-blue-500/30'
     },
     success: {
       track: 'text-emerald-200',
-      progress: 'text-emerald-500',
-      text: 'text-emerald-700'
+      progress: 'from-emerald-400 via-emerald-500 to-emerald-600',
+      text: 'text-emerald-700',
+      glow: 'shadow-emerald-500/30'
     },
     warning: {
       track: 'text-amber-200',
-      progress: 'text-amber-500',
-      text: 'text-amber-700'
+      progress: 'from-amber-400 via-amber-500 to-amber-600',
+      text: 'text-amber-700',
+      glow: 'shadow-amber-500/30'
     }
   };
 
@@ -77,24 +81,40 @@ const ProgressCircle: React.FC<ProgressCircleProps> = React.memo(({
       aria-valuemax={max}
       aria-label={`Progreso: ${Math.round(percentage)}% completado`}
     >
+      {/* Background glow effect */}
+      <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${styles.progress} opacity-10 blur-xl transition-all duration-700 ${isComplete ? 'animate-pulse' : ''}`} />
+      
       <svg 
-        className={`w-full h-full transform -rotate-90 ${animated ? 'transition-transform duration-300 group-hover:scale-105' : ''}`} 
+        className={`w-full h-full transform -rotate-90 relative z-10 ${animated ? 'transition-transform duration-300 group-hover:scale-[1.02]' : ''}`} 
         viewBox={`0 0 ${size} ${size}`}
       >
-        {/* Track circle */}
+        <defs>
+          <linearGradient id={`gradient-${variant}`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" className={`text-blue-400`} stopColor="currentColor" />
+            <stop offset="50%" className={`text-blue-500`} stopColor="currentColor" />
+            <stop offset="100%" className={`text-blue-600`} stopColor="currentColor" />
+          </linearGradient>
+          <filter id="shadow">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.2" />
+          </filter>
+        </defs>
+
+        {/* Track circle with subtle gradient */}
         <circle
           className={styles.track}
           stroke="currentColor"
-          strokeWidth={strokeWidth}
+          strokeWidth={strokeWidth - 2}
           fill="transparent"
           r={radius}
           cx={size / 2}
           cy={size / 2}
+          opacity="0.3"
         />
+
         {/* Progress circle */}
         <circle
-          className={`${styles.progress} ${animated ? 'transition-all duration-700 ease-out' : ''}`}
-          stroke="currentColor"
+          className={`${animated ? 'transition-all duration-1000 ease-out' : ''}`}
+          stroke={`url(#gradient-${variant})`}
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeDasharray={circumference}
@@ -103,26 +123,34 @@ const ProgressCircle: React.FC<ProgressCircleProps> = React.memo(({
           r={radius}
           cx={size / 2}
           cy={size / 2}
-          style={{
-            filter: isComplete ? 'drop-shadow(0 0 6px rgba(16, 185, 129, 0.3))' : undefined
-          }}
+          filter="url(#shadow)"
         />
       </svg>
       
       {showPercentage && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-          <span className={`text-4xl font-extrabold tracking-tight ${styles.text} ${animated ? 'transition-colors duration-300' : ''}`}>
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-20">
+          <span className={`text-5xl font-black tracking-tight ${styles.text} ${animated ? 'transition-all duration-500' : ''} drop-shadow-sm`}>
             {Math.round(percentage)}%
           </span>
-          <span className="text-sm font-medium text-slate-500 -mt-1">
-            Completado
+          <span className="text-sm font-semibold text-slate-500 -mt-1 tracking-wide">
+            COMPLETADO
           </span>
+          {isComplete && (
+            <div className="mt-1">
+              <span className="material-icons text-emerald-500 !text-xl animate-bounce">
+                check_circle
+              </span>
+            </div>
+          )}
         </div>
       )}
       
-      {/* Glow effect when complete */}
+      {/* Enhanced glow effect when complete */}
       {isComplete && (
-        <div className="absolute inset-0 rounded-full bg-emerald-500/10 animate-pulse" />
+        <>
+          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-400/20 to-blue-400/20 animate-pulse" style={{ animationDuration: '2s'}}/>
+          <div className="absolute inset-2 rounded-full border-2 border-emerald-400/30 animate-ping" style={{ animationDuration: '3s'}}/>
+        </>
       )}
     </div>
   );
@@ -135,7 +163,7 @@ const getMotivationalMessage = (percent: number): MotivationalMessageConfig => {
   return MOTIVATIONAL_MESSAGES.find(config => percent >= config.threshold) || MOTIVATIONAL_MESSAGES[MOTIVATIONAL_MESSAGES.length - 1];
 };
 
-// --- Componente OrientacionSelector ---
+// --- Componente OrientacionSelector Mejorado ---
 const OrientacionSelector: React.FC<{
   selectedOrientacion: string;
   onOrientacionChange: (orientacion: Orientacion | "") => void;
@@ -150,42 +178,49 @@ const OrientacionSelector: React.FC<{
 
   return (
     <div className="animate-fade-in-up">
-      <div className="flex items-center gap-2 mb-2">
-        <span className="material-icons text-blue-500 !text-xl">psychology</span>
-        <h3 className="text-slate-800 font-semibold text-base leading-tight">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg">
+          <span className="material-icons text-white !text-lg">psychology</span>
+        </div>
+        <h3 className="text-slate-800 font-bold text-lg leading-tight">
           Define tu Especialidad
         </h3>
       </div>
-      <p className="text-sm text-slate-500 mb-3">
-        Seleccioná tu orientación para ver el progreso de las {HORAS_OBJETIVO_ORIENTACION}hs.
+      <p className="text-sm text-slate-600 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
+        <span className="material-icons !text-sm text-slate-500 mr-1">info</span>
+        Seleccioná tu orientación para ver el progreso de las {HORAS_OBJETIVO_ORIENTACION}hs especializadas.
       </p>
       <div className="relative">
         {showSaveConfirmation && (
-          <div className="absolute right-0 -top-8 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200 transition-all duration-300 animate-fade-in">
-            <span className="material-icons !text-xs mr-1">check_circle</span>
-            Guardado
+          <div className="absolute right-0 -top-10 text-xs font-bold text-emerald-700 bg-gradient-to-r from-emerald-50 to-emerald-100 px-3 py-2 rounded-lg border-2 border-emerald-200 transition-all duration-300 animate-fade-in shadow-lg">
+            <span className="material-icons !text-sm mr-1">check_circle</span>
+            ¡Guardado exitosamente!
           </div>
         )}
-        <select 
-          id="orientacion-elegida-select" 
-          aria-label="Seleccionar orientación principal"
-          value={selectedOrientacion}
-          onChange={handleChange}
-          onFocus={() => setIsOpen(true)}
-          onBlur={() => setIsOpen(false)}
-          className={`appearance-none w-full rounded-lg border p-3 pr-10 text-sm text-slate-800 bg-white shadow-sm outline-none transition-all duration-200 ${
-            isOpen 
-              ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-lg' 
-              : 'border-slate-300/80 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
-          }`}
-        >
-          <option value="">Seleccionar orientación...</option>
-          {ALL_ORIENTACIONES.map(o => (
-            <option key={o} value={o}>{o}</option>
-          ))}
-        </select>
-        <div className={`pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
-          <span className="material-icons !text-base text-slate-500">expand_more</span>
+        <div className="relative group">
+          <select 
+            id="orientacion-elegida-select" 
+            aria-label="Seleccionar orientación principal"
+            value={selectedOrientacion}
+            onChange={handleChange}
+            onFocus={() => setIsOpen(true)}
+            onBlur={() => setIsOpen(false)}
+            className={`appearance-none w-full rounded-xl border-2 p-4 pr-12 text-sm font-medium text-slate-800 bg-gradient-to-r from-white to-slate-50 shadow-lg outline-none transition-all duration-300 ${
+              isOpen 
+                ? 'border-blue-500 ring-4 ring-blue-500/20 shadow-xl transform scale-[1.02]' 
+                : 'border-slate-300 hover:border-blue-400 hover:shadow-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20'
+            }`}
+          >
+            <option value="">🎯 Seleccionar orientación...</option>
+            {ALL_ORIENTACIONES.map(o => (
+              <option key={o} value={o}>📚 {o}</option>
+            ))}
+          </select>
+          <div className={`pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 transition-all duration-300 ${isOpen ? 'rotate-180 scale-110' : 'group-hover:scale-110'}`}>
+            <span className="material-icons !text-xl text-slate-500 drop-shadow">expand_more</span>
+          </div>
+          {/* Subtle animated border */}
+          <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/0 via-blue-500/10 to-purple-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"></div>
         </div>
       </div>
     </div>
@@ -194,40 +229,63 @@ const OrientacionSelector: React.FC<{
 
 OrientacionSelector.displayName = 'OrientacionSelector';
 
-// --- Componente CertificationButton ---
+// --- Componente CertificationButton Mejorado ---
 const CertificationButton: React.FC = React.memo(() => {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
-    <a
-      href="https://airtable.com/appBY8PYhPZ1X2ka1/paglLBxubDedzl1qz/form"
-      target="_blank"
-      rel="noopener noreferrer"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className="mt-4 inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold text-sm py-3 px-6 rounded-lg transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-emerald-300 focus:ring-offset-2 shadow-lg hover:shadow-emerald-500/30 hover:-translate-y-0.5 active:transform active:scale-95"
-      aria-label="Solicitar acreditación final - Se abrirá en nueva ventana"
-    >
-      <span 
-        className={`material-icons !text-base transition-transform duration-300 ${isHovered ? 'rotate-12 scale-110' : ''}`}
-        aria-hidden="true"
+    <div className="relative">
+      <a
+        href="https://airtable.com/appBY8PYhPZ1X2ka1/paglLBxubDedzl1qz/form"
+        target="_blank"
+        rel="noopener noreferrer"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className="group relative overflow-hidden inline-flex items-center gap-3 bg-gradient-to-r from-emerald-600 via-emerald-700 to-emerald-800 hover:from-emerald-700 hover:via-emerald-800 hover:to-emerald-900 text-white font-bold text-sm py-4 px-8 rounded-xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-emerald-300 focus:ring-offset-2 shadow-xl hover:shadow-2xl hover:shadow-emerald-500/40 hover:-translate-y-1 active:transform active:scale-95"
+        aria-label="Solicitar acreditación final - Se abrirá en nueva ventana"
       >
-        school
-      </span>
-      <span>Solicitar Acreditación Final</span>
-      <span 
-        className={`material-icons !text-sm opacity-75 transition-transform duration-300 ${isHovered ? 'translate-x-0.5' : ''}`}
-        aria-hidden="true"
-      >
-        open_in_new
-      </span>
-    </a>
+        {/* Background animation */}
+        <div className="absolute inset-0 bg-gradient-to-r from-emerald-400/0 via-white/10 to-emerald-400/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+        
+        <span 
+          className={`material-icons !text-lg transition-all duration-300 relative z-10 ${isHovered ? 'rotate-12 scale-125' : ''}`}
+          aria-hidden="true"
+        >
+          school
+        </span>
+        <span className="relative z-10 tracking-wide">Solicitar Acreditación Final</span>
+        <span 
+          className={`material-icons !text-sm opacity-90 transition-all duration-300 relative z-10 ${isHovered ? 'translate-x-1 scale-110' : ''}`}
+          aria-hidden="true"
+        >
+          open_in_new
+        </span>
+      </a>
+      
+      {/* Floating particles effect */}
+      {isHovered && (
+        <div className="absolute inset-0 pointer-events-none">
+          {[...Array(6)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-1 h-1 bg-emerald-400 rounded-full animate-ping opacity-75"
+              style={{
+                left: `${20 + i * 15}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${i * 0.1}s`,
+                animationDuration: '1s'
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 });
 
 CertificationButton.displayName = 'CertificationButton';
 
-// --- Componente Principal ---
+// --- Componente Principal Mejorado ---
 const CriteriosPanel: React.FC = () => {
   const { criterios, selectedOrientacion, handleOrientacionChange, showSaveConfirmation } = useData();
 
@@ -247,58 +305,94 @@ const CriteriosPanel: React.FC = () => {
   const { horasTotalesPercent, todosLosCriteriosCumplidos, motivationalMessage } = progressData;
 
   const messageVariantStyles = {
-    success: 'text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-md',
-    primary: 'text-blue-600 bg-blue-50 border border-blue-200 px-2 py-1 rounded-md',
-    secondary: 'text-indigo-600 bg-indigo-50 border border-indigo-200 px-2 py-1 rounded-md',
-    neutral: 'text-slate-600'
+    success: 'text-emerald-700 bg-gradient-to-r from-emerald-50 to-emerald-100 border-2 border-emerald-200 px-4 py-2 rounded-xl shadow-lg',
+    primary: 'text-blue-700 bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-200 px-4 py-2 rounded-xl shadow-lg',
+    secondary: 'text-indigo-700 bg-gradient-to-r from-indigo-50 to-indigo-100 border-2 border-indigo-200 px-4 py-2 rounded-xl shadow-lg',
+    neutral: 'text-slate-700 bg-gradient-to-r from-slate-50 to-slate-100 border-2 border-slate-200 px-4 py-2 rounded-xl shadow-lg'
   };
 
   return (
     <section className="animate-fade-in-up">
-      <div className="flex items-center gap-3 mb-6">
-        <div className={`p-2 rounded-lg ${todosLosCriteriosCumplidos ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'} transition-colors duration-300`}>
-          <span className="material-icons !text-2xl">
-            {todosLosCriteriosCumplidos ? 'verified' : 'trending_up'}
-          </span>
-        </div>
-        <h2 className="text-3xl font-bold text-slate-800 tracking-tight">
-          {todosLosCriteriosCumplidos ? '¡Felicitaciones, objetivo cumplido!' : 'Tu Progreso General'}
-        </h2>
-      </div>
-      
-      <div className={`bg-white p-6 sm:p-8 rounded-2xl border shadow-lg transition-all duration-500 grid grid-cols-1 md:grid-cols-5 gap-x-8 gap-y-6 ${
+      <div className={`relative bg-gradient-to-br from-white/80 via-white/70 to-slate-50/70 backdrop-blur-xl p-8 sm:p-10 rounded-3xl border shadow-2xl transition-all duration-700 grid grid-cols-1 lg:grid-cols-5 gap-x-10 gap-y-8 overflow-hidden ${
         todosLosCriteriosCumplidos 
-          ? 'border-emerald-300/80 shadow-emerald-500/20 bg-gradient-to-br from-white to-emerald-50/30' 
-          : 'border-slate-200/70 shadow-slate-500/5 hover:shadow-lg hover:border-slate-300/80'
+          ? 'border-emerald-300/80 shadow-emerald-500/20 bg-gradient-to-br from-emerald-50/50 via-white/70 to-blue-50/50' 
+          : 'border-slate-200 shadow-slate-500/10 hover:shadow-2xl hover:border-slate-300'
       }`}>
+        
+        {/* Decorative background patterns */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-blue-100/50 to-transparent rounded-full blur-3xl -z-10" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-purple-100/50 to-transparent rounded-full blur-3xl -z-10" />
+        
+        {todosLosCriteriosCumplidos && (
+          <>
+            <div 
+              className="absolute inset-0 opacity-30"
+              style={{
+                backgroundImage: 'radial-gradient(circle at 1px 1px, theme(colors.emerald.200) 1px, transparent 0)',
+                backgroundSize: '2rem 2rem',
+                animation: 'pan-bg 60s linear infinite'
+              }}
+            />
+            {/* Celebration sparkles */}
+            <div className="absolute inset-0 pointer-events-none">
+              {[...Array(12)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute w-2 h-2 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full animate-ping"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                    animationDelay: `${i * 0.5}s`,
+                    animationDuration: '2s'
+                  }}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
         {/* Progreso Principal */}
-        <div className="md:col-span-3 flex flex-col sm:flex-row items-center gap-6">
+        <div className="lg:col-span-3 flex flex-col sm:flex-row items-center gap-8 z-10">
           <ProgressCircle 
             value={criterios.horasTotales} 
             max={HORAS_OBJETIVO_TOTAL}
             variant={todosLosCriteriosCumplidos ? 'success' : 'default'}
           />
           <div className="flex-1 text-center sm:text-left">
-            <h3 className="text-2xl font-bold text-slate-900 mb-2">
-              {criterios.cumpleHorasTotales ? 'Horas Totales Completadas' : 'Horas Totales de Práctica'}
-            </h3>
-            <p className="text-slate-600 leading-relaxed">
-              Has completado{' '}
-              <span className="font-bold text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded">
-                {Math.round(criterios.horasTotales)}
-              </span>{' '}
-              de{' '}
-              <span className="font-bold text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded">
-                {HORAS_OBJETIVO_TOTAL}
-              </span>{' '}
-              horas requeridas.
-            </p>
-            <div className={`mt-2 font-semibold text-sm inline-block ${messageVariantStyles[motivationalMessage.variant]}`}>
+            <div className="flex items-center gap-3 mb-4 justify-center sm:justify-start">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
+                <span className="material-icons text-white !text-xl">schedule</span>
+              </div>
+              <h3 className="text-3xl font-black text-slate-900 tracking-tight">
+                {criterios.cumpleHorasTotales ? 'Horas Completadas' : 'Horas de Práctica'}
+              </h3>
+            </div>
+            
+            <div className="bg-gradient-to-r from-slate-50 to-slate-100 p-4 rounded-xl border border-slate-200 mb-4">
+              <p className="text-slate-700 leading-relaxed font-medium">
+                Has completado{' '}
+                <span className="font-black text-blue-600 bg-blue-100 px-2 py-1 rounded-lg shadow-sm">
+                  {Math.round(criterios.horasTotales)}
+                </span>{' '}
+                de{' '}
+                <span className="font-black text-slate-800 bg-slate-200 px-2 py-1 rounded-lg shadow-sm">
+                  {HORAS_OBJETIVO_TOTAL}
+                </span>{' '}
+                horas requeridas
+              </p>
+            </div>
+
+            <div className={`inline-flex items-center gap-2 font-bold text-sm ${messageVariantStyles[motivationalMessage.variant]}`}>
+              {motivationalMessage.icon && (
+                <span className="material-icons !text-base">
+                  {motivationalMessage.icon}
+                </span>
+              )}
               {motivationalMessage.message}
             </div>
             
             {todosLosCriteriosCumplidos && (
-              <div className="mt-6">
+              <div className="mt-6 animate-bounce">
                 <CertificationButton />
               </div>
             )}
@@ -306,15 +400,15 @@ const CriteriosPanel: React.FC = () => {
         </div>
 
         {/* Criterios Secundarios */}
-        <div className="md:col-span-2 flex flex-col justify-center gap-8 border-t md:border-t-0 md:border-l border-slate-200/70 pt-6 md:pt-0 md:pl-8">
-          <div className="transition-all duration-300 hover:scale-105">
+        <div className="lg:col-span-2 flex flex-col justify-center gap-10 border-t-2 lg:border-t-0 lg:border-l-2 border-slate-200 pt-8 lg:pt-0 lg:pl-10 z-10">
+          <div className="transition-all duration-300 hover:scale-[1.02] hover:shadow-lg p-4 rounded-2xl hover:bg-white/50">
             <RotationTracker
               count={criterios.orientacionesCursadasCount}
               orientacionesUnicas={criterios.orientacionesUnicas}
             />
           </div>
           
-          <div className="flex flex-col transition-all duration-300 hover:scale-105">
+          <div className="transition-all duration-300 hover:scale-[1.02] hover:shadow-lg p-4 rounded-2xl hover:bg-white/50">
             {selectedOrientacion ? (
               <ProgressBar
                 label={`Horas en ${selectedOrientacion}`}

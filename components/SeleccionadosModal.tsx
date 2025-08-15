@@ -1,14 +1,5 @@
 import React from 'react';
-
-// Define the shape of a selected student and the grouped data
-interface SelectedStudent {
-  nombre: string;
-  legajo: string;
-}
-
-export interface GroupedSeleccionados {
-  [horario: string]: SelectedStudent[];
-}
+import { GroupedSeleccionados } from '../types';
 
 interface SeleccionadosModalProps {
   isOpen: boolean;

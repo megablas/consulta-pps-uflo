@@ -1,5 +1,6 @@
 import React from 'react';
 import { ALERT_DISCLAIMER_TITLE, ALERT_DISCLAIMER_TEXT } from '../constants';
+import Card from './Card';
 
 const Footer: React.FC = () => {
   const mailToLink = `mailto:blas.rivera@uflouniversidad.edu.ar?subject=${encodeURIComponent('Solicitud de Corrección de Datos - Mi Panel Académico')}&body=${encodeURIComponent(
@@ -8,7 +9,7 @@ const Footer: React.FC = () => {
 
   return (
     <footer className="mt-16 mb-8">
-      <div className="p-6 sm:p-8 bg-white rounded-2xl border border-slate-200/60 shadow-lg shadow-slate-200/40">
+      <Card>
         <div className="flex items-start gap-5">
           <div className="flex-shrink-0">
             <div className="bg-blue-100 text-blue-600 rounded-full size-11 flex items-center justify-center">
@@ -35,7 +36,7 @@ const Footer: React.FC = () => {
             </a>
           </div>
         </div>
-      </div>
+      </Card>
     </footer>
   );
 };

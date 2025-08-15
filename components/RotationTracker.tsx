@@ -9,36 +9,37 @@ interface RotationTrackerProps {
 const RotationTracker: React.FC<RotationTrackerProps> = ({ count, orientacionesUnicas }) => {
   const total = ROTACION_OBJETIVO_ORIENTACIONES;
   const isComplete = count >= total;
-  
-  const completedText = isComplete
-    ? `Rotación completa. Cursaste: ${orientacionesUnicas.join(', ')}.`
-    : `Has cursado ${count} de ${total} orientaciones.`;
+  const colorClass = 'text-blue-600';
 
   return (
-    <div className="flex flex-col">
-       <div className="flex justify-between items-baseline mb-2">
-        <h4 className="text-slate-800 font-semibold text-base leading-tight">Rotación de Orientaciones</h4>
-        <p className={`font-bold text-lg ${isComplete ? 'text-green-600' : 'text-blue-600'}`}>
-          {count}
-          <span className="text-slate-400 font-medium">/{total}</span>
-        </p>
-      </div>
-
-      <div className="flex-grow flex items-center">
-        <div className="flex items-center gap-1.5 w-full">
-           {Array.from({ length: total }).map((_, i) => (
-            <div 
-              key={i} 
-              className={`flex-1 h-2 rounded-full transition-colors duration-500 ${i < count ? 'bg-blue-500' : 'bg-slate-200'}`}
-              title={i < count ? (orientacionesUnicas[i] || `Rotación ${i+1}`) : `Rotación ${i+1} pendiente`}
-            />
-          ))}
+    <div className="w-full">
+      <div className="flex justify-between items-center mb-2">
+        <h4 className="text-base font-bold text-slate-800">
+          Rotación de Orientaciones
+        </h4>
+        <div className={`flex items-center gap-1.5 text-sm font-bold ${isComplete ? colorClass : 'text-slate-800'}`}>
+          {isComplete && <span className="material-icons !text-base">check_circle</span>}
+          <span>{count} / {total}</span>
         </div>
       </div>
       
-       <div className="text-center mt-2">
-        <p className="text-slate-500 text-xs font-medium min-h-[1.25rem]">{completedText}</p>
+      {/* Progress Bars */}
+      <div className="flex gap-1.5 h-2">
+        {[...Array(total)].map((_, i) => (
+          <div key={i} className="flex-1 bg-slate-200 rounded-full overflow-hidden">
+            <div 
+              className={`h-full rounded-full ${i < count ? 'bg-blue-600' : ''}`}
+              style={{ width: '100%' }}
+            />
+          </div>
+        ))}
       </div>
+
+      {orientacionesUnicas.length > 0 && (
+        <div className="mt-2 text-xs text-slate-500 font-medium">
+          <span className="font-semibold">Cursadas:</span> {orientacionesUnicas.join(', ')}
+        </div>
+      )}
     </div>
   );
 };

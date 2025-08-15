@@ -20,9 +20,9 @@ interface AuthInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 const AuthInput: React.FC<AuthInputProps> = ({ id, type, value, onChange, placeholder, icon, disabled = false, ...props }) => (
-  <div className="relative">
-    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-      <span className="material-icons text-slate-400">{icon}</span>
+  <div className="relative group">
+    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 transition-colors duration-300 group-focus-within:text-blue-600">
+      <span className="material-icons text-slate-400 group-focus-within:text-blue-600">{icon}</span>
     </div>
     <input
       id={id}
@@ -229,8 +229,8 @@ const Auth: React.FC<AuthProps> = ({ showModal }) => {
     <div className="w-full bg-white md:grid md:grid-cols-2 min-h-[85vh] rounded-2xl shadow-2xl shadow-slate-200/40 overflow-hidden border border-slate-200/60">
       {/* Left Panel */}
       <div className="hidden md:flex flex-col justify-between p-8 lg:p-12 bg-slate-900 text-white relative overflow-hidden">
-        <div className="absolute -top-1/4 -right-1/4 w-1/2 h-1/2 bg-blue-600/30 rounded-full filter blur-3xl" />
-        <div className="absolute -bottom-1/4 -left-1/4 w-1/2 h-1/2 bg-indigo-600/30 rounded-full filter blur-3xl" />
+        <div className="absolute -top-1/4 -right-1/4 w-3/4 h-3/4 bg-blue-600/30 rounded-full filter blur-3xl animate-pulse" style={{animationDuration: '8s'}} />
+        <div className="absolute -bottom-1/4 -left-1/4 w-3/4 h-3/4 bg-indigo-600/30 rounded-full filter blur-3xl animate-pulse" style={{animationDuration: '10s', animationDelay: '2s'}} />
         <div className="relative z-10">
           <div className="flex-shrink-0 animate-fade-in-up" style={{ animationDelay: '0ms' }}><MiPanelLogo className="h-16 w-auto" variant="dark" /></div>
           <div className="flex-grow flex flex-col justify-center mt-20">
@@ -251,7 +251,7 @@ const Auth: React.FC<AuthProps> = ({ showModal }) => {
           <div className="flex md:hidden justify-center items-center gap-4 mb-8"><UfloLogo className="h-12 w-auto" /><MiPanelLogo className="h-12 w-auto" /></div>
           
           <div className="text-left mb-8">
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 animate-fade-in-up" style={{ animationDelay: '400ms' }}>Acceso de Estudiantes</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight animate-fade-in-up" style={{ animationDelay: '400ms' }}>Acceso de Estudiantes</h2>
             <p className="text-slate-500 mt-1 animate-fade-in-up" style={{ animationDelay: '500ms' }}>Accede a tu cuenta o regístrate para comenzar.</p>
           </div>
           
@@ -306,7 +306,7 @@ const Auth: React.FC<AuthProps> = ({ showModal }) => {
             {error && <p className="text-red-600 text-sm text-center pt-2">{error}</p>}
 
             <div className="pt-4 animate-fade-in-up" style={{ animationDelay: '1000ms' }}>
-              <button type="submit" disabled={isLoading || (mode === 'register' && legajoCheckState !== 'success')} className="w-full bg-blue-600 text-white font-bold text-base py-3 px-6 rounded-lg transition-all duration-200 ease-in-out shadow-md hover:bg-blue-700 hover:-translate-y-0.5 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-y-0 flex items-center justify-center gap-3">
+              <button type="submit" disabled={isLoading || (mode === 'register' && legajoCheckState !== 'success')} className="w-full bg-blue-600 text-white font-bold text-base py-3 px-6 rounded-lg transition-all duration-200 ease-in-out shadow-md hover:bg-blue-700 hover:-translate-y-0.5 active:scale-95 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-y-0 flex items-center justify-center gap-3">
                 {isLoading && <div className="border-2 border-white/50 border-t-white rounded-full w-5 h-5 animate-spin"></div>}
                 <span>{isLoading ? 'Procesando...' : (mode === 'login' ? 'Ingresar' : 'Crear Cuenta')}</span>
               </button>

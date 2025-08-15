@@ -143,6 +143,16 @@ export interface ModalInfo {
   message: string;
 }
 
+// For SeleccionadosModal
+export interface SelectedStudent {
+  nombre: string;
+  legajo: string;
+}
+
+export interface GroupedSeleccionados {
+  [horario: string]: SelectedStudent[];
+}
+
 // For Airtable API responses
 export interface AirtableResponse<T> {
   records: AirtableRecord<T>[];

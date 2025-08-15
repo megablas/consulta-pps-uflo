@@ -25,33 +25,42 @@ const finalesOptions = [
   "5 o más finales",
 ];
 
-const RadioButton = ({ id, name, value, checked, onChange, label, disabled, error }: any) => (
+const RadioButton: React.FC<{
+  id: string; name: string; value: string; checked: boolean;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  label: string; disabled?: boolean; error?: boolean;
+}> = ({ id, name, value, checked, onChange, label, disabled, error }) => (
   <label 
     htmlFor={id} 
-    className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all duration-200 group ${
+    className={`flex items-center p-3.5 border rounded-lg cursor-pointer transition-all duration-200 group relative ${
       checked 
-        ? 'bg-slate-100 border-slate-400 shadow-sm' 
-        : 'bg-white border-slate-300/80 hover:border-slate-400 hover:bg-slate-50/50'
+        ? 'bg-blue-50 border-blue-500 shadow-sm' 
+        : 'bg-white border-slate-300/80 hover:border-blue-400'
     } ${
       disabled ? 'cursor-not-allowed opacity-60' : ''
     } ${
-      error ? 'border-red-300 bg-red-50/30' : ''
+      error ? 'border-red-400 bg-red-50' : ''
     }`}
   >
-    <div className="relative">
-      <input
-        type="radio"
-        id={id}
-        name={name}
-        value={value}
-        checked={checked}
-        onChange={onChange}
-        disabled={disabled}
-        className="h-4 w-4 text-blue-600 border-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-1 transition-all"
-      />
+    <div className="flex-shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 "
+      style={{ borderColor: checked ? 'var(--color-primary, #2563eb)' : '#94a3b8' }}
+    >
+        <div className={`h-2.5 w-2.5 rounded-full transition-all duration-200 ${checked ? 'scale-100' : 'scale-0'}`}
+             style={{ backgroundColor: 'var(--color-primary, #2563eb)' }}
+        />
     </div>
+    <input
+      type="radio"
+      id={id}
+      name={name}
+      value={value}
+      checked={checked}
+      onChange={onChange}
+      disabled={disabled}
+      className="opacity-0 absolute"
+    />
     <span className={`ml-3 text-sm font-medium transition-colors ${
-      checked ? 'text-slate-900' : 'text-slate-700 group-hover:text-slate-900'
+      checked ? 'text-blue-900' : 'text-slate-700 group-hover:text-slate-900'
     } ${
       disabled ? 'text-slate-500' : ''
     }`}>
@@ -60,20 +69,21 @@ const RadioButton = ({ id, name, value, checked, onChange, label, disabled, erro
   </label>
 );
 
+
 const ProgressIndicator = ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => (
   <div className="mb-6 animate-fade-in-up">
-    <div className="flex items-center justify-between mb-3">
+    <div className="flex items-center justify-between mb-2">
       <div className="flex items-center gap-2">
-        <span className="material-icons text-slate-600 !text-base">trending_up</span>
+        <span className="material-icons text-slate-600 !text-base">dynamic_form</span>
         <span className="text-sm font-medium text-slate-700">Progreso del formulario</span>
       </div>
-      <span className="text-sm font-semibold text-slate-900 bg-slate-100 px-2 py-1 rounded">
+      <span className="text-sm font-semibold text-slate-900 bg-slate-100 px-2 py-1 rounded-md">
         {currentStep}/{totalSteps}
       </span>
     </div>
-    <div className="w-full bg-slate-200/70 rounded-full h-2">
+    <div className="w-full bg-slate-200/70 rounded-full h-2.5 overflow-hidden">
       <div 
-        className="bg-blue-600 h-2 rounded-full transition-all duration-500 ease-out"
+        className="bg-gradient-to-r from-sky-400 to-blue-500 h-2.5 rounded-full transition-all duration-500 ease-out"
         style={{ width: `${(currentStep / totalSteps) * 100}%` }}
       ></div>
     </div>
@@ -122,38 +132,26 @@ const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
   const [selectedHorarios, setSelectedHorarios] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const [showSuccess, setShowSuccess] = useState(false);
   
   const formRef = useRef<HTMLFormElement>(null);
 
   const showHorarios = Array.isArray(horariosDisponibles) && horariosDisponibles.length > 1;
 
-  // Calculate progress
+  // Simplified and more accurate progress calculation
   const getProgress = useCallback(() => {
+    const total = (showHorarios ? 1 : 0) + 3; // Horarios + TerminoCursar + Conditional + OtraSituacion
     let completed = 0;
-    let total = 3; // Base: terminoDeCursar, situación adicional, aclaraciones
-    
-    if (showHorarios) {
-      total++;
-      if (selectedHorarios.length > 0) completed++;
-    }
-    
-    if (terminoDeCursar !== null) {
-      completed++;
-      if (terminoDeCursar === false && cursandoElectivas !== null) {
-        completed++;
-      } else if (terminoDeCursar === true && finalesAdeudados) {
-        completed++;
-      }
-    }
-    
+
+    if (showHorarios && selectedHorarios.length > 0) completed++;
+    if (terminoDeCursar !== null) completed++;
+    if ((terminoDeCursar === true && finalesAdeudados) || (terminoDeCursar === false && cursandoElectivas !== null)) completed++;
     if (otraSituacionAcademica.trim().length >= 10) completed++;
-    
+
     return { current: completed, total };
   }, [terminoDeCursar, cursandoElectivas, finalesAdeudados, otraSituacionAcademica, selectedHorarios, showHorarios]);
 
   // Enhanced validation
-  const validateField = useCallback((field: string) => {
+  const validateField = useCallback((field: string): string => {
     switch (field) {
       case 'horarios':
         return showHorarios && selectedHorarios.length === 0 
@@ -182,17 +180,21 @@ const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
       default:
         return '';
     }
-  }, [terminoDeCursar, cursandoElectivas, finalesAdeudados, otraSituacionAcademica, selectedHorarios, showHorarios]);
+  }, [terminoDeCursar, cursandoElectivas, finalesAdeudados, otraSituacionAcademica, selectedHorarios.length, showHorarios]);
 
-  // Real-time validation
+  // Real-time validation, fixed to only store actual errors
   useEffect(() => {
     const newErrors: Record<string, string> = {};
+    const checkAndSetError = (field: string) => {
+      if (touched[field]) {
+        const error = validateField(field);
+        if (error) { // Only add if there's an actual error message
+          newErrors[field] = error;
+        }
+      }
+    };
     
-    if (touched.horarios) newErrors.horarios = validateField('horarios');
-    if (touched.terminoDeCursar) newErrors.terminoDeCursar = validateField('terminoDeCursar');
-    if (touched.finalesAdeudados) newErrors.finalesAdeudados = validateField('finalesAdeudados');
-    if (touched.cursandoElectivas) newErrors.cursandoElectivas = validateField('cursandoElectivas');
-    if (touched.otraSituacionAcademica) newErrors.otraSituacionAcademica = validateField('otraSituacionAcademica');
+    ['horarios', 'terminoDeCursar', 'finalesAdeudados', 'cursandoElectivas', 'otraSituacionAcademica'].forEach(checkAndSetError);
     
     setErrors(newErrors);
   }, [terminoDeCursar, cursandoElectivas, finalesAdeudados, otraSituacionAcademica, selectedHorarios, touched, validateField]);
@@ -207,7 +209,6 @@ const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
       setSelectedHorarios([]);
       setErrors({});
       setTouched({});
-      setShowSuccess(false);
     }
   }, [isOpen]);
 
@@ -216,11 +217,9 @@ const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
     if (terminoDeCursar === true) {
       setCursandoElectivas(null);
       setTouched(prev => ({ ...prev, cursandoElectivas: false }));
-      setErrors(prev => ({ ...prev, cursandoElectivas: '' }));
     } else if (terminoDeCursar === false) {
       setFinalesAdeudados('');
       setTouched(prev => ({ ...prev, finalesAdeudados: false }));
-      setErrors(prev => ({ ...prev, finalesAdeudados: '' }));
     }
   }, [terminoDeCursar]);
 
@@ -254,7 +253,7 @@ const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Mark all fields as touched
+    // Mark all potentially required fields as touched to show errors
     const allFields = ['horarios', 'terminoDeCursar', 'finalesAdeudados', 'cursandoElectivas', 'otraSituacionAcademica'];
     setTouched(Object.fromEntries(allFields.map(field => [field, true])));
 
@@ -264,18 +263,17 @@ const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
       const error = validateField(field);
       if (error) newErrors[field] = error;
     });
+    
+    setErrors(newErrors);
 
     if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
       // Focus first error
       setTimeout(() => {
-        const firstErrorField = formRef.current?.querySelector('[aria-invalid="true"]') as HTMLElement;
+        const firstErrorField = formRef.current?.querySelector('[aria-invalid="true"], .border-red-400') as HTMLElement;
         firstErrorField?.focus();
       }, 100);
       return;
     }
-
-    setErrors({});
     
     try {
       await onSubmit({
@@ -306,6 +304,7 @@ const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
       <form
         ref={formRef}
         onSubmit={handleSubmit}
+        noValidate
         onClick={(e) => e.stopPropagation()}
         className="bg-white rounded-2xl shadow-lg w-full max-w-2xl transform transition-all duration-300 flex flex-col max-h-[90vh] overflow-hidden border border-slate-200/70"
       >
@@ -371,12 +370,11 @@ const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                       id={`horario-${horario.replace(/\s+/g, '-')}`}
                       name="horario"
                       checked={selectedHorarios.includes(horario)}
-                      onChange={() => handleHorarioChange(horario)}
-                      onBlur={() => handleFieldBlur('horarios')}
+                      onChange={(e) => handleHorarioChange(horario)}
+                      onBlur={(e) => handleFieldBlur('horarios')}
                       label={horario}
                       disabled={isSubmitting}
                       error={touched.horarios && !!errors.horarios}
-                      aria-invalid={touched.horarios && !!errors.horarios}
                     />
                   ))}
                 </div>
@@ -486,7 +484,7 @@ const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                     )}
 
                     {terminoDeCursar === true && (
-                      <div>
+                      <div className="relative">
                         <label htmlFor="finalesAdeudados" className="block text-sm font-medium text-slate-800 mb-4">
                           ¿Cuántos finales adeudas?
                         </label>
@@ -498,7 +496,7 @@ const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                           disabled={isSubmitting}
                           className={`appearance-none w-full rounded-lg border bg-white p-3 pr-10 text-sm text-slate-800 shadow-sm outline-none transition-all duration-200 ${
                             touched.finalesAdeudados && errors.finalesAdeudados
-                              ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/20'
+                              ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-500/20'
                               : 'border-slate-300/80 hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
                           }`}
                           aria-invalid={touched.finalesAdeudados && !!errors.finalesAdeudados}
@@ -509,7 +507,7 @@ const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                             <option key={option} value={option}>{option}</option>
                           ))}
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3">
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 top-8">
                           <span className="material-icons !text-base text-slate-400">expand_more</span>
                         </div>
                         {touched.finalesAdeudados && errors.finalesAdeudados && (
@@ -546,7 +544,7 @@ const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                   maxLength={500}
                   className={`w-full rounded-lg border bg-white p-4 text-sm text-slate-800 shadow-sm transition-all focus:ring-2 focus:ring-offset-1 resize-none outline-none ${
                     touched.otraSituacionAcademica && errors.otraSituacionAcademica
-                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20'
+                      ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20'
                       : 'border-slate-300/80 hover:border-slate-400 focus:border-blue-500 focus:ring-blue-500/20'
                   }`}
                   placeholder="Ej: Nombres de los finales adeudados, situación de regularidad, materias que estás cursando actualmente, etc."
@@ -579,7 +577,7 @@ const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
           <button
             type="submit"
             disabled={isSubmitting || !isFormValid}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-6 rounded-lg text-sm transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[180px] gap-2"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-6 rounded-lg text-sm transition-all duration-200 shadow-sm hover:shadow-md disabled:bg-slate-400 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center min-w-[180px] gap-2"
           >
             {isSubmitting && (
               <div className="border-2 border-white/30 border-t-white rounded-full w-4 h-4 animate-spin"></div>
