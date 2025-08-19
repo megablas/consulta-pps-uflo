@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Convocatoria, LanzamientoPPS } from '../types';
 import ConvocatoriaCard from './ConvocatoriaCard';
-import { FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS } from '../constants';
+import { FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS as FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS } from '../constants';
 import EmptyState from './EmptyState';
 import { useData } from '../contexts/DataContext';
 import { useModal } from '../contexts/ModalContext';
@@ -37,7 +37,7 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myE
                 ? myEnrollments.find(e => (e[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || []).includes(lanzamiento.id))
                 : undefined;
         
-            const enrollmentStatus = enrollment ? enrollment[FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS] : null;
+            const enrollmentStatus = enrollment ? enrollment[FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS] : null;
             const isEnrolling = enrollingId === lanzamiento.id;
             const isVerSeleccionadosLoading = loadingSeleccionadosId === lanzamiento.id;
             

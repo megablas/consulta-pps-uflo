@@ -406,28 +406,28 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup">
                     <RadioButton 
-                      id="cursar-si" 
-                      name="terminoCursar" 
-                      value="si" 
-                      checked={terminoDeCursar === true} 
+                      id="cursar-si"
+                      name="terminoDeCursar"
+                      value="true"
+                      checked={terminoDeCursar === true}
                       onChange={() => {
                         setTerminoDeCursar(true);
-                        handleFieldBlur('terminoDeCursar');
+                        setTouched(prev => ({ ...prev, terminoDeCursar: true }));
                       }}
-                      label="Sí, terminé de cursar" 
+                      label="Sí"
                       disabled={isSubmitting}
                       error={touched.terminoDeCursar && !!errors.terminoDeCursar}
                     />
                     <RadioButton 
-                      id="cursar-no" 
-                      name="terminoCursar" 
-                      value="no" 
-                      checked={terminoDeCursar === false} 
+                      id="cursar-no"
+                      name="terminoDeCursar"
+                      value="false"
+                      checked={terminoDeCursar === false}
                       onChange={() => {
-                        setTerminoDeCursar(false);
-                        handleFieldBlur('terminoDeCursar');
+                          setTerminoDeCursar(false);
+                          setTouched(prev => ({ ...prev, terminoDeCursar: true }));
                       }}
-                      label="No, aún estoy cursando" 
+                      label="No, todavía tengo materias pendientes"
                       disabled={isSubmitting}
                       error={touched.terminoDeCursar && !!errors.terminoDeCursar}
                     />
@@ -439,124 +439,109 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                   )}
                 </div>
 
-                {/* Conditional Questions */}
-                {terminoDeCursar !== null && (
-                  <div className="space-y-6 pl-4 border-l-2 border-slate-200/70 animate-fade-in-up">
-                    {terminoDeCursar === false && (
-                      <div>
-                        <h4 className="text-sm font-medium text-slate-800 mb-4">
-                          ¿Estás cursando materias electivas?
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup">
-                          <RadioButton 
-                            id="electivas-si" 
-                            name="cursandoElectivas" 
-                            value="si" 
-                            checked={cursandoElectivas === true} 
-                            onChange={() => {
-                              setCursandoElectivas(true);
-                              handleFieldBlur('cursandoElectivas');
-                            }}
-                            label="Sí" 
-                            disabled={isSubmitting}
-                            error={touched.cursandoElectivas && !!errors.cursandoElectivas}
-                          />
-                          <RadioButton 
-                            id="electivas-no" 
-                            name="cursandoElectivas" 
-                            value="no" 
-                            checked={cursandoElectivas === false} 
-                            onChange={() => {
-                              setCursandoElectivas(false);
-                              handleFieldBlur('cursandoElectivas');
-                            }}
-                            label="No" 
-                            disabled={isSubmitting}
-                            error={touched.cursandoElectivas && !!errors.cursandoElectivas}
-                          />
-                        </div>
-                        {touched.cursandoElectivas && errors.cursandoElectivas && (
-                          <p className="mt-3 text-sm text-red-600 font-medium" role="alert">
-                            {errors.cursandoElectivas}
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                    {terminoDeCursar === true && (
-                      <div className="relative">
-                        <label htmlFor="finalesAdeudados" className="block text-sm font-medium text-slate-800 mb-4">
-                          ¿Cuántos finales adeudas?
-                        </label>
-                        <select
-                          id="finalesAdeudados"
-                          value={finalesAdeudados}
-                          onChange={(e) => setFinalesAdeudados(e.target.value)}
-                          onBlur={() => handleFieldBlur('finalesAdeudados')}
+                {/* Question 2 (Conditional) */}
+                {terminoDeCursar === true && (
+                  <div className="animate-fade-in-up">
+                    <h4 className="text-sm font-medium text-slate-800 mb-4">
+                      ¿Cuántos finales adeudas?
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup">
+                      {finalesOptions.map(option => (
+                        <RadioButton
+                          key={option}
+                          id={`finales-${option.replace(/\s+/g, '-')}`}
+                          name="finalesAdeudados"
+                          value={option}
+                          checked={finalesAdeudados === option}
+                          onChange={(e) => {
+                            setFinalesAdeudados(e.target.value);
+                            setTouched(prev => ({ ...prev, finalesAdeudados: true }));
+                          }}
+                          label={option}
                           disabled={isSubmitting}
-                          className={`appearance-none w-full rounded-lg border bg-white p-3 pr-10 text-sm text-slate-800 shadow-sm outline-none transition-all duration-200 ${
-                            touched.finalesAdeudados && errors.finalesAdeudados
-                              ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-500/20'
-                              : 'border-slate-300/80 hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
-                          }`}
-                          aria-invalid={touched.finalesAdeudados && !!errors.finalesAdeudados}
-                          required
-                        >
-                          <option value="" disabled>Seleccione una opción...</option>
-                          {finalesOptions.map(option => (
-                            <option key={option} value={option}>{option}</option>
-                          ))}
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 top-8">
-                          <span className="material-icons !text-base text-slate-400">expand_more</span>
-                        </div>
-                        {touched.finalesAdeudados && errors.finalesAdeudados && (
-                          <p className="mt-3 text-sm text-red-600 font-medium" role="alert">
-                            {errors.finalesAdeudados}
-                          </p>
-                        )}
-                      </div>
+                          error={touched.finalesAdeudados && !!errors.finalesAdeudados}
+                        />
+                      ))}
+                    </div>
+                    {touched.finalesAdeudados && errors.finalesAdeudados && (
+                      <p className="mt-3 text-sm text-red-600 font-medium" role="alert">
+                        {errors.finalesAdeudados}
+                      </p>
+                    )}
+                  </div>
+                )}
+                
+                {terminoDeCursar === false && (
+                  <div className="animate-fade-in-up">
+                    <h4 className="text-sm font-medium text-slate-800 mb-4">
+                      ¿Estás cursando actualmente materias electivas?
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup">
+                      <RadioButton 
+                        id="electivas-si"
+                        name="cursandoElectivas"
+                        value="true"
+                        checked={cursandoElectivas === true}
+                        onChange={() => {
+                          setCursandoElectivas(true);
+                          setTouched(prev => ({ ...prev, cursandoElectivas: true }));
+                        }}
+                        label="Sí"
+                        disabled={isSubmitting}
+                        error={touched.cursandoElectivas && !!errors.cursandoElectivas}
+                      />
+                      <RadioButton 
+                        id="electivas-no"
+                        name="cursandoElectivas"
+                        value="false"
+                        checked={cursandoElectivas === false}
+                        onChange={() => {
+                          setCursandoElectivas(false);
+                          setTouched(prev => ({ ...prev, cursandoElectivas: true }));
+                        }}
+                        label="No"
+                        disabled={isSubmitting}
+                        error={touched.cursandoElectivas && !!errors.cursandoElectivas}
+                      />
+                    </div>
+                    {touched.cursandoElectivas && errors.cursandoElectivas && (
+                      <p className="mt-3 text-sm text-red-600 font-medium" role="alert">
+                        {errors.cursandoElectivas}
+                      </p>
                     )}
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Additional Information */}
+            {/* Other Academic Situation */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200/70 shadow-sm transition-all duration-300 hover:shadow-lg hover:border-slate-300/80">
               <div className="flex items-center gap-2 mb-3">
-                <span className="material-icons text-blue-500 !text-xl">note_add</span>
+                <span className="material-icons text-blue-500 !text-xl">edit_note</span>
                 <h3 className="text-slate-800 font-semibold text-base leading-tight">
                   Aclaraciones Adicionales
                 </h3>
               </div>
               <p className="text-sm text-slate-600 mb-4 leading-relaxed">
-                Proporciona información adicional relevante para tu inscripción (mínimo 10 caracteres).
+                Utiliza este espacio para cualquier otra aclaración sobre tu situación académica (ej: "Cursando el TIF", "Realizando la Práctica Clínica de Adultos", etc.). Mínimo 10 caracteres.
               </p>
-              <div className="relative">
-                <textarea
-                  id="otraSituacionAcademica"
-                  value={otraSituacionAcademica}
-                  onChange={(e) => setOtraSituacionAcademica(e.target.value)}
-                  onBlur={() => handleFieldBlur('otraSituacionAcademica')}
-                  rows={4}
-                  disabled={isSubmitting}
-                  maxLength={500}
-                  className={`w-full rounded-lg border bg-white p-4 text-sm text-slate-800 shadow-sm transition-all focus:ring-2 focus:ring-offset-1 resize-none outline-none ${
-                    touched.otraSituacionAcademica && errors.otraSituacionAcademica
-                      ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20'
-                      : 'border-slate-300/80 hover:border-slate-400 focus:border-blue-500 focus:ring-blue-500/20'
-                  }`}
-                  placeholder="Ej: Nombres de los finales adeudados, situación de regularidad, materias que estás cursando actualmente, etc."
-                  aria-invalid={touched.otraSituacionAcademica && !!errors.otraSituacionAcademica}
-                  required
-                ></textarea>
-                <div className="absolute bottom-3 right-3 text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
-                  {otraSituacionAcademica.length}/500
-                </div>
-              </div>
+              <textarea
+                id="otraSituacionAcademica"
+                name="otraSituacionAcademica"
+                rows={3}
+                value={otraSituacionAcademica}
+                onChange={(e) => setOtraSituacionAcademica(e.target.value)}
+                onBlur={() => handleFieldBlur('otraSituacionAcademica')}
+                disabled={isSubmitting}
+                className={`w-full text-sm rounded-lg border p-3 bg-white/50 shadow-sm outline-none transition-all duration-200 ${
+                  touched.otraSituacionAcademica && errors.otraSituacionAcademica 
+                    ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20' 
+                    : 'border-slate-300/80 focus:border-blue-500 focus:ring-blue-500/20 hover:border-blue-400'
+                }`}
+                aria-invalid={!!errors.otraSituacionAcademica}
+              />
               {touched.otraSituacionAcademica && errors.otraSituacionAcademica && (
-                <p className="mt-3 text-sm text-red-600 font-medium" role="alert">
+                <p className="mt-2 text-sm text-red-600 font-medium" role="alert">
                   {errors.otraSituacionAcademica}
                 </p>
               )}
@@ -565,25 +550,34 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="bg-white px-6 py-4 flex justify-end items-center gap-3 border-t border-slate-200/70 flex-shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSubmitting}
-            className="bg-white hover:bg-slate-50 text-slate-700 font-medium py-2.5 px-5 rounded-lg text-sm border border-slate-300/80 hover:border-slate-400 transition-all duration-200 disabled:opacity-50"
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={isSubmitting || !isFormValid}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-6 rounded-lg text-sm transition-all duration-200 shadow-sm hover:shadow-md disabled:bg-slate-400 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center min-w-[180px] gap-2"
-          >
-            {isSubmitting && (
-              <div className="border-2 border-white/30 border-t-white rounded-full w-4 h-4 animate-spin"></div>
-            )}
-            <span>{isSubmitting ? 'Enviando...' : 'Confirmar Inscripción'}</span>
-          </button>
+        <div className="p-6 flex-shrink-0 bg-white/50 backdrop-blur-sm border-t border-slate-200/60">
+          <div className="flex flex-col sm:flex-row justify-end items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="w-full sm:w-auto px-6 py-2.5 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-50 transition-colors disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting || !isFormValid}
+              className="w-full sm:w-auto px-6 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="border-2 border-white/50 border-t-white rounded-full w-4 h-4 animate-spin"></div>
+                  <span>Enviando...</span>
+                </>
+              ) : (
+                <>
+                  <span className="material-icons !text-base">send</span>
+                  <span>Inscribirme</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </form>
     </div>
