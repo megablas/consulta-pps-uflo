@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { fileURLToPath, URL } from 'node:url';
+import { fileURLToPath, URL } from 'node:url'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -10,9 +10,8 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
   },
-  // Define la ruta base pública. En desarrollo, suele ser '/'.
-  // Para despliegues en una subcarpeta (ej. GitHub Pages), sería '/nombre-repo/'.
-  base: '/',
+  // Ruta base para producción en GitHub Pages
+  base: '/consulta-pps-uflo/',
   server: {
     proxy: {
       '/airtable-api': {
