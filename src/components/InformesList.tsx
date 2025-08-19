@@ -2,7 +2,6 @@ import React from 'react';
 import type { InformeTask } from '../types';
 import InformeCard from './InformeCard';
 import EmptyState from './EmptyState';
-import { ALERT_INFORMES_TITLE, ALERT_INFORMES_TEXT } from '../constants';
 
 interface InformesListProps {
   tasks: InformeTask[];
@@ -21,11 +20,7 @@ const InformesList: React.FC<InformesListProps> = ({ tasks, onConfirmar }) => {
   }
 
   return (
-    <div className="space-y-4">
-       <div className="p-4 bg-amber-50 border-l-4 border-amber-400 text-amber-800 rounded-r-lg">
-            <h4 className="font-bold">{ALERT_INFORMES_TITLE}</h4>
-            <p className="text-sm mt-1">{ALERT_INFORMES_TEXT}</p>
-        </div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {tasks.map(task => (
         <InformeCard key={task.convocatoriaId} task={task} onConfirmar={onConfirmar} />
       ))}
