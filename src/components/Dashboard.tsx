@@ -25,7 +25,7 @@ interface DashboardProps {
 // --- Componente de Loading Mejorado ---
 const DashboardLoadingSkeleton: React.FC = () => (
   <div className="space-y-8 animate-fade-in">
-    <WelcomeBanner isLoading={true} studentDetails={null} />
+    <WelcomeBanner isLoading={true} studentDetails={null} studentName="" />
     <CriteriosPanelSkeleton />
     <Card>
       <div className="border-b border-slate-200">

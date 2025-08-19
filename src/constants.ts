@@ -11,6 +11,7 @@ export const AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS = 'Lanzamientos de PPS';
 export const AIRTABLE_TABLE_NAME_CONVOCATORIAS = 'Convocatorias';
 export const AIRTABLE_TABLE_NAME_INSTITUCIONES = 'Instituciones';
 
+
 // --- Fields for 'Estudiantes' table ---
 export const FIELD_LEGAJO_ESTUDIANTES = 'Legajo';
 export const FIELD_NOMBRE_ESTUDIANTES = 'Nombre';

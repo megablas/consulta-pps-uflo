@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { fetchAirtableData } from '../services/airtableService';
+import { fetchAirtableData, updateAirtableRecords } from '../services/airtableService';
 import { formatDate, normalizeStringForComparison } from '../utils/formatters';
 import type { Convocatoria, ConvocatoriaFields, EstudianteFields, LanzamientoPPSFields } from '../types';
 import {
@@ -12,12 +12,14 @@ import {
     FIELD_DNI_ESTUDIANTES, FIELD_HORARIO_FORMULA_CONVOCATORIAS, FIELD_CORREO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES, FIELD_NOMBRE_SEPARADO_ESTUDIANTES, FIELD_APELLIDO_SEPARADO_ESTUDIANTES,
     FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
     AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
+    FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS,
     FIELD_NOMBRE_PPS_LANZAMIENTOS,
     FIELD_DIRECCION_LANZAMIENTOS,
     FIELD_FECHA_INICIO_LANZAMIENTOS,
     FIELD_FECHA_FIN_LANZAMIENTOS,
     FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS,
     FIELD_ORIENTACION_LANZAMIENTOS,
+    FIELD_HORAS_ACREDITADAS_LANZAMIENTOS,
     FIELD_PLANTILLA_SEGURO_LANZAMIENTOS,
     TEMPLATE_PPS_NAME,
     EMAIL_SEGUROS
@@ -213,7 +215,8 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                         FIELD_FECHA_INICIO_LANZAMIENTOS,
                         FIELD_FECHA_FIN_LANZAMIENTOS,
                         FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS,
-                        FIELD_ORIENTACION_LANZAMIENTOS
+                        FIELD_ORIENTACION_LANZAMIENTOS,
+                        FIELD_HORAS_ACREDITADAS_LANZAMIENTOS,
                     ],
                     lanzamientoFormula
                 );
