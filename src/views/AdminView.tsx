@@ -9,6 +9,7 @@ import Card from '../components/Card';
 import ConvocatoriaManager from '../components/ConvocatoriaManager';
 import CorreccionPanel from '../components/CorreccionPanel';
 import type { TabId } from '../types';
+import ConvocatoriaStatusManager from '../components/ConvocatoriaStatusManager';
 
 
 interface StudentTab {
@@ -66,6 +67,13 @@ const AdminView: React.FC = () => {
             icon: 'tune',
             isClosable: false,
             content: <ConvocatoriaManager />
+        },
+        {
+            id: 'status-manager',
+            label: 'Control de Convocatorias',
+            icon: 'toggle_on',
+            isClosable: false,
+            content: <ConvocatoriaStatusManager />
         },
         {
             id: 'search',

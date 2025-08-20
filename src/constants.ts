@@ -51,8 +51,8 @@ export const FIELD_ORIENTACIONES_AUTH = 'Orientaciones';
 
 // --- Fields for 'Lanzamientos de PPS' table ---
 export const FIELD_NOMBRE_PPS_LANZAMIENTOS = 'Nombre PPS';
-export const FIELD_FECHA_INICIO_LANZAMIENTOS = 'Fecha de Inicio';
-export const FIELD_FECHA_FIN_LANZAMIENTOS = 'Fecha de Finalización';
+export const FIELD_FECHA_INICIO_LANZAMIENTOS = 'Fecha Inicio';
+export const FIELD_FECHA_FIN_LANZAMIENTOS = 'Fecha Finalización';
 export const FIELD_DIRECCION_LANZAMIENTOS = 'Dirección';
 export const FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS = 'Horario Seleccionado';
 export const FIELD_ORIENTACION_LANZAMIENTOS = 'Orientación';
@@ -74,8 +74,8 @@ export const FIELD_NOMBRE_INSTITUCIONES = 'Nombre';
 export const FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS = 'Lanzamiento Vinculado';
 export const FIELD_NOMBRE_PPS_CONVOCATORIAS = 'Nombre PPS'; // Lookup from Lanzamientos
 export const FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS = 'Estudiante Inscripto';
-export const FIELD_FECHA_INICIO_CONVOCATORIAS = 'Fecha de Inicio';
-export const FIELD_FECHA_FIN_CONVOCATORIAS = 'Fecha de Finalización';
+export const FIELD_FECHA_INICIO_CONVOCATORIAS = 'Fecha Inicio';
+export const FIELD_FECHA_FIN_CONVOCATORIAS = 'Fecha Finalización';
 export const FIELD_DIRECCION_CONVOCATORIAS = 'Dirección';
 export const FIELD_HORARIO_FORMULA_CONVOCATORIAS = 'Horario';
 export const FIELD_HORAS_ACREDITADAS_CONVOCATORIAS = 'Horas Acreditadas';

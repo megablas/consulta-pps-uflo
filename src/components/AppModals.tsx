@@ -29,7 +29,7 @@ const AppModals: React.FC = () => {
     };
 
     const horariosStr = selectedLanzamientoForEnrollment?.['Horario Seleccionado'] || '';
-    const horariosArray = horariosStr ? horariosStr.split('\n').map(h => h.trim()).filter(Boolean) : [];
+    const horariosArray = horariosStr ? horariosStr.split(',').map(h => h.trim()).filter(Boolean) : [];
 
     return (
         <>
