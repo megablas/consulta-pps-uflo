@@ -237,11 +237,12 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
     }
   }, [isOpen, isSubmitting, onClose]);
 
-  const handleHorarioChange = (horario: string) => {
+  const handleHorarioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value, checked } = e.target;
     setSelectedHorarios(prev =>
-      prev.includes(horario)
-        ? prev.filter(h => h !== horario)
-        : [...prev, horario]
+      checked
+        ? [...prev, value]
+        : prev.filter(horario => horario !== value)
     );
     setTouched(prev => ({ ...prev, horarios: true }));
   };
@@ -369,8 +370,9 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                       key={horario}
                       id={`horario-${horario.replace(/\s+/g, '-')}`}
                       name="horario"
+                      value={horario}
                       checked={selectedHorarios.includes(horario)}
-                      onChange={(e) => handleHorarioChange(horario)}
+                      onChange={handleHorarioChange}
                       onBlur={(e) => handleFieldBlur('horarios')}
                       label={horario}
                       disabled={isSubmitting}

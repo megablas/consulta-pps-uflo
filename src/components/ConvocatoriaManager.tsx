@@ -9,7 +9,7 @@ import {
   FIELD_ESTADO_GESTION_LANZAMIENTOS,
   FIELD_NOTAS_GESTION_LANZAMIENTOS,
   FIELD_FECHA_INICIO_LANZAMIENTOS,
-  FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS
+  FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS,
 } from '../constants';
 import Loader from './Loader';
 import EmptyState from './EmptyState';
@@ -30,7 +30,21 @@ interface GestionCardProps {
 const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpdating, cardType }) => {
   const [status, setStatus] = useState(pps[FIELD_ESTADO_GESTION_LANZAMIENTOS] || 'Pendiente de Gestión');
   const [notes, setNotes] = useState(pps[FIELD_NOTAS_GESTION_LANZAMIENTOS] || '');
-  const [relaunchDate, setRelaunchDate] = useState(pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS] || '');
+  const [relaunchDate, setRelaunchDate] = useState(() => {
+    const dateStr = pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS];
+    if (!dateStr) return '';
+    // If it's already YYYY-MM-DD, return as is
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        return dateStr;
+    }
+    // If it's MM/DD/YYYY, convert to YYYY-MM-DD for the input
+    const parts = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (parts) {
+        const [, month, day, year] = parts;
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    return ''; // Unrecognized format
+  });
   const [isJustSaved, setIsJustSaved] = useState(false);
   const [error, setError] = useState<string|null>(null);
   const especialidadVisuals = getEspecialidadClasses(pps[FIELD_ORIENTACION_LANZAMIENTOS]);
@@ -39,7 +53,14 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
     const originalStatus = pps[FIELD_ESTADO_GESTION_LANZAMIENTOS] || 'Pendiente de Gestión';
     const originalNotes = pps[FIELD_NOTAS_GESTION_LANZAMIENTOS] || '';
     const originalRelaunchDate = pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS] || '';
-    return status !== originalStatus || notes !== originalNotes || relaunchDate !== originalRelaunchDate;
+
+    let currentRelaunchDateForCompare = '';
+    if (relaunchDate) {
+        const [year, month, day] = relaunchDate.split('-');
+        currentRelaunchDateForCompare = `${month}/${day}/${year}`;
+    }
+
+    return status !== originalStatus || notes !== originalNotes || currentRelaunchDateForCompare !== originalRelaunchDate;
   }, [status, notes, relaunchDate, pps]);
 
   const handleSave = async () => {
@@ -53,8 +74,14 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
     const updates = {
       [FIELD_ESTADO_GESTION_LANZAMIENTOS]: status,
       [FIELD_NOTAS_GESTION_LANZAMIENTOS]: notes,
-      [FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]: status === 'Relanzamiento Confirmado' ? relaunchDate : null,
+      [FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]: status === 'Relanzamiento Confirmado' && relaunchDate
+        ? (() => {
+            const [year, month, day] = relaunchDate.split('-');
+            return `${month}/${day}/${year}`; // Convert YYYY-MM-DD to MM/DD/YYYY
+          })()
+        : null,
     };
+    
     const success = await onSave(pps.id, updates);
     if (success) {
       setIsJustSaved(true);
@@ -306,40 +333,59 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
     const { finalizadasParaReactivar, relanzamientosConfirmados, activasYPorFinalizar } = useMemo(() => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const currentYear = today.getFullYear();
+    
+        // 1. Group all filtered PPS by institution name
+        const ppsByInstitution = new Map<string, LanzamientoPPS[]>();
+        for (const pps of filteredData) {
+            const institutionName = pps[FIELD_NOMBRE_PPS_LANZAMIENTOS];
+            if (!institutionName) continue;
+            const normalizedName = normalizeStringForComparison(institutionName);
+            if (!ppsByInstitution.has(normalizedName)) {
+                ppsByInstitution.set(normalizedName, []);
+            }
+            ppsByInstitution.get(normalizedName)!.push(pps);
+        }
 
+        // 2. For each institution, find the single most recent record based on end date
+        const latestPpsPerInstitution: LanzamientoPPS[] = [];
+        for (const ppsList of ppsByInstitution.values()) {
+            if (ppsList.length > 0) {
+                const latestPps = ppsList.sort((a, b) => {
+                    const dateA = a[FIELD_FECHA_FIN_LANZAMIENTOS] ? new Date(a[FIELD_FECHA_FIN_LANZAMIENTOS]).getTime() : 0;
+                    const dateB = b[FIELD_FECHA_FIN_LANZAMIENTOS] ? new Date(b[FIELD_FECHA_FIN_LANZAMIENTOS]).getTime() : 0;
+                    return dateB - dateA;
+                })[0];
+                latestPpsPerInstitution.push(latestPps);
+            }
+        }
+    
+        // 3. Categorize these latest records
         const fin: LanzamientoPPS[] = [];
         const conf: LanzamientoPPS[] = [];
         const act: LanzamientoPPS[] = [];
-        
-        const nonManagedStatuses = ['Archivado'];
-
-        for (const pps of filteredData) {
+        const nonManagedStatuses = ['Archivado', 'No se Relanza'];
+    
+        for (const pps of latestPpsPerInstitution) {
             const gestionStatus = pps[FIELD_ESTADO_GESTION_LANZAMIENTOS];
             if (nonManagedStatuses.includes(gestionStatus!)) {
                 continue;
             }
-            
+    
+            const endDate = pps[FIELD_FECHA_FIN_LANZAMIENTOS] ? new Date(pps[FIELD_FECHA_FIN_LANZAMIENTOS]) : null;
+    
             if (gestionStatus === 'Relanzamiento Confirmado' && pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]) {
                 conf.push(pps);
-                continue;
-            }
-
-            const endDate = pps[FIELD_FECHA_FIN_LANZAMIENTOS] ? new Date(pps[FIELD_FECHA_FIN_LANZAMIENTOS]) : null;
-            
-            if (endDate && endDate < today) {
-                if (endDate.getFullYear() === currentYear) {
-                    fin.push(pps);
-                }
             } else if (endDate && endDate >= today) {
                 act.push(pps);
+            } else if (endDate && endDate < today) {
+                fin.push(pps);
             }
         }
         
         act.sort((a, b) => new Date(a[FIELD_FECHA_FIN_LANZAMIENTOS]!).getTime() - new Date(b[FIELD_FECHA_FIN_LANZAMIENTOS]!).getTime());
         conf.sort((a, b) => new Date(a[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]!).getTime() - new Date(b[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]!).getTime());
         fin.sort((a, b) => new Date(b[FIELD_FECHA_FIN_LANZAMIENTOS]!).getTime() - new Date(a[FIELD_FECHA_FIN_LANZAMIENTOS]!).getTime());
-
+    
         return { finalizadasParaReactivar: fin, relanzamientosConfirmados: conf, activasYPorFinalizar: act };
     }, [filteredData]);
 
