@@ -46,6 +46,8 @@ export const FIELD_LEGAJO_AUTH = 'Legajo';
 export const FIELD_NOMBRE_AUTH = 'Nombre';
 export const FIELD_PASSWORD_HASH_AUTH = 'PasswordHash';
 export const FIELD_SALT_AUTH = 'Salt';
+export const FIELD_ROLE_AUTH = 'Role';
+export const FIELD_ORIENTACIONES_AUTH = 'Orientaciones';
 
 // --- Fields for 'Lanzamientos de PPS' table ---
 export const FIELD_NOMBRE_PPS_LANZAMIENTOS = 'Nombre PPS';
@@ -60,6 +62,9 @@ export const FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS = 'Estado de Convocatoria';
 export const FIELD_DURACION_INSCRIPCION_DIAS_LANZAMIENTOS = 'Plazo Inscripción (días)';
 export const FIELD_PLANTILLA_SEGURO_LANZAMIENTOS = 'Plantilla Seguro';
 export const FIELD_INFORME_LANZAMIENTOS = 'Informe';
+export const FIELD_ESTADO_GESTION_LANZAMIENTOS = 'Estado de Gestión';
+export const FIELD_NOTAS_GESTION_LANZAMIENTOS = 'Notas de Gestión';
+export const FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS = 'Fecha de Relanzamiento';
 
 
 // --- Fields for 'Instituciones' table ---

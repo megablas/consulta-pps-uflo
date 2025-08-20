@@ -1,434 +1,470 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { fetchAllAirtableData, updateAirtableRecord } from '../services/airtableService';
 import type { LanzamientoPPS } from '../types';
 import {
   AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
   FIELD_NOMBRE_PPS_LANZAMIENTOS,
-  FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS,
+  FIELD_FECHA_FIN_LANZAMIENTOS,
+  FIELD_ORIENTACION_LANZAMIENTOS,
+  FIELD_ESTADO_GESTION_LANZAMIENTOS,
+  FIELD_NOTAS_GESTION_LANZAMIENTOS,
   FIELD_FECHA_INICIO_LANZAMIENTOS,
-  FIELD_ORIENTACION_LANZAMIENTOS
+  FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS
 } from '../constants';
 import Loader from './Loader';
 import EmptyState from './EmptyState';
-import { formatDate, getStatusVisuals, getEspecialidadClasses } from '../utils/formatters';
 import Toast from './Toast';
+import { normalizeStringForComparison, getEspecialidadClasses, formatDate } from '../utils/formatters';
+import { ALL_ORIENTACIONES } from '../types';
 
-// Tipos mejorados
-type StatusType = 'Abierto' | 'Cerrado' | 'Oculto';
 type LoadingState = 'initial' | 'loading' | 'loaded' | 'error';
-type FilterType = 'all' | 'abierto' | 'cerrado' | 'oculto';
+const GESTION_STATUS_OPTIONS = ['Pendiente de Gestión', 'En Conversación', 'Relanzamiento Confirmado', 'No se Relanza', 'Archivado'];
 
-interface StatusOption {
-  value: StatusType;
-  label: string;
-  icon: string;
-  description: string;
+interface GestionCardProps {
+  pps: LanzamientoPPS;
+  onSave: (id: string, updates: Partial<LanzamientoPPS>) => Promise<boolean>;
+  isUpdating: boolean;
+  cardType: 'activasYPorFinalizar' | 'finalizadasParaReactivar' | 'relanzamientosConfirmados';
 }
 
-// Configuración de estados
-const STATUS_OPTIONS: StatusOption[] = [
-  { 
-    value: 'Abierto', 
-    label: 'Abierto', 
-    icon: 'public',
-    description: 'Estudiantes pueden postularse'
-  },
-  { 
-    value: 'Cerrado', 
-    label: 'Cerrado', 
-    icon: 'lock',
-    description: 'Solo ver resultados'
-  },
-  { 
-    value: 'Oculto', 
-    label: 'Oculto', 
-    icon: 'visibility_off',
-    description: 'No visible para estudiantes'
-  }
-];
+const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpdating, cardType }) => {
+  const [status, setStatus] = useState(pps[FIELD_ESTADO_GESTION_LANZAMIENTOS] || 'Pendiente de Gestión');
+  const [notes, setNotes] = useState(pps[FIELD_NOTAS_GESTION_LANZAMIENTOS] || '');
+  const [relaunchDate, setRelaunchDate] = useState(pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS] || '');
+  const [isJustSaved, setIsJustSaved] = useState(false);
+  const [error, setError] = useState<string|null>(null);
+  const especialidadVisuals = getEspecialidadClasses(pps[FIELD_ORIENTACION_LANZAMIENTOS]);
 
-// Componente para el selector de estado mejorado
-const StatusSelector: React.FC<{
-  currentStatus: string;
-  convocatoriaId: string;
-  convocatoriaNombre: string;
-  isUpdating: boolean;
-  onStatusChange: (id: string, newStatus: string) => Promise<void>;
-}> = React.memo(({ currentStatus, convocatoriaId, convocatoriaNombre, isUpdating, onStatusChange }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [selectedValue, setSelectedValue] = useState(currentStatus);
+  const hasChanges = useMemo(() => {
+    const originalStatus = pps[FIELD_ESTADO_GESTION_LANZAMIENTOS] || 'Pendiente de Gestión';
+    const originalNotes = pps[FIELD_NOTAS_GESTION_LANZAMIENTOS] || '';
+    const originalRelaunchDate = pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS] || '';
+    return status !== originalStatus || notes !== originalNotes || relaunchDate !== originalRelaunchDate;
+  }, [status, notes, relaunchDate, pps]);
 
-  const handleChange = useCallback(async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newStatus = e.target.value;
-    setSelectedValue(newStatus);
-    setIsOpen(false);
-    await onStatusChange(convocatoriaId, newStatus);
-  }, [convocatoriaId, onStatusChange]);
-
-  const currentOption = STATUS_OPTIONS.find(opt => opt.value === currentStatus);
-
-  return (
-    <div className="relative">
-      <select
-        value={selectedValue}
-        onChange={handleChange}
-        disabled={isUpdating}
-        onFocus={() => setIsOpen(true)}
-        onBlur={() => setIsOpen(false)}
-        className={`w-full text-sm rounded-lg border p-2.5 pr-10 text-slate-800 bg-white shadow-sm outline-none transition-all duration-200 ${
-          isUpdating 
-            ? 'bg-slate-100 cursor-wait border-slate-300 ring-2 ring-blue-200' 
-            : 'border-slate-300/80 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
-        }`}
-        aria-label={`Cambiar estado para ${convocatoriaNombre}`}
-        title={currentOption?.description}
-      >
-        {STATUS_OPTIONS.map(option => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      
-      <div className={`pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 transition-all duration-200 ${
-        isUpdating ? 'opacity-50' : ''
-      }`}>
-        {isUpdating ? (
-          <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-        ) : (
-          <span className={`material-icons !text-base text-slate-500 transition-transform duration-200 ${
-            isOpen ? 'rotate-180' : ''
-          }`}>
-            expand_more
-          </span>
-        )}
-      </div>
-    </div>
-  );
-});
-
-StatusSelector.displayName = 'StatusSelector';
-
-// Componente para filtros
-const StatusFilter: React.FC<{
-  currentFilter: FilterType;
-  onFilterChange: (filter: FilterType) => void;
-  counts: Record<FilterType, number>;
-}> = React.memo(({ currentFilter, onFilterChange, counts }) => {
-  const filters: Array<{ key: FilterType; label: string; icon: string }> = [
-    { key: 'all', label: 'Todas', icon: 'apps' },
-    { key: 'abierto', label: 'Abiertas', icon: 'public' },
-    { key: 'cerrado', label: 'Cerradas', icon: 'lock' },
-    { key: 'oculto', label: 'Ocultas', icon: 'visibility_off' }
-  ];
-
-  return (
-    <div className="flex flex-wrap gap-2 mb-6">
-      {filters.map(filter => (
-        <button
-          key={filter.key}
-          onClick={() => onFilterChange(filter.key)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-            currentFilter === filter.key
-              ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700'
-              : 'bg-white text-slate-600 border border-slate-300/80 hover:bg-slate-50 hover:border-slate-400'
-          }`}
-        >
-          <span className="material-icons !text-base">{filter.icon}</span>
-          <span>{filter.label}</span>
-          <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
-            currentFilter === filter.key
-              ? 'bg-white/20 text-white'
-              : 'bg-slate-200 text-slate-600'
-          }`}>
-            {counts[filter.key]}
-          </span>
-        </button>
-      ))}
-    </div>
-  );
-});
-
-StatusFilter.displayName = 'StatusFilter';
-
-// Componente para estadísticas rápidas
-const StatsOverview: React.FC<{ lanzamientos: LanzamientoPPS[] }> = React.memo(({ lanzamientos }) => {
-  const stats = useMemo(() => {
-    const total = lanzamientos.length;
-    const abiertos = lanzamientos.filter(l => l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS] === 'Abierto').length;
-    const cerrados = lanzamientos.filter(l => l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS] === 'Cerrado').length;
-    const ocultos = lanzamientos.filter(l => l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS] === 'Oculto').length;
-
-    return { total, abiertos, cerrados, ocultos };
-  }, [lanzamientos]);
-
-  const statCards = [
-    { label: 'Total', value: stats.total, icon: 'apps', color: 'bg-slate-100 text-slate-700' },
-    { label: 'Abiertas', value: stats.abiertos, icon: 'public', color: 'bg-emerald-100 text-emerald-700' },
-    { label: 'Cerradas', value: stats.cerrados, icon: 'lock', color: 'bg-blue-100 text-blue-700' },
-    { label: 'Ocultas', value: stats.ocultos, icon: 'visibility_off', color: 'bg-amber-100 text-amber-700' }
-  ];
-
-  return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      {statCards.map(stat => (
-        <div key={stat.label} className="bg-white rounded-lg border border-slate-200/60 p-4 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${stat.color}`}>
-              <span className="material-icons !text-lg">{stat.icon}</span>
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">{stat.label}</p>
-              <p className="text-xl font-bold text-slate-800">{stat.value}</p>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-});
-
-StatsOverview.displayName = 'StatsOverview';
-
-// Componente principal
-const ConvocatoriaManager: React.FC = () => {
-  const [lanzamientos, setLanzamientos] = useState<LanzamientoPPS[]>([]);
-  const [loadingState, setLoadingState] = useState<LoadingState>('initial');
-  const [error, setError] = useState<string | null>(null);
-  const [toastInfo, setToastInfo] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [currentFilter, setCurrentFilter] = useState<FilterType>('all');
-  const [searchTerm, setSearchTerm] = useState('');
-
-  // Datos filtrados
-  const filteredLanzamientos = useMemo(() => {
-    let filtered = lanzamientos;
-
-    // Filtro por estado
-    if (currentFilter !== 'all') {
-      const statusMap: Record<Exclude<FilterType, 'all'>, string> = {
-        'abierto': 'Abierto',
-        'cerrado': 'Cerrado',
-        'oculto': 'Oculto'
-      };
-      filtered = filtered.filter(l => l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS] === statusMap[currentFilter]);
-    }
-
-    // Filtro por búsqueda
-    if (searchTerm) {
-      filtered = filtered.filter(l => 
-        l[FIELD_NOMBRE_PPS_LANZAMIENTOS]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        l[FIELD_ORIENTACION_LANZAMIENTOS]?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    return filtered;
-  }, [lanzamientos, currentFilter, searchTerm]);
-
-  // Contadores para filtros
-  const filterCounts = useMemo((): Record<FilterType, number> => ({
-    all: lanzamientos.length,
-    abierto: lanzamientos.filter(l => l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS] === 'Abierto').length,
-    cerrado: lanzamientos.filter(l => l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS] === 'Cerrado').length,
-    oculto: lanzamientos.filter(l => l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS] === 'Oculto').length,
-  }), [lanzamientos]);
-
-  const fetchData = useCallback(async () => {
-    setLoadingState('loading');
+  const handleSave = async () => {
     setError(null);
-    
-    const { records, error: fetchError } = await fetchAllAirtableData<LanzamientoPPS>(
-      AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
-      [
-        FIELD_NOMBRE_PPS_LANZAMIENTOS,
-        FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS,
-        FIELD_FECHA_INICIO_LANZAMIENTOS,
-        FIELD_ORIENTACION_LANZAMIENTOS,
-      ],
-      undefined,
-      [{ field: FIELD_FECHA_INICIO_LANZAMIENTOS, direction: 'desc' }]
-    );
-
-    if (fetchError) {
-      setError('No se pudieron cargar las convocatorias. ' + (typeof fetchError.error === 'string' ? fetchError.error : fetchError.error.message));
-      setLoadingState('error');
-    } else {
-      const mappedRecords = records.map(r => ({ ...r.fields, id: r.id }));
-      setLanzamientos(mappedRecords);
-      setLoadingState('loaded');
+    if (!hasChanges) return;
+    if (status === 'Relanzamiento Confirmado' && !relaunchDate) {
+        setError('Por favor, selecciona una fecha de relanzamiento.');
+        return;
     }
-  }, []);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const handleStatusChange = useCallback(async (id: string, newStatus: string) => {
-    setUpdatingId(id);
-
-    const originalLanzamientos = [...lanzamientos];
-    const updatedLanzamientos = lanzamientos.map(l => 
-      l.id === id ? { ...l, [FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]: newStatus } : l
-    );
-    setLanzamientos(updatedLanzamientos);
-
-    const { error: updateError } = await updateAirtableRecord(
-      AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
-      id,
-      { [FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]: newStatus }
-    );
-
-    if (updateError) {
-      setLanzamientos(originalLanzamientos);
-      setToastInfo({ message: 'Error al actualizar el estado.', type: 'error' });
-    } else {
-      setToastInfo({ message: `Estado cambiado a "${newStatus}" exitosamente.`, type: 'success' });
+    const updates = {
+      [FIELD_ESTADO_GESTION_LANZAMIENTOS]: status,
+      [FIELD_NOTAS_GESTION_LANZAMIENTOS]: notes,
+      [FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]: status === 'Relanzamiento Confirmado' ? relaunchDate : null,
+    };
+    const success = await onSave(pps.id, updates);
+    if (success) {
+      setIsJustSaved(true);
+      setTimeout(() => setIsJustSaved(false), 2000);
     }
-    setUpdatingId(null);
-  }, [lanzamientos]);
-
-  const renderTable = () => (
-    <div className="bg-white rounded-xl border border-slate-200/60 shadow-sm overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[800px]">
-          <thead className="bg-slate-50/80 border-b border-slate-200">
-            <tr>
-              <th className="p-4 text-left font-semibold text-slate-600 uppercase text-xs tracking-wider">Convocatoria</th>
-              <th className="p-4 text-center font-semibold text-slate-600 uppercase text-xs tracking-wider">Orientación</th>
-              <th className="p-4 text-center font-semibold text-slate-600 uppercase text-xs tracking-wider">Fecha Inicio</th>
-              <th className="p-4 text-center font-semibold text-slate-600 uppercase text-xs tracking-wider">Estado Actual</th>
-              <th className="p-4 text-center font-semibold text-slate-600 uppercase text-xs tracking-wider">Gestionar</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200/60">
-            {filteredLanzamientos.map(l => {
-              const status = l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS] || 'N/A';
-              const visuals = getStatusVisuals(status);
-              const especialidadClasses = getEspecialidadClasses(l[FIELD_ORIENTACION_LANZAMIENTOS]);
-              
-              return (
-                <tr key={l.id} className="transition-all duration-200 hover:bg-slate-50/50 group">
-                  <td className="p-4 align-middle">
-                    <div className="font-semibold text-slate-800 group-hover:text-blue-700 transition-colors duration-200">
-                      {l[FIELD_NOMBRE_PPS_LANZAMIENTOS]}
-                    </div>
-                  </td>
-                  <td className="p-4 align-middle text-center">
-                    <span className={`${especialidadClasses.tag} transition-all duration-200 group-hover:scale-105`}>
-                      {l[FIELD_ORIENTACION_LANZAMIENTOS] || 'N/A'}
-                    </span>
-                  </td>
-                  <td className="p-4 align-middle text-center text-slate-600 font-medium">
-                    {formatDate(l[FIELD_FECHA_INICIO_LANZAMIENTOS])}
-                  </td>
-                  <td className="p-4 align-middle text-center">
-                    <span className={`${visuals.labelClass} gap-1.5 transition-all duration-200 group-hover:scale-105`}>
-                      <span className="material-icons !text-sm">{visuals.icon}</span>
-                      <span>{status}</span>
-                    </span>
-                  </td>
-                  <td className="p-4 align-middle">
-                    <StatusSelector
-                      currentStatus={status}
-                      convocatoriaId={l.id}
-                      convocatoriaNombre={l[FIELD_NOMBRE_PPS_LANZAMIENTOS]}
-                      isUpdating={updatingId === l.id}
-                      onStatusChange={handleStatusChange}
-                    />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-
-  const renderContent = () => {
-    if (loadingState === 'loading') {
-      return <Loader />;
-    }
-    if (loadingState === 'error') {
-      return (
-        <EmptyState 
-          icon="error" 
-          title="Error al Cargar" 
-          message={error!}
-          action={
-            <button
-              onClick={fetchData}
-              className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-300"
-            >
-              Reintentar
-            </button>
-          }
-        />
-      );
-    }
-    if (lanzamientos.length === 0) {
-      return <EmptyState icon="upcoming_off" title="Sin Convocatorias" message="No se encontraron lanzamientos de PPS en Airtable." />;
-    }
-    if (filteredLanzamientos.length === 0) {
-      return <EmptyState icon="search_off" title="Sin Resultados" message="No se encontraron convocatorias que coincidan con los filtros." />;
-    }
-    return renderTable();
   };
+  
+  const headerBg = isJustSaved ? 'bg-emerald-100' : especialidadVisuals.headerBg;
+  const headerIconColor = isJustSaved ? 'text-emerald-700' : especialidadVisuals.headerText;
+  const headerTextColor = isJustSaved ? 'text-emerald-900' : especialidadVisuals.headerText;
+  
+  const cardIcon = useMemo(() => {
+    if (cardType === 'activasYPorFinalizar') return 'pending_actions';
+    if (cardType === 'finalizadasParaReactivar') return 'history';
+    return 'event_repeat'; // For relanzamientosConfirmados
+  }, [cardType]);
+  
+  const timeBadge = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (cardType === 'activasYPorFinalizar') {
+        const endDate = pps[FIELD_FECHA_FIN_LANZAMIENTOS] ? new Date(pps[FIELD_FECHA_FIN_LANZAMIENTOS]) : null;
+        if (!endDate || endDate < today) return null;
+
+        const diffTime = endDate.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 0) return { text: 'Finaliza hoy', color: 'bg-red-100 text-red-800 ring-red-200', icon: 'event_busy' };
+        if (diffDays <= 30) return { text: `Finaliza en ${diffDays} día${diffDays !== 1 ? 's' : ''}`, color: 'bg-amber-100 text-amber-800 ring-amber-200', icon: 'hourglass_top' };
+        
+        const startDate = pps[FIELD_FECHA_INICIO_LANZAMIENTOS] ? new Date(pps[FIELD_FECHA_INICIO_LANZAMIENTOS]) : null;
+        if (startDate && startDate <= today && endDate >= today) {
+             return { text: 'Activa', color: 'bg-green-100 text-green-800 ring-green-200', icon: 'sync' };
+        }
+    }
+
+    if (cardType === 'finalizadasParaReactivar') {
+        return { text: `Finalizó ${formatDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS])}`, color: 'bg-slate-100 text-slate-600 ring-slate-200', icon: 'history_toggle_off' };
+    }
+    
+    if (cardType === 'relanzamientosConfirmados' && pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]) {
+        return { text: `Relanza ${formatDate(pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS])}`, color: 'bg-indigo-100 text-indigo-800 ring-indigo-200', icon: 'flight_takeoff' };
+    }
+    
+    return null;
+  }, [pps, cardType]);
+
 
   return (
-    <div className="animate-fade-in-up space-y-6">
-      {toastInfo && (
-        <Toast 
-          message={toastInfo.message} 
-          type={toastInfo.type} 
-          onClose={() => setToastInfo(null)} 
-        />
-      )}
-      
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
-          <span className="material-icons !text-2xl">admin_panel_settings</span>
-        </div>
-        <div>
-          <h3 className="text-2xl font-bold text-slate-800">Panel de Administración</h3>
-          <p className="text-slate-600 max-w-2xl mt-1">
-            Gestiona la visibilidad y estado de las convocatorias para estudiantes.
-          </p>
-        </div>
-      </div>
-
-      {loadingState === 'loaded' && lanzamientos.length > 0 && (
-        <>
-          <StatsOverview lanzamientos={lanzamientos} />
-          
-          {/* Controles */}
-          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-            <StatusFilter 
-              currentFilter={currentFilter}
-              onFilterChange={setCurrentFilter}
-              counts={filterCounts}
-            />
-            
-            <div className="relative w-full sm:w-80">
-              <input
-                type="text"
-                placeholder="Buscar convocatorias..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-300/80 rounded-lg text-sm bg-white text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all hover:border-slate-400"
-              />
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 material-icons text-slate-400 !text-lg">
-                search
-              </span>
+    <div className="relative bg-white rounded-xl border border-slate-200/60 shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-px group overflow-hidden">
+        {/* Header */}
+        <div className={`p-4 border-b border-slate-200/60 flex justify-between items-start gap-3 transition-colors duration-500 ${headerBg}`}>
+            <div className="flex-grow">
+                <div className="flex items-center gap-2.5">
+                    <span className={`material-icons !text-lg ${headerIconColor}`}>{cardIcon}</span>
+                    <h4 className={`font-extrabold tracking-tight ${headerTextColor}`}>
+                        {pps[FIELD_NOMBRE_PPS_LANZAMIENTOS]}
+                    </h4>
+                </div>
+                <div className="mt-2 ml-9">
+                    <span className={`${especialidadVisuals.tag} shadow-sm`}>{pps[FIELD_ORIENTACION_LANZAMIENTOS]}</span>
+                </div>
             </div>
-          </div>
-        </>
-      )}
+            {timeBadge?.text && (
+            <div className={`flex-shrink-0 flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ring-1 ${timeBadge.color}`}>
+                <span className="material-icons !text-sm">{timeBadge.icon}</span>
+                <span>{timeBadge.text}</span>
+            </div>
+            )}
+        </div>
+        
+        <div className="p-4 bg-gradient-to-br from-white to-slate-50/50 space-y-4">
+            {/* Form */}
+            <div className="space-y-3">
+                <div>
+                    <label htmlFor={`status-${pps.id}`} className="text-xs font-semibold text-slate-600 mb-1 block">Estado de Gestión</label>
+                    <div className="relative">
+                        <select 
+                            id={`status-${pps.id}`} 
+                            value={status}
+                            onChange={(e) => setStatus(e.target.value)}
+                            className="w-full text-sm rounded-lg border border-slate-300 p-2.5 bg-white shadow-sm outline-none appearance-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 transition"
+                        >
+                            {GESTION_STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3">
+                            <span className="material-icons !text-base text-slate-500">expand_more</span>
+                        </div>
+                    </div>
+                </div>
+                {status === 'Relanzamiento Confirmado' && (
+                    <div className="animate-fade-in-up">
+                        <label htmlFor={`relaunch-${pps.id}`} className="text-xs font-semibold text-slate-600 mb-1 block">Fecha de Relanzamiento</label>
+                        <input
+                            type="date"
+                            id={`relaunch-${pps.id}`}
+                            value={relaunchDate}
+                            onChange={(e) => setRelaunchDate(e.target.value)}
+                            className="w-full text-sm rounded-lg border border-slate-300 p-2 bg-white shadow-sm outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 transition"
+                        />
+                         {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+                    </div>
+                )}
+                <div>
+                    <label htmlFor={`notes-${pps.id}`} className="text-xs font-semibold text-slate-600 mb-1 block">Notas de Gestión</label>
+                    <textarea 
+                        id={`notes-${pps.id}`}
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        rows={3} 
+                        className="w-full text-sm rounded-lg border border-slate-300 p-2 bg-white shadow-sm outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 transition" 
+                        placeholder="Conversaciones, próximos pasos..."
+                    />
+                </div>
+            </div>
 
-      {renderContent()}
+            {/* Footer/Actions */}
+            <div className="flex justify-end pt-2">
+                <button
+                onClick={handleSave}
+                disabled={isUpdating || !hasChanges || isJustSaved}
+                className={`font-bold py-2 px-5 rounded-lg text-sm transition-all duration-300 shadow-md flex items-center justify-center gap-2 relative overflow-hidden
+                    ${isJustSaved
+                        ? 'bg-emerald-600 text-white cursor-default'
+                        : isUpdating
+                            ? 'bg-slate-500 text-white cursor-wait'
+                            : hasChanges
+                                ? 'bg-slate-800 text-white hover:bg-slate-700 hover:-translate-y-px transform active:scale-95'
+                                : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                    }
+                `}
+                >
+                {isUpdating ? <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin"/> : <span className="material-icons !text-base">{isJustSaved ? 'check_circle_outline' : 'save'}</span>}
+                <span>{isUpdating ? 'Guardando...' : (isJustSaved ? '¡Guardado!' : 'Guardar Cambios')}</span>
+                </button>
+            </div>
+        </div>
     </div>
   );
+});
+
+const CollapsibleSection: React.FC<{ title: string; count: number; children: React.ReactNode; defaultOpen?: boolean; icon: string; iconBgColor: string; iconColor: string; borderColor: string; }> = ({ title, count, children, defaultOpen = true, icon, iconBgColor, iconColor, borderColor }) => (
+    <details className="group/details" open={defaultOpen}>
+        <summary className="list-none flex items-center gap-4 cursor-pointer mb-4 p-2 rounded-lg transition-colors hover:bg-slate-50">
+            <div className={`flex-shrink-0 size-10 rounded-lg flex items-center justify-center ${iconBgColor}`}>
+                <span className={`material-icons ${iconColor}`}>{icon}</span>
+            </div>
+            <div className="flex-grow">
+                <h3 className="text-xl font-black text-slate-800 tracking-tight">{title}</h3>
+            </div>
+            <span className="text-base font-bold text-slate-700 bg-slate-200 h-8 w-8 flex items-center justify-center rounded-full">{count}</span>
+            <span className="material-icons text-slate-400 transition-transform duration-300 group-open/details:rotate-90">chevron_right</span>
+        </summary>
+        <div className={`pl-4 ml-5 border-l-2 ${borderColor}`}>
+            {children}
+        </div>
+    </details>
+);
+
+interface ConvocatoriaManagerProps {
+  forcedOrientation?: string;
+}
+
+const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrientation }) => {
+    const [lanzamientos, setLanzamientos] = useState<LanzamientoPPS[]>([]);
+    const [loadingState, setLoadingState] = useState<LoadingState>('initial');
+    const [error, setError] = useState<string | null>(null);
+    const [toastInfo, setToastInfo] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+    const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
+    const [searchTerm, setSearchTerm] = useState('');
+    const [orientationFilter, setOrientationFilter] = useState('all');
+
+    const fetchData = useCallback(async () => {
+        setLoadingState('loading');
+        setError(null);
+        
+        const { records, error: fetchError } = await fetchAllAirtableData<LanzamientoPPS>(
+            AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
+            [
+                FIELD_NOMBRE_PPS_LANZAMIENTOS,
+                FIELD_FECHA_INICIO_LANZAMIENTOS,
+                FIELD_FECHA_FIN_LANZAMIENTOS,
+                FIELD_ORIENTACION_LANZAMIENTOS,
+                FIELD_ESTADO_GESTION_LANZAMIENTOS,
+                FIELD_NOTAS_GESTION_LANZAMIENTOS,
+                FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS,
+            ],
+            undefined,
+            [{ field: FIELD_FECHA_FIN_LANZAMIENTOS, direction: 'desc' }]
+        );
+
+        if (fetchError) {
+            setError('No se pudieron cargar las convocatorias. ' + (typeof fetchError.error === 'string' ? fetchError.error : fetchError.error.message));
+            setLoadingState('error');
+        } else {
+            const mappedRecords = records.map(r => ({ ...r.fields, id: r.id }));
+            setLanzamientos(mappedRecords);
+            setLoadingState('loaded');
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    const handleSave = useCallback(async (id: string, updates: Partial<LanzamientoPPS>): Promise<boolean> => {
+        setUpdatingIds(prev => new Set(prev).add(id));
+
+        const { error: updateError } = await updateAirtableRecord(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, id, updates);
+        
+        let success = false;
+        if (updateError) {
+            setToastInfo({ message: 'Error al actualizar la práctica.', type: 'error' });
+        } else {
+            setToastInfo({ message: 'Práctica actualizada exitosamente.', type: 'success' });
+            // Refetch to ensure data integrity and correct section placement
+            fetchData();
+            success = true;
+        }
+
+        setUpdatingIds(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(id);
+            return newSet;
+        });
+
+        return success;
+    }, [fetchData]);
+
+    const filteredData = useMemo(() => {
+        return lanzamientos.filter(pps => {
+            const matchesSearch = searchTerm === '' || normalizeStringForComparison(pps[FIELD_NOMBRE_PPS_LANZAMIENTOS]).includes(normalizeStringForComparison(searchTerm));
+            
+            const ppsOrientation = normalizeStringForComparison(pps[FIELD_ORIENTACION_LANZAMIENTOS]);
+
+            if (forcedOrientation) {
+                const requiredOrientation = normalizeStringForComparison(forcedOrientation);
+                return matchesSearch && ppsOrientation === requiredOrientation;
+            }
+            
+            const selectedOrientation = normalizeStringForComparison(orientationFilter);
+            const matchesOrientation = selectedOrientation === 'all' || ppsOrientation === selectedOrientation;
+            
+            return matchesSearch && matchesOrientation;
+        });
+    }, [lanzamientos, searchTerm, orientationFilter, forcedOrientation]);
+
+    const { finalizadasParaReactivar, relanzamientosConfirmados, activasYPorFinalizar } = useMemo(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const currentYear = today.getFullYear();
+
+        const fin: LanzamientoPPS[] = [];
+        const conf: LanzamientoPPS[] = [];
+        const act: LanzamientoPPS[] = [];
+        
+        const nonManagedStatuses = ['Archivado'];
+
+        for (const pps of filteredData) {
+            const gestionStatus = pps[FIELD_ESTADO_GESTION_LANZAMIENTOS];
+            if (nonManagedStatuses.includes(gestionStatus!)) {
+                continue;
+            }
+            
+            if (gestionStatus === 'Relanzamiento Confirmado' && pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]) {
+                conf.push(pps);
+                continue;
+            }
+
+            const endDate = pps[FIELD_FECHA_FIN_LANZAMIENTOS] ? new Date(pps[FIELD_FECHA_FIN_LANZAMIENTOS]) : null;
+            
+            if (endDate && endDate < today) {
+                if (endDate.getFullYear() === currentYear) {
+                    fin.push(pps);
+                }
+            } else if (endDate && endDate >= today) {
+                act.push(pps);
+            }
+        }
+        
+        act.sort((a, b) => new Date(a[FIELD_FECHA_FIN_LANZAMIENTOS]!).getTime() - new Date(b[FIELD_FECHA_FIN_LANZAMIENTOS]!).getTime());
+        conf.sort((a, b) => new Date(a[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]!).getTime() - new Date(b[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]!).getTime());
+        fin.sort((a, b) => new Date(b[FIELD_FECHA_FIN_LANZAMIENTOS]!).getTime() - new Date(a[FIELD_FECHA_FIN_LANZAMIENTOS]!).getTime());
+
+        return { finalizadasParaReactivar: fin, relanzamientosConfirmados: conf, activasYPorFinalizar: act };
+    }, [filteredData]);
+
+    const renderContent = () => {
+        if (loadingState === 'loading' || loadingState === 'initial') return <Loader />;
+        if (loadingState === 'error') return <EmptyState icon="error" title="Error" message={error!} />;
+        if (lanzamientos.length === 0) return <EmptyState icon="folder_off" title="Sin Prácticas" message="No se encontraron prácticas para gestionar." />;
+        
+        const hasActivas = activasYPorFinalizar.length > 0;
+        const hasFinalizadas = finalizadasParaReactivar.length > 0;
+        const hasConfirmados = relanzamientosConfirmados.length > 0;
+
+        if (!hasActivas && !hasFinalizadas && !hasConfirmados && (searchTerm || orientationFilter !== 'all' || forcedOrientation)) {
+            return <EmptyState icon="search_off" title="Sin Resultados" message="No se encontraron prácticas que coincidan con los filtros aplicados." />;
+        }
+
+        return (
+            <div className="space-y-6">
+                <section>
+                    <CollapsibleSection 
+                        title="Finalizadas (Para Reactivar)"
+                        count={finalizadasParaReactivar.length}
+                        icon="history"
+                        iconBgColor="bg-sky-100"
+                        iconColor="text-sky-600"
+                        borderColor="border-sky-300"
+                    >
+                        {hasFinalizadas ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-4">
+                                {finalizadasParaReactivar.map(pps => (
+                                    <GestionCard key={pps.id} pps={pps} onSave={handleSave} isUpdating={updatingIds.has(pps.id)} cardType="finalizadasParaReactivar" />
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-slate-500 text-sm p-4 bg-white rounded-lg border border-slate-200/70">No hay prácticas finalizadas este año pendientes de gestión.</p>
+                        )}
+                    </CollapsibleSection>
+                </section>
+                
+                <section>
+                     <CollapsibleSection 
+                        title="Relanzamientos Confirmados"
+                        count={relanzamientosConfirmados.length}
+                        icon="event_repeat"
+                        iconBgColor="bg-indigo-100"
+                        iconColor="text-indigo-600"
+                        borderColor="border-indigo-300"
+                    >
+                        {hasConfirmados ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-4">
+                               {relanzamientosConfirmados.map(pps => (
+                                    <GestionCard key={pps.id} pps={pps} onSave={handleSave} isUpdating={updatingIds.has(pps.id)} cardType="relanzamientosConfirmados" />
+                               ))}
+                            </div>
+                        ) : (
+                            <p className="text-slate-500 text-sm p-4 bg-white rounded-lg border border-slate-200/70">No hay prácticas con relanzamiento confirmado.</p>
+                        )}
+                    </CollapsibleSection>
+                </section>
+
+                <section>
+                    <CollapsibleSection 
+                        title="Activas y Próximas a Finalizar"
+                        count={activasYPorFinalizar.length}
+                        icon="pending_actions"
+                        iconBgColor="bg-amber-100"
+                        iconColor="text-amber-600"
+                        borderColor="border-amber-300"
+                    >
+                        {hasActivas ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-4">
+                               {activasYPorFinalizar.map(pps => (
+                                    <GestionCard key={pps.id} pps={pps} onSave={handleSave} isUpdating={updatingIds.has(pps.id)} cardType="activasYPorFinalizar" />
+                               ))}
+                            </div>
+                        ) : (
+                            <p className="text-slate-500 text-sm p-4 bg-white rounded-lg border border-slate-200/70">No hay prácticas activas o finalizando en los próximos 30 días.</p>
+                        )}
+                    </CollapsibleSection>
+                </section>
+            </div>
+        );
+    };
+
+    return (
+        <div className="animate-fade-in-up space-y-6">
+            {toastInfo && <Toast message={toastInfo.message} type={toastInfo.type} onClose={() => setToastInfo(null)} />}
+            
+            <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/60">
+                <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
+                    <div className="relative w-full sm:w-80">
+                        <input
+                            type="text"
+                            placeholder="Buscar por institución..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors"
+                        />
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 material-icons text-slate-400">search</span>
+                    </div>
+                    
+                    {!forcedOrientation ? (
+                        <div className="relative w-full sm:w-60">
+                            <select 
+                            value={orientationFilter} 
+                            onChange={(e) => setOrientationFilter(e.target.value)}
+                            className="w-full appearance-none pl-4 pr-10 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors"
+                            >
+                                <option value="all">Todas las Orientaciones</option>
+                                {ALL_ORIENTACIONES.map(o => <option key={o} value={o}>{o}</option>)}
+                            </select>
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 material-icons text-slate-400 pointer-events-none">expand_more</span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2 bg-blue-100 text-blue-800 text-sm font-semibold px-3 py-2 rounded-lg border border-blue-200/80">
+                            <span className="material-icons !text-base">filter_alt</span>
+                            <span>Mostrando: {forcedOrientation}</span>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {renderContent()}
+        </div>
+    );
 };
 
 export default ConvocatoriaManager;

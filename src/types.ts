@@ -46,6 +46,8 @@ export interface AuthUserFields {
   'Nombre'?: string;
   'PasswordHash'?: string;
   'Salt'?: string;
+  'Role'?: 'Jefe' | 'SuperUser';
+  'Orientaciones'?: string; // Comma-separated list
 }
 
 export interface LanzamientoPPSFields {
@@ -62,6 +64,9 @@ export interface LanzamientoPPSFields {
   'Plazo Inscripción (días)'?: number;
   'Plantilla Seguro'?: { url: string }[];
   'Informe'?: string; // Link to report submission
+  'Estado de Gestión'?: string;
+  'Notas de Gestión'?: string;
+  'Fecha de Relanzamiento'?: string; // Date string for confirmed relaunches
 }
 
 export interface InstitucionFields {
