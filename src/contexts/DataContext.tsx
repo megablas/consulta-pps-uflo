@@ -30,7 +30,7 @@ interface DataContextType {
   studentDetails: EstudianteFields | null;
   userGender: UserGender;
 
-  fetchStudentData: (legajo?: string, nombre?: string) => void;
+  fetchStudentData: () => void;
   handleOrientacionChange: (orientacion: Orientacion | "") => void;
   handleNotaChange: (practicaId: string, nota: string) => void;
   handleConfirmarInforme: (convocatoriaId: string) => void;
@@ -79,7 +79,7 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
   const [studentDetails, setStudentDetails] = useState<EstudianteFields | null>(null);
   const [userGender, setUserGender] = useState<UserGender>('neutro');
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
@@ -128,139 +128,151 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
   }, []);
 
   const fetchStudentData = useCallback(async () => {
-      setIsLoading(true);
-      setError(null);
+    // For Admin/Jefe users at the root level, their data is not in the 'Estudiantes' table.
+    // We prevent this fetch to avoid an error. This provider will still be used when
+    // an admin opens a specific student's tab, in which case `user.role` will be undefined.
+    if (user.role === 'SuperUser' || user.role === 'Jefe') {
+        setIsLoading(false);
+        setInitialLoadCompleted(true);
+        return;
+    }
 
-      try {
-          const studentFieldsToFetch = [
-            FIELD_LEGAJO_ESTUDIANTES, FIELD_NOMBRE_ESTUDIANTES, FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES,
-            FIELD_DNI_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_FECHA_NACIMIENTO_ESTUDIANTES,
-            FIELD_TELEFONO_ESTUDIANTES, FIELD_GENERO_ESTUDIANTES
-          ];
-          const { records: studentRecords, error: studentError } = await fetchAirtableData<EstudianteFields>(
-              AIRTABLE_TABLE_NAME_ESTUDIANTES,
-              studentFieldsToFetch,
-              `{${FIELD_LEGAJO_ESTUDIANTES}} = '${user.legajo}'`,
-              1
-          );
-          if (studentError || studentRecords.length === 0) throw new Error("No se pudo encontrar la información del estudiante.");
+    setIsLoading(true);
+    setError(null);
 
-          const studentRecord = studentRecords[0];
-          const studentId = studentRecord.id;
-          const studentName = studentRecord.fields[FIELD_NOMBRE_ESTUDIANTES] || user.nombre;
-          const orientacionElegida = (studentRecord.fields[FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES] as Orientacion) || "";
+    try {
+        const studentFieldsToFetch = [
+          FIELD_LEGAJO_ESTUDIANTES, FIELD_NOMBRE_ESTUDIANTES, FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES,
+          FIELD_DNI_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_FECHA_NACIMIENTO_ESTUDIANTES,
+          FIELD_TELEFONO_ESTUDIANTES, FIELD_GENERO_ESTUDIANTES
+        ];
+        const { records: studentRecords, error: studentError } = await fetchAirtableData<EstudianteFields>(
+            AIRTABLE_TABLE_NAME_ESTUDIANTES,
+            studentFieldsToFetch,
+            `{${FIELD_LEGAJO_ESTUDIANTES}} = '${user.legajo}'`,
+            1
+        );
+        if (studentError || studentRecords.length === 0) throw new Error("No se pudo encontrar la información del estudiante.");
 
-          setStudentAirtableId(studentId);
-          setStudentNameForPanel(studentName);
-          setSelectedOrientacion(orientacionElegida);
-          setStudentDetails(studentRecord.fields);
-          
-          const existingAirtableGender = studentRecord.fields[FIELD_GENERO_ESTUDIANTES] as string | undefined;
-          let genderToSet: UserGender = 'neutro'; // Default to neutro
+        const studentRecord = studentRecords[0];
+        const studentId = studentRecord.id;
+        const studentName = studentRecord.fields[FIELD_NOMBRE_ESTUDIANTES] || user.nombre;
+        const orientacionElegida = (studentRecord.fields[FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES] as Orientacion) || "";
 
-          if (existingAirtableGender) {
-              const lowerGender = existingAirtableGender.toLowerCase().trim();
-              if (lowerGender === 'varon') {
-                  genderToSet = 'masculino';
-              } else if (lowerGender === 'mujer') {
-                  genderToSet = 'femenino';
-              }
-          }
-          // If the field is empty or has a value other than 'varon' or 'mujer', it defaults to 'neutro'
-          setUserGender(genderToSet);
+        setStudentAirtableId(studentId);
+        setStudentNameForPanel(studentName);
+        setSelectedOrientacion(orientacionElegida);
+        setStudentDetails(studentRecord.fields);
+        
+        const existingAirtableGender = studentRecord.fields[FIELD_GENERO_ESTUDIANTES] as string | undefined;
+        let genderToSet: UserGender = 'neutro'; // Default to neutro
 
-          const lanzamientosFieldsToFetch = [
-              FIELD_NOMBRE_PPS_LANZAMIENTOS, FIELD_ORIENTACION_LANZAMIENTOS, FIELD_DIRECCION_LANZAMIENTOS,
-              FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS, FIELD_FECHA_INICIO_LANZAMIENTOS, FIELD_FECHA_FIN_LANZAMIENTOS,
-              FIELD_HORAS_ACREDITADAS_LANZAMIENTOS, FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS,
-              FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS, FIELD_INFORME_LANZAMIENTOS,
-          ];
-          
-          const [practicasResult, solicitudesResult, lanzamientosResult, enrollmentsResult] = await Promise.all([
-              fetchAirtableData<PracticaFields>(
-                  AIRTABLE_TABLE_NAME_PRACTICAS, 
-                  [FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS, FIELD_ESPECIALIDAD_PRACTICAS, FIELD_HORAS_PRACTICAS, FIELD_FECHA_INICIO_PRACTICAS, FIELD_FECHA_FIN_PRACTICAS, FIELD_ESTADO_PRACTICA, FIELD_NOTA_PRACTICAS], 
-                  `{${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}} = '${studentName}'`
-              ),
-              fetchAirtableData<SolicitudPPSFields>(
-                  AIRTABLE_TABLE_NAME_PPS, 
-                  [FIELD_EMPRESA_PPS_SOLICITUD, FIELD_ESTADO_PPS, FIELD_NOTAS_PPS, FIELD_ULTIMA_ACTUALIZACION_PPS], 
-                  `{${FIELD_LEGAJO_PPS}} = '${user.legajo}'`
-              ),
-              fetchAirtableData<LanzamientoPPSFields>(
-                  AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, 
-                  lanzamientosFieldsToFetch
-              ),
-              fetchAirtableData<ConvocatoriaFields>(
-                  AIRTABLE_TABLE_NAME_CONVOCATORIAS, 
-                  [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS, FIELD_INFORME_SUBIDO_CONVOCATORIAS], 
-                  `{${FIELD_LEGAJO_CONVOCATORIAS}} = ${user.legajo}`
-              ),
-          ]);
-          
-          if (practicasResult.error) console.error("Error fetching practicas:", practicasResult.error);
-          const practicasData = practicasResult.records.map(r => ({ ...r.fields, id: r.id })) as Practica[];
-          setPracticas(practicasData);
+        if (existingAirtableGender) {
+            const lowerGender = existingAirtableGender.toLowerCase().trim();
+            if (lowerGender === 'varon') {
+                genderToSet = 'masculino';
+            } else if (lowerGender === 'mujer') {
+                genderToSet = 'femenino';
+            }
+        }
+        setUserGender(genderToSet);
 
-          if (solicitudesResult.error) console.error("Error fetching solicitudes:", solicitudesResult.error);
-          const solicitudesData = solicitudesResult.records.map(r => ({ ...r.fields, id: r.id })) as SolicitudPPS[];
-          setSolicitudes(solicitudesData);
+        const lanzamientosFieldsToFetch = [
+            FIELD_NOMBRE_PPS_LANZAMIENTOS, FIELD_ORIENTACION_LANZAMIENTOS, FIELD_DIRECCION_LANZAMIENTOS,
+            FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS, FIELD_FECHA_INICIO_LANZAMIENTOS, FIELD_FECHA_FIN_LANZAMIENTOS,
+            FIELD_HORAS_ACREDITADAS_LANZAMIENTOS, FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS,
+            FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS, FIELD_INFORME_LANZAMIENTOS,
+        ];
+        
+        const [practicasResult, solicitudesResult, lanzamientosResult, enrollmentsResult] = await Promise.all([
+            fetchAirtableData<PracticaFields>(
+                AIRTABLE_TABLE_NAME_PRACTICAS, 
+                [FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS, FIELD_ESPECIALIDAD_PRACTICAS, FIELD_HORAS_PRACTICAS, FIELD_FECHA_INICIO_PRACTICAS, FIELD_FECHA_FIN_PRACTICAS, FIELD_ESTADO_PRACTICA, FIELD_NOTA_PRACTICAS], 
+                `{${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}} = '${studentName}'`
+            ),
+            fetchAirtableData<SolicitudPPSFields>(
+                AIRTABLE_TABLE_NAME_PPS, 
+                [FIELD_EMPRESA_PPS_SOLICITUD, FIELD_ESTADO_PPS, FIELD_NOTAS_PPS, FIELD_ULTIMA_ACTUALIZACION_PPS], 
+                `{${FIELD_LEGAJO_PPS}} = '${user.legajo}'`
+            ),
+            fetchAirtableData<LanzamientoPPSFields>(
+                AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, 
+                lanzamientosFieldsToFetch
+            ),
+            fetchAirtableData<ConvocatoriaFields>(
+                AIRTABLE_TABLE_NAME_CONVOCATORIAS, 
+                [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS, FIELD_INFORME_SUBIDO_CONVOCATORIAS], 
+                `{${FIELD_LEGAJO_CONVOCATORIAS}} = ${user.legajo}`
+            ),
+        ]);
+        
+        if (practicasResult.error) console.error("Error fetching practicas:", practicasResult.error);
+        const practicasData = practicasResult.records.map(r => ({ ...r.fields, id: r.id })) as Practica[];
+        setPracticas(practicasData);
 
-          if (lanzamientosResult.error) console.error("Error fetching lanzamientos:", lanzamientosResult.error);
-          const allLanzamientosData = lanzamientosResult.records.map(r => ({ ...r.fields, id: r.id })) as LanzamientoPPS[];
+        if (solicitudesResult.error) console.error("Error fetching solicitudes:", solicitudesResult.error);
+        const solicitudesData = solicitudesResult.records.map(r => ({ ...r.fields, id: r.id })) as SolicitudPPS[];
+        setSolicitudes(solicitudesData);
 
-          const visibleLanzamientos = allLanzamientosData.filter(l => 
-              normalizeStringForComparison(l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]) !== 'oculto'
-          );
-          setLanzamientos(visibleLanzamientos);
+        if (lanzamientosResult.error) console.error("Error fetching lanzamientos:", lanzamientosResult.error);
+        const allLanzamientosData = lanzamientosResult.records.map(r => ({ ...r.fields, id: r.id })) as LanzamientoPPS[];
 
-
-          if (enrollmentsResult.error) console.error("Error fetching enrollments:", enrollmentsResult.error);
-          const enrollmentsData = enrollmentsResult.records.map(r => ({ ...r.fields, id: r.id })) as Convocatoria[];
-          setMyEnrollments(enrollmentsData);
-          
-          calculateCriterios(practicasData, orientacionElegida);
-          
-          // Process data for "Informes" tab
-          const selectedEnrollments = enrollmentsData.filter(e => e[FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS] === 'Seleccionado');
-          const tasks: InformeTask[] = selectedEnrollments.map(enrollment => {
-              const lanzamientoId = (enrollment[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])[0];
-              const pps = allLanzamientosData.find(l => l.id === lanzamientoId);
-              if (!pps || !pps[FIELD_INFORME_LANZAMIENTOS] || !pps[FIELD_FECHA_FIN_LANZAMIENTOS]) {
-                  return null;
-              }
-              
-              const ppsName = pps[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'PPS sin nombre';
-
-              // Find the corresponding practica to get the grade
-              const matchingPractica = practicasData.find(p => {
-                  const practicaPpsNameRaw = p[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
-                  // Handle lookup fields which can be arrays
-                  const practicaPpsName = Array.isArray(practicaPpsNameRaw) ? practicaPpsNameRaw[0] : practicaPpsNameRaw;
-                  return normalizeStringForComparison(practicaPpsName) === normalizeStringForComparison(ppsName);
-              });
-              
-              return {
-                  convocatoriaId: enrollment.id,
-                  ppsName: ppsName,
-                  informeLink: pps[FIELD_INFORME_LANZAMIENTOS] as string,
-                  fechaFinalizacion: pps[FIELD_FECHA_FIN_LANZAMIENTOS] as string,
-                  informeSubido: !!enrollment[FIELD_INFORME_SUBIDO_CONVOCATORIAS],
-                  nota: matchingPractica ? matchingPractica[FIELD_NOTA_PRACTICAS] : undefined,
-              };
-          }).filter(task => task !== null) as InformeTask[];
-
-          setInformeTasks(tasks);
+        const visibleLanzamientos = allLanzamientosData.filter(l => 
+            normalizeStringForComparison(l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]) !== 'oculto'
+        );
+        setLanzamientos(visibleLanzamientos);
 
 
-      } catch (e: any) {
-          setError(e.message || "Ocurrió un error inesperado al cargar los datos.");
-          console.error(e);
-      } finally {
-          setIsLoading(false);
-          setInitialLoadCompleted(true);
-      }
-  }, [user.legajo, user.nombre, calculateCriterios]);
+        if (enrollmentsResult.error) console.error("Error fetching enrollments:", enrollmentsResult.error);
+        const enrollmentsData = enrollmentsResult.records.map(r => ({ ...r.fields, id: r.id })) as Convocatoria[];
+        setMyEnrollments(enrollmentsData);
+        
+        calculateCriterios(practicasData, orientacionElegida);
+        
+        // Process data for "Informes" tab
+        const selectedEnrollments = enrollmentsData.filter(e => e[FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS] === 'Seleccionado');
+        const tasks: InformeTask[] = selectedEnrollments.map(enrollment => {
+            const lanzamientoId = (enrollment[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])[0];
+            const pps = allLanzamientosData.find(l => l.id === lanzamientoId);
+            if (!pps || !pps[FIELD_INFORME_LANZAMIENTOS] || !pps[FIELD_FECHA_FIN_LANZAMIENTOS]) {
+                return null;
+            }
+            
+            const ppsName = pps[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'PPS sin nombre';
+
+            const matchingPractica = practicasData.find(p => {
+                const practicaPpsNameRaw = p[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
+                const practicaPpsName = Array.isArray(practicaPpsNameRaw) ? practicaPpsNameRaw[0] : practicaPpsNameRaw;
+                return normalizeStringForComparison(practicaPpsName) === normalizeStringForComparison(ppsName);
+            });
+            
+            return {
+                convocatoriaId: enrollment.id,
+                ppsName: ppsName,
+                informeLink: pps[FIELD_INFORME_LANZAMIENTOS] as string,
+                fechaFinalizacion: pps[FIELD_FECHA_FIN_LANZAMIENTOS] as string,
+                informeSubido: !!enrollment[FIELD_INFORME_SUBIDO_CONVOCATORIAS],
+                nota: matchingPractica ? matchingPractica[FIELD_NOTA_PRACTICAS] : undefined,
+            };
+        }).filter((task: InformeTask | null): task is InformeTask => task !== null);
+
+        setInformeTasks(tasks);
+
+    } catch (e: any) {
+        setError(e.message || "Ocurrió un error inesperado al cargar los datos.");
+        console.error(e);
+    } finally {
+        setIsLoading(false);
+        setInitialLoadCompleted(true);
+    }
+}, [user, calculateCriterios]);
+
+  useEffect(() => {
+    // Only fetch data if it hasn't been fetched before.
+    if (!initialLoadCompleted) {
+        fetchStudentData();
+    }
+  }, [fetchStudentData, initialLoadCompleted]);
 
   const handleOrientacionChange = useCallback(async (orientacion: Orientacion | "") => {
     setSelectedOrientacion(orientacion);
@@ -294,7 +306,6 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
   const handleConfirmarInforme = useCallback(async (convocatoriaId: string) => {
       const originalTasks = [...informeTasks];
       
-      // Optimistic update
       const updatedTasks = informeTasks.map(task => 
           task.convocatoriaId === convocatoriaId ? { ...task, informeSubido: true } : task
       );
@@ -306,7 +317,7 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
       
       if (error) {
           showModal('Error de Confirmación', 'No se pudo guardar la confirmación. Por favor, inténtalo de nuevo.');
-          setInformeTasks(originalTasks); // Revert on error
+          setInformeTasks(originalTasks);
       }
   }, [informeTasks, showModal]);
 

@@ -25,6 +25,7 @@ import Toast from './Toast';
 import InformeCorreccionCard from './InformeCorreccionCard';
 import CorreccionRapidaView from './CorreccionRapidaView';
 import { normalizeStringForComparison, addBusinessDays } from '../utils/formatters';
+import { useAuth } from '../contexts/AuthContext';
 
 type LoadingState = 'initial' | 'loading' | 'loaded' | 'error';
 type Manager = 'Selva Estrella' | 'Franco Pedraza' | 'Cynthia Rossi';
@@ -37,6 +38,7 @@ const managerConfig: Record<Manager, { orientations: string[], label: string }> 
 };
 
 const CorreccionPanel: React.FC = () => {
+  const { isJefeMode, authenticatedUser } = useAuth();
   const [loadingState, setLoadingState] = useState<LoadingState>('initial');
   const [error, setError] = useState<string | null>(null);
   const [allPpsGroups, setAllPpsGroups] = useState<Map<string, InformeCorreccionPPS>>(new Map());
@@ -234,7 +236,10 @@ const CorreccionPanel: React.FC = () => {
   }, [selectedStudents]);
 
   const managerData = useMemo(() => {
-    const managerOrientations = new Set(managerConfig[activeManager].orientations.map(normalizeStringForComparison));
+    const managerOrientations = isJefeMode
+      ? new Set((authenticatedUser?.orientaciones || []).map(normalizeStringForComparison))
+      : new Set(managerConfig[activeManager].orientations.map(normalizeStringForComparison));
+
     let filteredGroups = Array.from(allPpsGroups.values())
       .filter(group => managerOrientations.has(normalizeStringForComparison(group.orientacion)));
 
@@ -284,7 +289,7 @@ const CorreccionPanel: React.FC = () => {
     );
     
     return { pendientes, finalizados, flatList: searchFilteredFlatList, totalSinCorregir };
-  }, [activeManager, allPpsGroups, searchTerm]);
+  }, [activeManager, allPpsGroups, searchTerm, isJefeMode, authenticatedUser]);
 
   const renderContent = () => {
     if (loadingState === 'loading' || loadingState === 'initial') return <Loader />;
@@ -300,7 +305,7 @@ const CorreccionPanel: React.FC = () => {
     return (
       <div className="space-y-8">
         {noContentForManager ? (
-           <EmptyState icon="person_search_off" title="Sin Resultados" message={`No se encontraron Prácticas de ${managerConfig[activeManager].orientations.join(' o ')} que coincidan con la búsqueda.`} />
+           <EmptyState icon="person_search_off" title="Sin Resultados" message={`No se encontraron Prácticas de ${isJefeMode ? authenticatedUser?.orientaciones?.join(' o ') : managerConfig[activeManager].orientations.join(' o ')} que coincidan con la búsqueda.`} />
         ) : (
           <>
             <CollapsibleSection title="Pendientes de Corrección" count={managerData.pendientes.length} defaultOpen>
@@ -371,23 +376,25 @@ const CorreccionPanel: React.FC = () => {
     <div className="animate-fade-in-up space-y-6">
       {toastInfo && <Toast message={toastInfo.message} type={toastInfo.type} onClose={() => setToastInfo(null)} />}
       
-      <div className="border-b border-slate-200">
-        <nav className="-mb-px flex space-x-4" aria-label="Managers">
-          {(Object.keys(managerConfig) as Manager[]).map(manager => (
-            <button
-              key={manager}
-              onClick={() => setActiveManager(manager)}
-              className={`whitespace-nowrap py-3 px-1 border-b-2 text-sm font-medium transition-colors duration-200 ${
-                activeManager === manager
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-              }`}
-            >
-              {managerConfig[manager].label}
-            </button>
-          ))}
-        </nav>
-      </div>
+      {!isJefeMode && (
+        <div className="border-b border-slate-200">
+            <nav className="-mb-px flex space-x-4" aria-label="Managers">
+            {(Object.keys(managerConfig) as Manager[]).map(manager => (
+                <button
+                key={manager}
+                onClick={() => setActiveManager(manager)}
+                className={`whitespace-nowrap py-3 px-1 border-b-2 text-sm font-medium transition-colors duration-200 ${
+                    activeManager === manager
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                }`}
+                >
+                {managerConfig[manager].label}
+                </button>
+            ))}
+            </nav>
+        </div>
+      )}
 
        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
            <div className="p-1 bg-slate-100 rounded-lg flex items-center ring-1 ring-slate-200/50">

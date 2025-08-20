@@ -15,20 +15,47 @@ export function addBusinessDays(startDate: Date, days: number): Date {
 
 export function formatDate(dateString?: string): string {
     if (!dateString) return 'N/A';
-    try {
-        const date = new Date(dateString);
-        // Check if date is valid
-        if (isNaN(date.getTime())) {
-            return 'Fecha inválida';
+    
+    let date: Date;
+
+    // First, try to parse it as is. This works for ISO 8601 formats (YYYY-MM-DD) which Airtable's Date fields provide.
+    const initialDate = new Date(dateString);
+
+    // Check if the initial parsing resulted in a valid date.
+    if (!isNaN(initialDate.getTime())) {
+        date = initialDate;
+    } else {
+        // If not, try parsing a DD/MM/YYYY format.
+        const parts = dateString.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+        if (parts) {
+            // parts[1] = day, parts[2] = month, parts[3] = year
+            // Note: Month is 0-indexed in JavaScript Date constructor (0 for Jan, 11 for Dec).
+            const day = parseInt(parts[1], 10);
+            const month = parseInt(parts[2], 10) - 1;
+            const year = parseInt(parts[3], 10);
+            // Check for valid date components before creating the date object.
+            if (year > 1000 && month >= 0 && month < 12 && day > 0 && day <= 31) {
+                date = new Date(Date.UTC(year, month, day));
+            } else {
+                date = new Date('invalid');
+            }
+        } else {
+            date = new Date('invalid');
         }
-        return date.toLocaleDateString('es-ES', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-        });
-    } catch (e) {
+    }
+    
+    // Final check if the resulting date is valid.
+    if (isNaN(date.getTime())) {
         return 'Fecha inválida';
     }
+    
+    // If valid, format and return it.
+    return date.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        timeZone: 'UTC' // Use UTC to avoid off-by-one day errors due to timezone conversion
+    });
 }
 
 export function getEspecialidadClasses(especialidad?: string): { 
