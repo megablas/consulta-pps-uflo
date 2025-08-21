@@ -130,9 +130,10 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
     return null;
   }, [pps, cardType]);
 
+  const isEnConversacion = status === 'En Conversación';
 
   return (
-    <div className="relative bg-white rounded-xl border border-slate-200/60 shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-px group overflow-hidden">
+    <div className={`relative bg-white rounded-xl border shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-px group overflow-hidden ${isEnConversacion ? 'border-sky-300 ring-2 ring-sky-50' : 'border-slate-200/60'}`}>
         {/* Header */}
         <div className={`p-4 border-b border-slate-200/60 flex justify-between items-start gap-3 transition-colors duration-500 ${headerBg}`}>
             <div className="flex-grow">
@@ -384,7 +385,16 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
         
         act.sort((a, b) => new Date(a[FIELD_FECHA_FIN_LANZAMIENTOS]!).getTime() - new Date(b[FIELD_FECHA_FIN_LANZAMIENTOS]!).getTime());
         conf.sort((a, b) => new Date(a[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]!).getTime() - new Date(b[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]!).getTime());
-        fin.sort((a, b) => new Date(b[FIELD_FECHA_FIN_LANZAMIENTOS]!).getTime() - new Date(a[FIELD_FECHA_FIN_LANZAMIENTOS]!).getTime());
+        fin.sort((a, b) => {
+            const aIsEnConversacion = a[FIELD_ESTADO_GESTION_LANZAMIENTOS] === 'En Conversación';
+            const bIsEnConversacion = b[FIELD_ESTADO_GESTION_LANZAMIENTOS] === 'En Conversación';
+            if (aIsEnConversacion && !bIsEnConversacion) return -1;
+            if (!aIsEnConversacion && bIsEnConversacion) return 1;
+
+            const dateA = a[FIELD_FECHA_FIN_LANZAMIENTOS] ? new Date(a[FIELD_FECHA_FIN_LANZAMIENTOS]).getTime() : 0;
+            const dateB = b[FIELD_FECHA_FIN_LANZAMIENTOS] ? new Date(b[FIELD_FECHA_FIN_LANZAMIENTOS]).getTime() : 0;
+            return dateB - dateA;
+        });
     
         return { finalizadasParaReactivar: fin, relanzamientosConfirmados: conf, activasYPorFinalizar: act };
     }, [filteredData]);
