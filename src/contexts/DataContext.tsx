@@ -153,7 +153,7 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
         fetchAirtableData<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS, [], `FIND('${user.nombre}', ARRAYJOIN({${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}}))`),
         fetchAirtableData<SolicitudPPSFields>(AIRTABLE_TABLE_NAME_PPS, [], `{${FIELD_LEGAJO_PPS}} = '${user.legajo}'`, 50, [{ field: FIELD_ULTIMA_ACTUALIZACION_PPS, direction: 'desc' }]),
         fetchAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS, [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS, FIELD_INFORME_SUBIDO_CONVOCATORIAS], `{${FIELD_LEGAJO_CONVOCATORIAS}} = ${user.legajo}`),
-        fetchAirtableData<LanzamientoPPSFields>(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, [], `OR({${FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS}} = 'Abierta', {${FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS}} = 'Abierto', {${FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS}} = 'Cerrado')`, 50, [{field: FIELD_FECHA_INICIO_LANZAMIENTOS, direction: 'desc'}])
+        fetchAirtableData<LanzamientoPPSFields>(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, [], undefined, 100, [{field: FIELD_FECHA_INICIO_LANZAMIENTOS, direction: 'desc'}])
       ]);
 
       if (practicasRes.error) throw new Error('Error al cargar prácticas.');
@@ -178,6 +178,11 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
 
       const informeTasksData = myEnrollmentsData
         .map((enrollment): InformeTask | null => {
+          // An "Informe" task should only be created if the student was selected for the PPS.
+          if (enrollment[FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS] !== 'Seleccionado') {
+            return null;
+          }
+          
           const lanzamientoId = (enrollment[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])[0];
           if (!lanzamientoId) return null;
 
