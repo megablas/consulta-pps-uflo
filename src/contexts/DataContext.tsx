@@ -150,7 +150,7 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
 
       // Fetch related data in parallel
       const [practicasRes, ppsRes, convocatoriasRes, lanzamientosRes] = await Promise.all([
-        fetchAirtableData<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS, [], `FIND('${user.nombre}', ARRAYJOIN({${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}}))`),
+        fetchAirtableData<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS, [], `{${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}} = '${user.legajo}'`),
         fetchAirtableData<SolicitudPPSFields>(AIRTABLE_TABLE_NAME_PPS, [], `{${FIELD_LEGAJO_PPS}} = '${user.legajo}'`, 50, [{ field: FIELD_ULTIMA_ACTUALIZACION_PPS, direction: 'desc' }]),
         fetchAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS, [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS, FIELD_INFORME_SUBIDO_CONVOCATORIAS], `{${FIELD_LEGAJO_CONVOCATORIAS}} = ${user.legajo}`),
         fetchAirtableData<LanzamientoPPSFields>(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, [], undefined, 100, [{field: FIELD_FECHA_INICIO_LANZAMIENTOS, direction: 'desc'}])
@@ -297,7 +297,7 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
         [FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS]: 'Inscripto',
         // Copy student details
         [FIELD_LEGAJO_CONVOCATORIAS]: studentDetails[FIELD_LEGAJO_ESTUDIANTES] ? parseInt(studentDetails[FIELD_LEGAJO_ESTUDIANTES], 10) : undefined,
-        [FIELD_DNI_CONVOCATORIAS]: studentDetails[FIELD_DNI_ESTUDIANTES],
+        [FIELD_DNI_CONVOCATORIAS]: studentDetails[FIELD_DNI_ESTUDIANTES] ? String(studentDetails[FIELD_DNI_ESTUDIANTES]) : undefined,
         [FIELD_CORREO_CONVOCATORIAS]: studentDetails[FIELD_CORREO_ESTUDIANTES],
         [FIELD_FECHA_NACIMIENTO_CONVOCATORIAS]: studentDetails[FIELD_FECHA_NACIMIENTO_ESTUDIANTES],
         [FIELD_TELEFONO_CONVOCATORIAS]: studentDetails[FIELD_TELEFONO_ESTUDIANTES],
