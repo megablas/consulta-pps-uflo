@@ -34,7 +34,7 @@ export interface EstudianteFields {
   'Apellido (Separado)'?: string;
   'Género'?: 'Varon' | 'Mujer' | 'Otro';
   'Orientación Elegida'?: string;
-  'DNI'?: string;
+  'DNI'?: number;
   'Fecha de Nacimiento'?: string; // Date string
   'Correo'?: string;
   'Teléfono'?: string;

@@ -25,7 +25,8 @@ export const FIELD_CORREO_ESTUDIANTES = 'Correo';
 export const FIELD_TELEFONO_ESTUDIANTES = 'Teléfono';
 
 // --- Fields for 'Prácticas' table ---
-export const FIELD_NOMBRE_BUSQUEDA_PRACTICAS = 'Nombre busqueda'; // Lookup from Estudiantes
+export const FIELD_NOMBRE_BUSQUEDA_PRACTICAS = 'Legajo Busqueda'; // Lookup from Estudiantes (should contain the Legajo value as text)
+export const FIELD_ESTUDIANTE_LINK_PRACTICAS = 'Estudiante Inscripto'; // Link to Estudiantes table record
 export const FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS = 'Nombre (de Institución)'; // Lookup from Institucion
 export const FIELD_HORAS_PRACTICAS = 'Horas Realizadas';
 export const FIELD_FECHA_INICIO_PRACTICAS = 'Fecha de Inicio';

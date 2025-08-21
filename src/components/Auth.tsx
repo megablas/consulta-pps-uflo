@@ -152,7 +152,19 @@ const Auth: React.FC = () => {
 
   const handleNewDataChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setNewData(prev => ({ ...prev, [name]: value || null }));
+    if (name === FIELD_DNI_ESTUDIANTES) {
+      // The DNI field in Airtable expects a Number. We process the input to only allow digits.
+      const numericString = value.replace(/\D/g, '');
+      if (numericString === '') {
+        // Handle case where input is cleared
+        setNewData(prev => ({ ...prev, [name]: null }));
+      } else {
+        // Store as a number
+        setNewData(prev => ({ ...prev, [name]: parseInt(numericString, 10) }));
+      }
+    } else {
+      setNewData(prev => ({ ...prev, [name]: value || null }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -328,7 +340,7 @@ const Auth: React.FC = () => {
             {mode === 'register' && legajoCheckState === 'success' && foundStudent && (
               <div className="space-y-4 animate-fade-in-up">
                 {missingFields.length > 0 && <p className="text-sm font-semibold text-slate-700 border-t pt-4 mt-4">Completa tus datos para continuar:</p>}
-                {missingFields.includes(FIELD_DNI_ESTUDIANTES) && <AuthInput name={FIELD_DNI_ESTUDIANTES} type="text" placeholder="DNI (sin puntos)" icon="badge" value={newData[FIELD_DNI_ESTUDIANTES] || ''} onChange={handleNewDataChange} disabled={isLoading} />}
+                {missingFields.includes(FIELD_DNI_ESTUDIANTES) && <AuthInput name={FIELD_DNI_ESTUDIANTES} type="text" placeholder="DNI (sin puntos)" icon="badge" value={newData[FIELD_DNI_ESTUDIANTES] || ''} onChange={handleNewDataChange} disabled={isLoading} inputMode="numeric" pattern="[0-9]*" />}
                 {missingFields.includes(FIELD_FECHA_NACIMIENTO_ESTUDIANTES) && <AuthInput name={FIELD_FECHA_NACIMIENTO_ESTUDIANTES} type="date" placeholder="Fecha de Nacimiento" icon="cake" value={newData[FIELD_FECHA_NACIMIENTO_ESTUDIANTES] || ''} onChange={handleNewDataChange} disabled={isLoading} />}
                 {missingFields.includes(FIELD_CORREO_ESTUDIANTES) && <AuthInput name={FIELD_CORREO_ESTUDIANTES} type="email" placeholder="Correo" icon="email" value={newData[FIELD_CORREO_ESTUDIANTES] || ''} onChange={handleNewDataChange} disabled={isLoading} />}
                 {missingFields.includes(FIELD_TELEFONO_ESTUDIANTES) && <AuthInput name={FIELD_TELEFONO_ESTUDIANTES} type="tel" placeholder="Teléfono (con cód. de área)" icon="phone" value={newData[FIELD_TELEFONO_ESTUDIANTES] || ''} onChange={handleNewDataChange} disabled={isLoading} />}
