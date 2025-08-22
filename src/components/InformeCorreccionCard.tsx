@@ -212,13 +212,20 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
                     </span>
                   </td>
                   <td className="p-3">
-                    <NotaSelector
-                      value={student.nota || 'Sin calificar'}
-                      onChange={(e) => handleNotaChange(student.practicaId, e)}
-                      disabled={!student.informeSubido}
-                      isSaving={updatingNotaId === student.practicaId}
-                      ariaLabel={`Nota para ${student.studentName}`}
-                    />
+                    <div className="flex items-center gap-2">
+                      <NotaSelector
+                        value={student.nota || 'Sin calificar'}
+                        onChange={(e) => handleNotaChange(student.practicaId, e)}
+                        disabled={!student.informeSubido}
+                        isSaving={updatingNotaId === student.practicaId}
+                        ariaLabel={`Nota para ${student.studentName}`}
+                      />
+                      {justUpdatedPracticaId === student.practicaId && (
+                        <span className="text-xs font-bold text-emerald-600 animate-fade-in-up" style={{ animationDuration: '300ms' }}>
+                            Guardado ✓
+                        </span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
