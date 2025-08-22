@@ -95,7 +95,7 @@ export interface ConvocatoriaFields {
   'Cursando Materias Electivas'?: string;
   'Finales que adeuda'?: string;
   'Otra situación académica'?: string;
-  'DNI'?: string;
+  'DNI'?: number;
   'Correo'?: string;
   'Fecha de Nacimiento'?: string;
   'Teléfono'?: string;

@@ -211,11 +211,6 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
 
       const informeTasksData = myEnrollmentsData
         .map((enrollment): InformeTask | null => {
-          const enrollmentStatus = normalizeStringForComparison(enrollment[FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS]);
-          if (!enrollmentStatus.includes('seleccionado')) {
-            return null;
-          }
-          
           const lanzamientoId = (enrollment[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])[0];
           if (!lanzamientoId) return null;
 
@@ -245,6 +240,7 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
           });
 
           // An InformeTask should only be created if there is a corresponding Practica record.
+          // This implies the student participated, regardless of the 'Estado' in the Convocatoria.
           if (!practicaVinculada) {
             return null;
           }
@@ -354,7 +350,7 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
         [FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS]: 'Inscripto',
         // Copy student details
         [FIELD_LEGAJO_CONVOCATORIAS]: studentDetails[FIELD_LEGAJO_ESTUDIANTES] ? parseInt(studentDetails[FIELD_LEGAJO_ESTUDIANTES], 10) : undefined,
-        [FIELD_DNI_CONVOCATORIAS]: studentDetails[FIELD_DNI_ESTUDIANTES] ? String(studentDetails[FIELD_DNI_ESTUDIANTES]) : undefined,
+        [FIELD_DNI_CONVOCATORIAS]: studentDetails[FIELD_DNI_ESTUDIANTES] ? Number(studentDetails[FIELD_DNI_ESTUDIANTES]) : undefined,
         [FIELD_CORREO_CONVOCATORIAS]: studentDetails[FIELD_CORREO_ESTUDIANTES],
         [FIELD_FECHA_NACIMIENTO_CONVOCATORIAS]: studentDetails[FIELD_FECHA_NACIMIENTO_ESTUDIANTES],
         [FIELD_TELEFONO_CONVOCATORIAS]: studentDetails[FIELD_TELEFONO_ESTUDIANTES],
