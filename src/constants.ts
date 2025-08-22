@@ -66,10 +66,12 @@ export const FIELD_INFORME_LANZAMIENTOS = 'Informe';
 export const FIELD_ESTADO_GESTION_LANZAMIENTOS = 'Estado de Gestión';
 export const FIELD_NOTAS_GESTION_LANZAMIENTOS = 'Notas de Gestión';
 export const FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS = 'Fecha de Relanzamiento';
+export const FIELD_TELEFONO_INSTITUCION_LANZAMIENTOS = 'Teléfono (from Instituciones)';
 
 
 // --- Fields for 'Instituciones' table ---
 export const FIELD_NOMBRE_INSTITUCIONES = 'Nombre';
+export const FIELD_TELEFONO_INSTITUCIONES = 'Teléfono';
 
 // --- Fields for 'Convocatorias' table ---
 export const FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS = 'Lanzamiento Vinculado';

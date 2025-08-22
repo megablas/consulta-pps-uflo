@@ -67,11 +67,13 @@ export interface LanzamientoPPSFields {
   'Estado de Gestión'?: string;
   'Notas de Gestión'?: string;
   'Fecha de Relanzamiento'?: string; // Date string for confirmed relaunches
+  'Teléfono (from Instituciones)'?: string[]; // Lookup from Instituciones table
 }
 
 export interface InstitucionFields {
   [key: string]: any;
   'Nombre'?: string;
+  'Teléfono'?: string;
 }
 
 export interface ConvocatoriaFields {
@@ -87,7 +89,7 @@ export interface ConvocatoriaFields {
   'Horas Acreditadas'?: number;
   'Cupos disponibles'?: number;
   'Estado de Convocatoria'?: string; // e.g. 'Abierta', 'Cerrada'
-  'Estado'?: string; // e.g. 'No seleccionado', 'Seleccionado', 'Inscripto'
+  'Estado'?: string; // e.g., 'No seleccionado', 'Seleccionado', 'Inscripto'
   'Orientación'?: string;
   '¿Terminó de cursar?'?: string;
   'Cursando Materias Electivas'?: string;
@@ -190,7 +192,7 @@ export interface InformeCorreccionStudent {
   studentId: string;
   studentName: string;
   convocatoriaId: string;
-  practicaId: string;
+  practicaId?: string;
   informeSubido: boolean;
   nota: string;
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { fetchAllAirtableData, updateAirtableRecord, createAirtableRecord } from '../services/airtableService';
-import type { LanzamientoPPS, Practica } from '../types';
+import type { LanzamientoPPS, Practica, InstitucionFields } from '../types';
 import {
   AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
   FIELD_NOMBRE_PPS_LANZAMIENTOS,
@@ -19,6 +19,9 @@ import {
   FIELD_FECHA_FIN_PRACTICAS,
   FIELD_HORAS_ACREDITADAS_LANZAMIENTOS,
   FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS,
+  AIRTABLE_TABLE_NAME_INSTITUCIONES,
+  FIELD_NOMBRE_INSTITUCIONES,
+  FIELD_TELEFONO_INSTITUCIONES,
 } from '../constants';
 import Loader from './Loader';
 import EmptyState from './EmptyState';
@@ -34,30 +37,30 @@ interface GestionCardProps {
   onSave: (id: string, updates: Partial<LanzamientoPPS>) => Promise<boolean>;
   isUpdating: boolean;
   cardType: 'activasYPorFinalizar' | 'finalizadasParaReactivar' | 'relanzamientosConfirmados';
+  institution?: { id: string; phone?: string };
+  onSavePhone: (institutionId: string, phone: string) => Promise<boolean>;
 }
 
-const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpdating, cardType }) => {
+const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpdating, cardType, institution, onSavePhone }) => {
   const [status, setStatus] = useState(pps[FIELD_ESTADO_GESTION_LANZAMIENTOS] || 'Pendiente de Gestión');
   const [notes, setNotes] = useState(pps[FIELD_NOTAS_GESTION_LANZAMIENTOS] || '');
   const [relaunchDate, setRelaunchDate] = useState(() => {
     const dateStr = pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS];
     if (!dateStr) return '';
-    // If it's already YYYY-MM-DD, return as is
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-        return dateStr;
-    }
-    // If it's MM/DD/YYYY, convert to YYYY-MM-DD for the input
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
     const parts = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (parts) {
-        const [, month, day, year] = parts;
-        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      const [, month, day, year] = parts;
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
-    return ''; // Unrecognized format
+    return '';
   });
   const [isJustSaved, setIsJustSaved] = useState(false);
   const [error, setError] = useState<string|null>(null);
+  const [isEditingPhone, setIsEditingPhone] = useState(false);
+  const [newPhone, setNewPhone] = useState('');
   const especialidadVisuals = getEspecialidadClasses(pps[FIELD_ORIENTACION_LANZAMIENTOS]);
-
+  
   const hasChanges = useMemo(() => {
     const originalStatus = pps[FIELD_ESTADO_GESTION_LANZAMIENTOS] || 'Pendiente de Gestión';
     const originalNotes = pps[FIELD_NOTAS_GESTION_LANZAMIENTOS] || '';
@@ -86,7 +89,7 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
       [FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]: status === 'Relanzamiento Confirmado' && relaunchDate
         ? (() => {
             const [year, month, day] = relaunchDate.split('-');
-            return `${month}/${day}/${year}`; // Convert YYYY-MM-DD to MM/DD/YYYY
+            return `${month}/${day}/${year}`;
           })()
         : null,
     };
@@ -97,6 +100,22 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
       setTimeout(() => setIsJustSaved(false), 2000);
     }
   };
+
+  const handleWhatsAppClick = () => {
+    if (!institution?.phone) return;
+    const cleanPhone = institution.phone.replace(/[^0-9]/g, '');
+    const url = `https://wa.me/${cleanPhone}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleSavePhone = async () => {
+    if (!institution || !newPhone.trim()) return;
+    const success = await onSavePhone(institution.id, newPhone.trim());
+    if (success) {
+      setIsEditingPhone(false);
+      setNewPhone('');
+    }
+  };
   
   const headerBg = isJustSaved ? 'bg-emerald-100' : especialidadVisuals.headerBg;
   const headerIconColor = isJustSaved ? 'text-emerald-700' : especialidadVisuals.headerText;
@@ -105,7 +124,7 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
   const cardIcon = useMemo(() => {
     if (cardType === 'activasYPorFinalizar') return 'pending_actions';
     if (cardType === 'finalizadasParaReactivar') return 'history';
-    return 'event_repeat'; // For relanzamientosConfirmados
+    return 'event_repeat';
   }, [cardType]);
   
   const timeBadge = useMemo(() => {
@@ -140,10 +159,10 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
   }, [pps, cardType]);
 
   const isEnConversacion = status === 'En Conversación';
+  const actionButtonClass = "font-bold py-2 px-4 rounded-lg text-sm transition-all duration-300 shadow-md flex items-center justify-center gap-2 w-44";
 
   return (
     <div className={`relative bg-white rounded-xl border shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-px group overflow-hidden ${isEnConversacion ? 'border-sky-300 ring-2 ring-sky-50' : 'border-slate-200/60'}`}>
-        {/* Header */}
         <div className={`p-4 border-b border-slate-200/60 flex justify-between items-start gap-3 transition-colors duration-500 ${headerBg}`}>
             <div className="flex-grow">
                 <div className="flex items-center gap-2.5">
@@ -165,7 +184,6 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
         </div>
         
         <div className="p-4 bg-gradient-to-br from-white to-slate-50/50 space-y-4">
-            {/* Form */}
             <div className="space-y-3">
                 <div>
                     <label htmlFor={`status-${pps.id}`} className="text-xs font-semibold text-slate-600 mb-1 block">Estado de Gestión</label>
@@ -209,12 +227,46 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
                 </div>
             </div>
 
-            {/* Footer/Actions */}
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-end items-stretch gap-3 pt-2">
+                 {isEditingPhone ? (
+                    <div className="flex items-center gap-2 w-44">
+                        <input
+                            type="tel"
+                            value={newPhone}
+                            onChange={(e) => setNewPhone(e.target.value)}
+                            placeholder="Nº de teléfono"
+                            className="flex-grow w-full text-sm rounded-lg border border-slate-300 p-2 bg-white shadow-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+                            autoFocus
+                        />
+                        <button onClick={handleSavePhone} className="p-2 rounded-full bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors" aria-label="Guardar teléfono"><span className="material-icons !text-base">check</span></button>
+                        <button onClick={() => setIsEditingPhone(false)} className="p-2 rounded-full bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors" aria-label="Cancelar"><span className="material-icons !text-base">close</span></button>
+                    </div>
+                 ) : institution?.phone ? (
+                    <button
+                        onClick={handleWhatsAppClick}
+                        type="button"
+                        className={`${actionButtonClass} bg-green-600 text-white hover:bg-green-700 hover:-translate-y-px transform active:scale-95`}
+                        title={`Contactar a ${institution.phone}`}
+                    >
+                        <span className="material-icons !text-base">chat</span>
+                        <span>Contactar</span>
+                    </button>
+                ) : (
+                     <button
+                        onClick={() => setIsEditingPhone(true)}
+                        type="button"
+                        className={`${actionButtonClass} bg-sky-100 text-sky-800 hover:bg-sky-200 hover:-translate-y-px transform active:scale-95`}
+                        disabled={!institution}
+                     >
+                         <span className="material-icons !text-base">add_call</span>
+                         <span>Cargar Teléfono</span>
+                     </button>
+                )}
+
                 <button
                 onClick={handleSave}
                 disabled={isUpdating || !hasChanges || isJustSaved}
-                className={`font-bold py-2 px-5 rounded-lg text-sm transition-all duration-300 shadow-md flex items-center justify-center gap-2 relative overflow-hidden
+                className={`${actionButtonClass} relative overflow-hidden
                     ${isJustSaved
                         ? 'bg-emerald-600 text-white cursor-default'
                         : isUpdating
@@ -258,6 +310,7 @@ interface ConvocatoriaManagerProps {
 
 const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrientations }) => {
     const [lanzamientos, setLanzamientos] = useState<LanzamientoPPS[]>([]);
+    const [institutionsMap, setInstitutionsMap] = useState<Map<string, { id: string; phone?: string }>>(new Map());
     const [loadingState, setLoadingState] = useState<LoadingState>('initial');
     const [error, setError] = useState<string | null>(null);
     const [toastInfo, setToastInfo] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -270,26 +323,46 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
         setLoadingState('loading');
         setError(null);
         
-        const { records, error: fetchError } = await fetchAllAirtableData<LanzamientoPPS>(
-            AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
-            [
-                FIELD_NOMBRE_PPS_LANZAMIENTOS,
-                FIELD_FECHA_INICIO_LANZAMIENTOS,
-                FIELD_FECHA_FIN_LANZAMIENTOS,
-                FIELD_ORIENTACION_LANZAMIENTOS,
-                FIELD_ESTADO_GESTION_LANZAMIENTOS,
-                FIELD_NOTAS_GESTION_LANZAMIENTOS,
-                FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS,
-            ],
-            undefined,
-            [{ field: FIELD_FECHA_FIN_LANZAMIENTOS, direction: 'desc' }]
-        );
+        const [lanzamientosRes, institucionesRes] = await Promise.all([
+            fetchAllAirtableData<LanzamientoPPS>(
+                AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
+                [
+                    FIELD_NOMBRE_PPS_LANZAMIENTOS,
+                    FIELD_FECHA_INICIO_LANZAMIENTOS,
+                    FIELD_FECHA_FIN_LANZAMIENTOS,
+                    FIELD_ORIENTACION_LANZAMIENTOS,
+                    FIELD_ESTADO_GESTION_LANZAMIENTOS,
+                    FIELD_NOTAS_GESTION_LANZAMIENTOS,
+                    FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS,
+                ],
+                undefined,
+                [{ field: FIELD_FECHA_FIN_LANZAMIENTOS, direction: 'desc' }]
+            ),
+            fetchAllAirtableData<InstitucionFields>(
+                AIRTABLE_TABLE_NAME_INSTITUCIONES,
+                [FIELD_NOMBRE_INSTITUCIONES, FIELD_TELEFONO_INSTITUCIONES]
+            )
+        ]);
 
-        if (fetchError) {
-            setError('No se pudieron cargar las convocatorias. ' + (typeof fetchError.error === 'string' ? fetchError.error : fetchError.error.message));
+        if (lanzamientosRes.error || institucionesRes.error) {
+            const errorObj = (lanzamientosRes.error || institucionesRes.error)?.error;
+            const errorMsg = typeof errorObj === 'string' ? errorObj : errorObj?.message || 'Error al cargar los datos.';
+            setError('No se pudieron cargar los datos. ' + errorMsg);
             setLoadingState('error');
         } else {
-            const mappedRecords = records.map(r => ({ ...r.fields, id: r.id }));
+            const newInstitutionsMap = new Map<string, { id: string; phone?: string }>();
+            institucionesRes.records.forEach(record => {
+                const name = record.fields[FIELD_NOMBRE_INSTITUCIONES];
+                if (name) {
+                    newInstitutionsMap.set(normalizeStringForComparison(name), {
+                        id: record.id,
+                        phone: record.fields[FIELD_TELEFONO_INSTITUCIONES]
+                    });
+                }
+            });
+            setInstitutionsMap(newInstitutionsMap);
+
+            const mappedRecords = lanzamientosRes.records.map(r => ({ ...r.fields, id: r.id }));
             const filteredRecords = mappedRecords.filter(pps => 
                 !pps[FIELD_NOMBRE_PPS_LANZAMIENTOS]?.toLowerCase().includes('uflo')
             );
@@ -312,7 +385,6 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
             setToastInfo({ message: 'Error al actualizar la práctica.', type: 'error' });
         } else {
             setToastInfo({ message: 'Práctica actualizada exitosamente.', type: 'success' });
-            // Refetch to ensure data integrity and correct section placement
             fetchData();
             success = true;
         }
@@ -325,6 +397,30 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
 
         return success;
     }, [fetchData]);
+
+    const handleUpdateInstitutionPhone = useCallback(async (institutionId: string, phone: string): Promise<boolean> => {
+      const { error: updateError } = await updateAirtableRecord(AIRTABLE_TABLE_NAME_INSTITUCIONES, institutionId, {
+          [FIELD_TELEFONO_INSTITUCIONES]: phone
+      });
+
+      if (updateError) {
+          setToastInfo({ message: 'Error al guardar el teléfono.', type: 'error' });
+          return false;
+      } else {
+          setToastInfo({ message: 'Teléfono guardado exitosamente.', type: 'success' });
+          setInstitutionsMap(prevMap => {
+              const newMap = new Map(prevMap);
+              for (const [key, value] of newMap.entries()) {
+                  if (value.id === institutionId) {
+                      newMap.set(key, { ...value, phone });
+                      break;
+                  }
+              }
+              return newMap;
+          });
+          return true;
+      }
+    }, []);
 
     const handleSync = async () => {
         if (!window.confirm('Esta acción buscará prácticas de los últimos dos años que no tengan un lanzamiento asociado y los creará. ¿Deseas continuar?')) {
@@ -425,8 +521,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                     successfulCreations++;
                 }
                 
-                // Esperar antes de la siguiente solicitud para evitar "rate limiting"
-                await new Promise(resolve => setTimeout(resolve, 250)); // ~4 requests per second
+                await new Promise(resolve => setTimeout(resolve, 250));
             }
 
             if (failedCreations > 0) {
@@ -435,7 +530,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
     
             setToastInfo({ message: `¡Éxito! Se sincronizaron ${successfulCreations} nuevas convocatorias.`, type: 'success' });
             
-            fetchData(); // Refetch data to update the view
+            fetchData();
     
         } catch (e: any) {
             setToastInfo({ message: e.message || 'Ocurrió un error inesperado durante la sincronización.', type: 'error' });
@@ -467,7 +562,6 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
         const today = new Date();
         today.setHours(0, 0, 0, 0);
     
-        // 1. Group all filtered PPS by institution name
         const ppsByInstitution = new Map<string, LanzamientoPPS[]>();
         for (const pps of filteredData) {
             const institutionName = pps[FIELD_NOMBRE_PPS_LANZAMIENTOS];
@@ -479,7 +573,6 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
             ppsByInstitution.get(normalizedName)!.push(pps);
         }
 
-        // 2. For each institution, find the single most recent record based on end date
         const latestPpsPerInstitution: LanzamientoPPS[] = [];
         for (const ppsList of ppsByInstitution.values()) {
             if (ppsList.length > 0) {
@@ -492,7 +585,6 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
             }
         }
     
-        // 3. Categorize these latest records
         const fin: LanzamientoPPS[] = [];
         const conf: LanzamientoPPS[] = [];
         const act: LanzamientoPPS[] = [];
@@ -530,6 +622,12 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
     
         return { finalizadasParaReactivar: fin, relanzamientosConfirmados: conf, activasYPorFinalizar: act };
     }, [filteredData]);
+    
+    const getInstitutionForPps = useCallback((pps: LanzamientoPPS) => {
+        const ppsName = pps[FIELD_NOMBRE_PPS_LANZAMIENTOS];
+        const normalizedPpsName = ppsName ? normalizeStringForComparison(ppsName) : '';
+        return institutionsMap.get(normalizedPpsName);
+    }, [institutionsMap]);
 
     const renderContent = () => {
         if (loadingState === 'loading' || loadingState === 'initial') return <Loader />;
@@ -558,7 +656,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                         {hasFinalizadas ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-4">
                                 {finalizadasParaReactivar.map(pps => (
-                                    <GestionCard key={pps.id} pps={pps} onSave={handleSave} isUpdating={updatingIds.has(pps.id)} cardType="finalizadasParaReactivar" />
+                                    <GestionCard key={pps.id} pps={pps} onSave={handleSave} isUpdating={updatingIds.has(pps.id)} cardType="finalizadasParaReactivar" institution={getInstitutionForPps(pps)} onSavePhone={handleUpdateInstitutionPhone} />
                                 ))}
                             </div>
                         ) : (
@@ -579,7 +677,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                         {hasConfirmados ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-4">
                                {relanzamientosConfirmados.map(pps => (
-                                    <GestionCard key={pps.id} pps={pps} onSave={handleSave} isUpdating={updatingIds.has(pps.id)} cardType="relanzamientosConfirmados" />
+                                    <GestionCard key={pps.id} pps={pps} onSave={handleSave} isUpdating={updatingIds.has(pps.id)} cardType="relanzamientosConfirmados" institution={getInstitutionForPps(pps)} onSavePhone={handleUpdateInstitutionPhone} />
                                ))}
                             </div>
                         ) : (
@@ -600,7 +698,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                         {hasActivas ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-4">
                                {activasYPorFinalizar.map(pps => (
-                                    <GestionCard key={pps.id} pps={pps} onSave={handleSave} isUpdating={updatingIds.has(pps.id)} cardType="activasYPorFinalizar" />
+                                    <GestionCard key={pps.id} pps={pps} onSave={handleSave} isUpdating={updatingIds.has(pps.id)} cardType="activasYPorFinalizar" institution={getInstitutionForPps(pps)} onSavePhone={handleUpdateInstitutionPhone} />
                                ))}
                             </div>
                         ) : (

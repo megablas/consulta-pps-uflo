@@ -150,9 +150,9 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
 
       // Fetch related data in parallel
       const [practicasRes, ppsRes, convocatoriasRes, lanzamientosRes] = await Promise.all([
-        fetchAllAirtableData<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS, [], `{${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}} = '${user.legajo}'`),
+        fetchAllAirtableData<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS, [], `SEARCH('${user.legajo}', ARRAYJOIN({${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}}))`),
         fetchAirtableData<SolicitudPPSFields>(AIRTABLE_TABLE_NAME_PPS, [], `{${FIELD_LEGAJO_PPS}} = '${user.legajo}'`, 50, [{ field: FIELD_ULTIMA_ACTUALIZACION_PPS, direction: 'desc' }]),
-        fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS, [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS, FIELD_INFORME_SUBIDO_CONVOCATORIAS], `{${FIELD_LEGAJO_CONVOCATORIAS}} = ${user.legajo}`),
+        fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS, [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS, FIELD_INFORME_SUBIDO_CONVOCATORIAS], `SEARCH('${user.legajo}', ARRAYJOIN({${FIELD_LEGAJO_CONVOCATORIAS}}))`),
         fetchAllAirtableData<LanzamientoPPSFields>(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, [], undefined, [{field: FIELD_FECHA_INICIO_LANZAMIENTOS, direction: 'desc'}])
       ]);
 
@@ -219,13 +219,21 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
               
               let isDateMatch = false;
               if (practicaStartDate && lanzamientoStartDate) {
-                  isDateMatch = practicaStartDate.getTime() === lanzamientoStartDate.getTime();
+                  const timeDiff = Math.abs(practicaStartDate.getTime() - lanzamientoStartDate.getTime());
+                  // Difference in days, allowing for a 7-day tolerance
+                  const dayDiff = timeDiff / (1000 * 3600 * 24);
+                  isDateMatch = dayDiff <= 7;
               }
 
               return isNameMatch && isDateMatch;
           });
+
+          // An InformeTask should only be created if there is a corresponding Practica record.
+          if (!practicaVinculada) {
+            return null;
+          }
           
-          const nota = practicaVinculada ? (practicaVinculada[FIELD_NOTA_PRACTICAS] || 'Sin calificar') : 'Sin calificar';
+          const nota = practicaVinculada[FIELD_NOTA_PRACTICAS] || 'Sin calificar';
 
           return {
               convocatoriaId: enrollment.id,

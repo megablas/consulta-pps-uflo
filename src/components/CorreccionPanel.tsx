@@ -104,8 +104,6 @@ const CorreccionPanel: React.FC = () => {
         const practicaKey = `${normalizeStringForComparison(studentLegajo)}-${normalizeStringForComparison(ppsName)}`;
         const practica = practicasMap.get(practicaKey);
 
-        if (!practica) continue;
-
         if (!ppsGroups.has(lanzamientoId)) {
           ppsGroups.set(lanzamientoId, {
             lanzamientoId: lanzamientoId,
@@ -121,9 +119,9 @@ const CorreccionPanel: React.FC = () => {
           studentId: studentId,
           studentName: studentName,
           convocatoriaId: conv.id,
-          practicaId: practica.id,
+          practicaId: practica?.id,
           informeSubido: !!conv.fields[FIELD_INFORME_SUBIDO_CONVOCATORIAS],
-          nota: practica.fields[FIELD_NOTA_PRACTICAS] || 'Sin calificar'
+          nota: practica?.fields?.[FIELD_NOTA_PRACTICAS] || 'Sin calificar'
         };
         
         ppsGroups.get(lanzamientoId)!.students.push(studentData);
@@ -220,7 +218,7 @@ const CorreccionPanel: React.FC = () => {
               const ppsGroup = newGroups.get(lanzamientoId);
               if (ppsGroup) {
                   ppsGroup.students.forEach(student => {
-                      if (selectedPracticaIds.includes(student.practicaId)) {
+                      if (student.practicaId && selectedPracticaIds.includes(student.practicaId)) {
                           student.nota = newNota;
                       }
                   });
@@ -251,7 +249,7 @@ const CorreccionPanel: React.FC = () => {
     const flatList: FlatCorreccionStudent[] = [];
     for (const group of filteredGroups) {
       for (const student of group.students) {
-        if (student.informeSubido && student.nota === 'Sin calificar') {
+        if (student.informeSubido && student.nota === 'Sin calificar' && student.practicaId) {
             const deadline = group.fechaFinalizacion ? addBusinessDays(new Date(group.fechaFinalizacion), 30) : undefined;
             flatList.push({ 
                 ...student, 

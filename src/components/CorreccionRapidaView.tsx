@@ -149,7 +149,7 @@ const CorreccionRapidaView: React.FC<CorreccionRapidaViewProps> = ({ students, o
             {sortedStudents.map(student => {
               const deadlineVisuals = getDeadlineVisuals(student.correctionDeadline);
               return (
-                <tr key={student.practicaId} className={`transition-colors duration-1000 ${justUpdatedPracticaId === student.practicaId ? 'bg-green-100' : 'hover:bg-slate-50/50'}`}>
+                <tr key={student.convocatoriaId} className={`transition-colors duration-1000 ${justUpdatedPracticaId === student.practicaId ? 'bg-green-100' : 'hover:bg-slate-50/50'}`}>
                   <td className="p-3 font-medium text-slate-800">
                     <HighlightedText text={student.studentName} highlight={searchTerm} />
                   </td>
@@ -163,8 +163,8 @@ const CorreccionRapidaView: React.FC<CorreccionRapidaViewProps> = ({ students, o
                     <div className="flex items-center gap-2">
                       <NotaSelector
                         value={student.nota || 'Sin calificar'}
-                        onChange={(e) => handleNotaChange(student.practicaId, e)}
-                        disabled={!student.informeSubido}
+                        onChange={(e) => student.practicaId && handleNotaChange(student.practicaId, e)}
+                        disabled={!student.informeSubido || !student.practicaId}
                         isSaving={updatingNotaId === student.practicaId}
                         ariaLabel={`Nota para ${student.studentName} en ${student.ppsName}`}
                       />
