@@ -5,16 +5,15 @@ import {
     FIELD_LEGAJO_ESTUDIANTES, 
     FIELD_NOMBRE_ESTUDIANTES,
 } from '../constants';
-import type { EstudianteFields, AirtableRecord } from '../types';
+import type { EstudianteFields } from '../types';
 
 interface AdminSearchProps {
-  onViewStudent: (student: { legajo: string, nombre: string }) => void;
-  onEnrollStudent?: (student: AirtableRecord<EstudianteFields>) => void;
+  onStudentSelect: (student: { legajo: string, nombre: string }) => void;
 }
 
-const AdminSearch: React.FC<AdminSearchProps> = ({ onViewStudent, onEnrollStudent }) => {
+const AdminSearch: React.FC<AdminSearchProps> = ({ onStudentSelect }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [results, setResults] = useState<AirtableRecord<EstudianteFields>[]>([]);
+  const [results, setResults] = useState<EstudianteFields[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -25,8 +24,11 @@ const AdminSearch: React.FC<AdminSearchProps> = ({ onViewStudent, onEnrollStuden
       return;
     }
     setIsLoading(true);
+    // Escape double quotes and convert to lowercase for a guaranteed case-insensitive search
     const cleanedTerm = term.replace(/"/g, '\\"').toLowerCase();
     
+    // Wrap the {Nombre} field in LOWER() to match against the lowercased search term.
+    // This makes the search robustly case-insensitive.
     const formula = `OR(
         SEARCH("${cleanedTerm}", LOWER({${FIELD_NOMBRE_ESTUDIANTES}})),
         SEARCH("${cleanedTerm}", {${FIELD_LEGAJO_ESTUDIANTES}} & '')
@@ -36,11 +38,11 @@ const AdminSearch: React.FC<AdminSearchProps> = ({ onViewStudent, onEnrollStuden
         AIRTABLE_TABLE_NAME_ESTUDIANTES,
         [FIELD_NOMBRE_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES],
         formula,
-        7
+        7 // max 7 results
     );
     
     if (!error) {
-      setResults(records);
+      setResults(records.map(r => r.fields));
     }
     setIsLoading(false);
   }, []);
@@ -48,7 +50,7 @@ const AdminSearch: React.FC<AdminSearchProps> = ({ onViewStudent, onEnrollStuden
   useEffect(() => {
     const handler = setTimeout(() => {
       fetchMatches(searchTerm);
-    }, 300);
+    }, 300); // Debounce time
 
     return () => {
       clearTimeout(handler);
@@ -66,6 +68,17 @@ const AdminSearch: React.FC<AdminSearchProps> = ({ onViewStudent, onEnrollStuden
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  const handleSelect = (student: EstudianteFields) => {
+    const legajo = student[FIELD_LEGAJO_ESTUDIANTES];
+    const nombre = student[FIELD_NOMBRE_ESTUDIANTES];
+    if (legajo && nombre) {
+      onStudentSelect({ legajo, nombre });
+      setSearchTerm('');
+      setResults([]);
+      setIsDropdownOpen(false);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -102,38 +115,15 @@ const AdminSearch: React.FC<AdminSearchProps> = ({ onViewStudent, onEnrollStuden
                     </div>
                 ) : results.length > 0 ? (
                     <ul>
-                        {results.map((student) => (
-                             <li key={student.id} className="w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors flex justify-between items-center">
-                                <div>
-                                    <span className="font-medium text-slate-800">{student.fields[FIELD_NOMBRE_ESTUDIANTES]}</span>
-                                    <span className="text-sm text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full ml-2">{student.fields[FIELD_LEGAJO_ESTUDIANTES]}</span>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button
-                                    onClick={() => {
-                                        onViewStudent({ legajo: student.fields[FIELD_LEGAJO_ESTUDIANTES]!, nombre: student.fields[FIELD_NOMBRE_ESTUDIANTES]! });
-                                        setIsDropdownOpen(false);
-                                        setSearchTerm('');
-                                        setResults([]);
-                                    }}
-                                    className="px-3 py-1 text-sm font-semibold text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors"
-                                    >
-                                    Ver Panel
-                                    </button>
-                                    {onEnrollStudent && (
-                                    <button
-                                        onClick={() => {
-                                            onEnrollStudent(student);
-                                            setIsDropdownOpen(false);
-                                            setSearchTerm('');
-                                            setResults([]);
-                                        }}
-                                        className="px-3 py-1 text-sm font-semibold text-emerald-700 bg-emerald-100 rounded-md hover:bg-emerald-200 transition-colors"
-                                    >
-                                        Inscribir
-                                    </button>
-                                    )}
-                                </div>
+                        {results.map((student, index) => (
+                            <li key={student[FIELD_LEGAJO_ESTUDIANTES] || index}>
+                                <button
+                                    onClick={() => handleSelect(student)}
+                                    className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex justify-between items-center"
+                                >
+                                    <span className="font-medium text-slate-800">{student[FIELD_NOMBRE_ESTUDIANTES]}</span>
+                                    <span className="text-sm text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{student[FIELD_LEGAJO_ESTUDIANTES]}</span>
+                                </button>
                             </li>
                         ))}
                     </ul>

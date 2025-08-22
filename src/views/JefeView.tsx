@@ -105,7 +105,7 @@ const JefeView: React.FC = () => {
             label: 'Buscar Estudiante',
             icon: 'person_search',
             isClosable: false,
-            content: <div className="p-4"><AdminSearch onViewStudent={handleStudentSelect} /></div>
+            content: <div className="p-4"><AdminSearch onStudentSelect={handleStudentSelect} /></div>
         },
         ...studentTabs.map(student => ({
             id: student.id,
