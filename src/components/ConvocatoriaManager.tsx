@@ -399,18 +399,32 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                 return;
             }
     
-            const createPromises = newLaunchesToCreate.map(launchData => 
-                createAirtableRecord(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, launchData)
-            );
-            
-            const results = await Promise.all(createPromises);
-            const failedCreations = results.filter(res => res.error);
-    
-            if (failedCreations.length > 0) {
-                 throw new Error(`${failedCreations.length} de ${newLaunchesToCreate.length} lanzamientos no pudieron crearse.`);
+            let successfulCreations = 0;
+            let failedCreations = 0;
+            const totalToCreate = newLaunchesToCreate.length;
+
+            for (let i = 0; i < totalToCreate; i++) {
+                const launchData = newLaunchesToCreate[i];
+                setToastInfo({ message: `Sincronizando ${i + 1} de ${totalToCreate}...`, type: 'success' });
+
+                const { error } = await createAirtableRecord(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, launchData);
+                
+                if (error) {
+                    failedCreations++;
+                    console.error(`Error al crear el lanzamiento para ${launchData[FIELD_NOMBRE_PPS_LANZAMIENTOS]}:`, error);
+                } else {
+                    successfulCreations++;
+                }
+                
+                // Esperar antes de la siguiente solicitud para evitar "rate limiting"
+                await new Promise(resolve => setTimeout(resolve, 250)); // ~4 requests per second
+            }
+
+            if (failedCreations > 0) {
+                 throw new Error(`${failedCreations} de ${totalToCreate} lanzamientos no pudieron crearse. Revisa la consola para más detalles.`);
             }
     
-            setToastInfo({ message: `¡Éxito! Se sincronizaron ${newLaunchesToCreate.length} nuevas convocatorias.`, type: 'success' });
+            setToastInfo({ message: `¡Éxito! Se sincronizaron ${successfulCreations} nuevas convocatorias.`, type: 'success' });
             
             fetchData(); // Refetch data to update the view
     
