@@ -160,13 +160,20 @@ const CorreccionRapidaView: React.FC<CorreccionRapidaViewProps> = ({ students, o
                       {deadlineVisuals.text}
                   </td>
                   <td className="p-3">
-                    <NotaSelector
-                      value={student.nota || 'Sin calificar'}
-                      onChange={(e) => handleNotaChange(student.practicaId, e)}
-                      disabled={!student.informeSubido}
-                      isSaving={updatingNotaId === student.practicaId}
-                      ariaLabel={`Nota para ${student.studentName} en ${student.ppsName}`}
-                    />
+                    <div className="flex items-center gap-2">
+                      <NotaSelector
+                        value={student.nota || 'Sin calificar'}
+                        onChange={(e) => handleNotaChange(student.practicaId, e)}
+                        disabled={!student.informeSubido}
+                        isSaving={updatingNotaId === student.practicaId}
+                        ariaLabel={`Nota para ${student.studentName} en ${student.ppsName}`}
+                      />
+                      {justUpdatedPracticaId === student.practicaId && (
+                        <span className="text-xs font-bold text-emerald-600 animate-fade-in-up" style={{ animationDuration: '300ms' }}>
+                            Guardado ✓
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="p-3 text-center">
                     {student.informeLink && (

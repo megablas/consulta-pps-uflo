@@ -58,11 +58,14 @@ const PracticasTable: React.FC = () => {
   const { practicas, handleNotaChange } = useData();
   const [sortConfig, setSortConfig] = useState<{ key: string | null; direction: 'ascending' | 'descending' }>({ key: 'fechaInicio', direction: 'descending' });
   const [savingNotaId, setSavingNotaId] = useState<string | null>(null);
+  const [justUpdatedPracticaId, setJustUpdatedPracticaId] = useState<string | null>(null);
 
   const handleLocalNotaChange = (practicaId: string, nota: string) => {
     handleNotaChange(practicaId, nota);
     setSavingNotaId(practicaId);
+    setJustUpdatedPracticaId(practicaId);
     setTimeout(() => setSavingNotaId(null), 1000);
+    setTimeout(() => setJustUpdatedPracticaId(null), 1500);
   };
 
   const sortedPracticas = useMemo(() => {
@@ -149,7 +152,12 @@ const PracticasTable: React.FC = () => {
             const notaClass = notaColors[nota] || notaColors['Sin calificar'];
 
             return (
-              <tr key={practica.id} className="transition-all duration-300 hover:bg-slate-50 hover:shadow-sm">
+              <tr 
+                key={practica.id} 
+                className={`transition-all duration-1000 ${
+                  justUpdatedPracticaId === practica.id ? 'bg-green-100' : 'hover:bg-slate-50 hover:shadow-sm'
+                }`}
+              >
                 <td className="p-4 align-middle text-sm text-slate-900 font-semibold break-words text-left">{institucion || 'N/A'}</td>
                 <td className="p-4 align-middle text-center">
                   <span className={`${getEspecialidadClasses(practica[FIELD_ESPECIALIDAD_PRACTICAS]).tag} shadow-sm`}>
