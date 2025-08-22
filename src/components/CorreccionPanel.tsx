@@ -242,8 +242,11 @@ const CorreccionPanel: React.FC = () => {
       ? new Set((authenticatedUser?.orientaciones || []).map(normalizeStringForComparison))
       : new Set(managerConfig[activeManager].orientations.map(normalizeStringForComparison));
 
-    let filteredGroups = Array.from(allPpsGroups.values())
-      .filter(group => managerOrientations.has(normalizeStringForComparison(group.orientacion)));
+    let filteredGroups = Array.from(allPpsGroups.values()).filter(group => {
+        const groupOrientations = (group.orientacion || '').split(',').map(o => normalizeStringForComparison(o.trim()));
+        // Check if any of the group's orientations match any of the manager's orientations
+        return groupOrientations.some(o => managerOrientations.has(o));
+    });
 
     const flatList: FlatCorreccionStudent[] = [];
     for (const group of filteredGroups) {
@@ -307,7 +310,7 @@ const CorreccionPanel: React.FC = () => {
     return (
       <div className="space-y-8">
         {noContentForManager ? (
-           <EmptyState icon="person_search_off" title="Sin Resultados" message={`No se encontraron Prácticas de ${isJefeMode ? authenticatedUser?.orientaciones?.join(' o ') : managerConfig[activeManager].orientations.join(' o ')} que coincidan con la búsqueda.`} />
+           <EmptyState icon="person_search_off" title="Sin Resultados" message={`No se encontraron Prácticas de ${isJefeMode ? authenticatedUser?.orientaciones?.join(' & ') : managerConfig[activeManager].orientations.join(' o ')} que coincidan con la búsqueda.`} />
         ) : (
           <>
             <CollapsibleSection title="Pendientes de Corrección" count={managerData.pendientes.length} defaultOpen>

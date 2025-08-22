@@ -53,7 +53,10 @@ const JefeWelcomeBanner: React.FC<{ name: string }> = ({ name }) => {
 const JefeView: React.FC = () => {
     const { authenticatedUser } = useAuth();
     const [studentTabs, setStudentTabs] = useState<StudentTab[]>([]);
-    const [activeTabId, setActiveTabId] = useState('correccion');
+    
+    const jefeOrientations = authenticatedUser?.orientaciones || [];
+    const initialTabId = jefeOrientations.length > 0 ? 'manager-jefe' : 'correccion';
+    const [activeTabId, setActiveTabId] = useState(initialTabId);
 
     const handleStudentSelect = useCallback((student: { legajo: string, nombre: string }) => {
         if (studentTabs.some(s => s.legajo === student.legajo)) {
@@ -72,13 +75,21 @@ const JefeView: React.FC = () => {
     
     const handleCloseTab = useCallback((tabId: string) => {
         setStudentTabs(prev => prev.filter(s => s.id !== tabId));
-        // If the closed tab was active, switch to the default tab
+        // If the closed tab was active, switch to a sensible default
         if (activeTabId === tabId) {
-            setActiveTabId('correccion');
+            setActiveTabId(initialTabId);
         }
-    }, [activeTabId]);
-
-    const jefeOrientation = authenticatedUser?.orientaciones?.[0];
+    }, [activeTabId, initialTabId]);
+    
+    const managerTabs = jefeOrientations.length > 0
+      ? [{
+          id: 'manager-jefe',
+          label: 'Gestionar PPS',
+          icon: 'dashboard',
+          isClosable: false,
+          content: <ConvocatoriaManager forcedOrientations={jefeOrientations} />
+        }]
+      : [];
 
     const allTabs = [
         {
@@ -88,13 +99,7 @@ const JefeView: React.FC = () => {
             isClosable: false,
             content: <CorreccionPanel />
         },
-        {
-            id: 'manager',
-            label: `Gestionar PPS ${jefeOrientation ? `(${jefeOrientation})` : ''}`.trim(),
-            icon: 'dashboard',
-            isClosable: false,
-            content: <ConvocatoriaManager forcedOrientation={jefeOrientation} />
-        },
+        ...managerTabs,
         {
             id: 'search',
             label: 'Buscar Estudiante',

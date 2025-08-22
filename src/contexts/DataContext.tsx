@@ -5,8 +5,8 @@ import {
   LanzamientoPPSFields, ConvocatoriaFields, ALL_ORIENTACIONES, InformeTask
 } from '../types';
 import { HORAS_OBJETIVO_TOTAL, HORAS_OBJETIVO_ORIENTACION, ROTACION_OBJETIVO_ORIENTACIONES, AIRTABLE_TABLE_NAME_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES, FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES, AIRTABLE_TABLE_NAME_PRACTICAS, FIELD_HORAS_PRACTICAS, FIELD_NOTA_PRACTICAS, FIELD_ESPECIALIDAD_PRACTICAS, AIRTABLE_TABLE_NAME_PPS, FIELD_LEGAJO_PPS, FIELD_EMPRESA_PPS_SOLICITUD, FIELD_ESTADO_PPS, FIELD_NOTAS_PPS, FIELD_ULTIMA_ACTUALIZACION_PPS, AIRTABLE_TABLE_NAME_CONVOCATORIAS, FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_NOMBRE_PPS_CONVOCATORIAS, FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS, FIELD_FECHA_INICIO_LANZAMIENTOS, FIELD_NOMBRE_PPS_LANZAMIENTOS, FIELD_FECHA_FIN_LANZAMIENTOS, FIELD_DIRECCION_LANZAMIENTOS, FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS, FIELD_ORIENTACION_LANZAMIENTOS, FIELD_HORAS_ACREDITADAS_LANZAMIENTOS, FIELD_DNI_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_FECHA_NACIMIENTO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES, FIELD_TERMINO_CURSAR_CONVOCATORIAS, FIELD_CURSANDO_ELECTIVAS_CONVOCATORIAS, FIELD_FINALES_ADEUDA_CONVOCATORIAS, FIELD_OTRA_SITUACION_CONVOCATORIAS, FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS as FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS, FIELD_DNI_CONVOCATORIAS, FIELD_CORREO_CONVOCATORIAS, FIELD_FECHA_NACIMIENTO_CONVOCATORIAS, FIELD_TELEFONO_CONVOCATORIAS, FIELD_LEGAJO_CONVOCATORIAS, FIELD_FECHA_INICIO_CONVOCATORIAS, FIELD_FECHA_FIN_CONVOCATORIAS, FIELD_DIRECCION_CONVOCATORIAS, FIELD_HORARIO_FORMULA_CONVOCATORIAS, FIELD_ORIENTACION_CONVOCATORIAS, FIELD_NOMBRE_ESTUDIANTES, FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS, FIELD_FECHA_INICIO_PRACTICAS, FIELD_FECHA_FIN_PRACTICAS, FIELD_ESTADO_PRACTICA, FIELD_GENERO_ESTUDIANTES, FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS, FIELD_HORAS_ACREDITADAS_CONVOCATORIAS, FIELD_CUPOS_DISPONIBLES_CONVOCATORIAS, FIELD_INFORME_LANZAMIENTOS, FIELD_INFORME_SUBIDO_CONVOCATORIAS, FIELD_NOMBRE_BUSQUEDA_PRACTICAS } from '../constants';
-import { fetchAirtableData, updateAirtableRecord, createAirtableRecord } from '../services/airtableService';
-import { normalizeStringForComparison } from '../utils/formatters';
+import { fetchAirtableData, updateAirtableRecord, createAirtableRecord, fetchAllAirtableData } from '../services/airtableService';
+import { normalizeStringForComparison, parseToUTCDate } from '../utils/formatters';
 import type { AuthUser } from './AuthContext';
 import { useModal } from './ModalContext';
 
@@ -150,10 +150,10 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
 
       // Fetch related data in parallel
       const [practicasRes, ppsRes, convocatoriasRes, lanzamientosRes] = await Promise.all([
-        fetchAirtableData<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS, [], `{${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}} = '${user.legajo}'`),
+        fetchAllAirtableData<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS, [], `{${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}} = '${user.legajo}'`),
         fetchAirtableData<SolicitudPPSFields>(AIRTABLE_TABLE_NAME_PPS, [], `{${FIELD_LEGAJO_PPS}} = '${user.legajo}'`, 50, [{ field: FIELD_ULTIMA_ACTUALIZACION_PPS, direction: 'desc' }]),
-        fetchAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS, [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS, FIELD_INFORME_SUBIDO_CONVOCATORIAS], `{${FIELD_LEGAJO_CONVOCATORIAS}} = ${user.legajo}`),
-        fetchAirtableData<LanzamientoPPSFields>(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, [], undefined, 100, [{field: FIELD_FECHA_INICIO_LANZAMIENTOS, direction: 'desc'}])
+        fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS, [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS, FIELD_INFORME_SUBIDO_CONVOCATORIAS], `{${FIELD_LEGAJO_CONVOCATORIAS}} = ${user.legajo}`),
+        fetchAllAirtableData<LanzamientoPPSFields>(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, [], undefined, [{field: FIELD_FECHA_INICIO_LANZAMIENTOS, direction: 'desc'}])
       ]);
 
       if (practicasRes.error) throw new Error('Error al cargar prácticas.');
@@ -172,14 +172,31 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
 
       const openLanzamientos = allLanzamientos.filter(l => {
           const status = normalizeStringForComparison(l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]);
-          return status === 'abierta' || status === 'abierto';
+          
+          if (status === 'abierta' || status === 'abierto') {
+              return true;
+          }
+      
+          const endDateString = l[FIELD_FECHA_FIN_LANZAMIENTOS];
+          if (!status && endDateString) {
+              const today = new Date();
+              today.setHours(0, 0, 0, 0); // Normalize today to the start of the day
+              
+              const endDate = parseToUTCDate(endDateString);
+              
+              if (endDate) { // Check if endDate is not null (i.e., parsing was successful)
+                  return endDate.getTime() >= today.getTime();
+              }
+          }
+      
+          return false;
       });
       setLanzamientos(openLanzamientos);
 
       const informeTasksData = myEnrollmentsData
         .map((enrollment): InformeTask | null => {
-          // An "Informe" task should only be created if the student was selected for the PPS.
-          if (enrollment[FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS] !== 'Seleccionado') {
+          const enrollmentStatus = normalizeStringForComparison(enrollment[FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS]);
+          if (!enrollmentStatus.includes('seleccionado')) {
             return null;
           }
           
@@ -187,12 +204,28 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
           if (!lanzamientoId) return null;
 
           const lanzamiento = allLanzamientos.find(l => l.id === lanzamientoId);
-          if (!lanzamiento || !lanzamiento[FIELD_INFORME_LANZAMIENTOS] || !lanzamiento[FIELD_FECHA_FIN_LANZAMIENTOS]) return null;
+          if (!lanzamiento || !lanzamiento[FIELD_INFORME_LANZAMIENTOS] || !lanzamiento[FIELD_FECHA_FIN_LANZAMIENTOS]) {
+            return null;
+          }
           
           const practicaVinculada = allPracticas.find(p => {
-              const ppsName = (p[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS] || [])[0];
-              return normalizeStringForComparison(ppsName) === normalizeStringForComparison(lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS]);
+              const ppsNameRaw = p[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
+              const ppsName = Array.isArray(ppsNameRaw) ? ppsNameRaw[0] : ppsNameRaw;
+
+              const practicaStartDate = parseToUTCDate(p[FIELD_FECHA_INICIO_PRACTICAS]);
+              const lanzamientoStartDate = parseToUTCDate(lanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+              
+              const isNameMatch = normalizeStringForComparison(ppsName) === normalizeStringForComparison(lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS]);
+              
+              let isDateMatch = false;
+              if (practicaStartDate && lanzamientoStartDate) {
+                  isDateMatch = practicaStartDate.getTime() === lanzamientoStartDate.getTime();
+              }
+
+              return isNameMatch && isDateMatch;
           });
+          
+          const nota = practicaVinculada ? (practicaVinculada[FIELD_NOTA_PRACTICAS] || 'Sin calificar') : 'Sin calificar';
 
           return {
               convocatoriaId: enrollment.id,
@@ -200,7 +233,7 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
               informeLink: lanzamiento[FIELD_INFORME_LANZAMIENTOS],
               fechaFinalizacion: lanzamiento[FIELD_FECHA_FIN_LANZAMIENTOS],
               informeSubido: !!enrollment[FIELD_INFORME_SUBIDO_CONVOCATORIAS],
-              nota: practicaVinculada ? practicaVinculada[FIELD_NOTA_PRACTICAS] : 'Sin calificar',
+              nota: nota,
           };
         })
         .filter((task): task is InformeTask => task !== null)

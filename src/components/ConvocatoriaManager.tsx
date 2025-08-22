@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { fetchAllAirtableData, updateAirtableRecord } from '../services/airtableService';
-import type { LanzamientoPPS } from '../types';
+import { fetchAllAirtableData, updateAirtableRecord, createAirtableRecord } from '../services/airtableService';
+import type { LanzamientoPPS, Practica } from '../types';
 import {
   AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
   FIELD_NOMBRE_PPS_LANZAMIENTOS,
@@ -10,6 +10,14 @@ import {
   FIELD_NOTAS_GESTION_LANZAMIENTOS,
   FIELD_FECHA_INICIO_LANZAMIENTOS,
   FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS,
+  AIRTABLE_TABLE_NAME_PRACTICAS,
+  FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS,
+  FIELD_ESPECIALIDAD_PRACTICAS,
+  FIELD_HORAS_PRACTICAS,
+  FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS,
+  FIELD_FECHA_INICIO_PRACTICAS,
+  FIELD_FECHA_FIN_PRACTICAS,
+  FIELD_HORAS_ACREDITADAS_LANZAMIENTOS,
 } from '../constants';
 import Loader from './Loader';
 import EmptyState from './EmptyState';
@@ -244,10 +252,10 @@ const CollapsibleSection: React.FC<{ title: string; count: number; children: Rea
 );
 
 interface ConvocatoriaManagerProps {
-  forcedOrientation?: string;
+  forcedOrientations?: string[];
 }
 
-const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrientation }) => {
+const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrientations }) => {
     const [lanzamientos, setLanzamientos] = useState<LanzamientoPPS[]>([]);
     const [loadingState, setLoadingState] = useState<LoadingState>('initial');
     const [error, setError] = useState<string | null>(null);
@@ -255,6 +263,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
     const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
     const [searchTerm, setSearchTerm] = useState('');
     const [orientationFilter, setOrientationFilter] = useState('all');
+    const [isSyncing, setIsSyncing] = useState(false);
 
     const fetchData = useCallback(async () => {
         setLoadingState('loading');
@@ -313,23 +322,121 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
         return success;
     }, [fetchData]);
 
+    const handleSync = async () => {
+        if (!window.confirm('Esta acción buscará prácticas de los últimos dos años que no tengan un lanzamiento asociado y los creará. ¿Deseas continuar?')) {
+            return;
+        }
+        
+        setIsSyncing(true);
+        setToastInfo({ message: 'Iniciando sincronización de prácticas antiguas...', type: 'success' });
+    
+        try {
+            const existingLaunchKeys = new Set(
+                lanzamientos.map(l => {
+                    const name = l[FIELD_NOMBRE_PPS_LANZAMIENTOS] || '';
+                    const date = l[FIELD_FECHA_INICIO_LANZAMIENTOS] || '';
+                    if (!name || !date) return '';
+                    return `${normalizeStringForComparison(name)}-${date}`;
+                }).filter(Boolean)
+            );
+    
+            const currentYear = new Date().getFullYear();
+            const lastYearStart = new Date(currentYear - 1, 0, 1).toISOString().split('T')[0];
+            const filterFormula = `IS_AFTER({${FIELD_FECHA_INICIO_PRACTICAS}}, DATETIME_PARSE('${lastYearStart}', 'YYYY-MM-DD'))`;
+    
+            const { records: recentPracticas, error: practicasError } = await fetchAllAirtableData<Practica>(
+                AIRTABLE_TABLE_NAME_PRACTICAS,
+                [
+                    FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS,
+                    FIELD_FECHA_INICIO_PRACTICAS,
+                    FIELD_FECHA_FIN_PRACTICAS,
+                    FIELD_ESPECIALIDAD_PRACTICAS,
+                    FIELD_HORAS_PRACTICAS,
+                ],
+                filterFormula
+            );
+    
+            if (practicasError) throw new Error('Error al obtener las prácticas antiguas desde Airtable.');
+    
+            const groupedPracticas = new Map<string, Practica[]>();
+            for (const practica of recentPracticas.map(p => ({ ...p.fields, id: p.id }))) {
+                const nameRaw = practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
+                const name = Array.isArray(nameRaw) ? nameRaw[0] : nameRaw;
+                const date = practica[FIELD_FECHA_INICIO_PRACTICAS];
+    
+                if (!name || !date) continue;
+                
+                const key = `${normalizeStringForComparison(name)}-${date}`;
+                if (!groupedPracticas.has(key)) {
+                    groupedPracticas.set(key, []);
+                }
+                groupedPracticas.get(key)!.push(practica);
+            }
+    
+            const newLaunchesToCreate: Partial<LanzamientoPPS>[] = [];
+            for (const [key, practicasGroup] of groupedPracticas.entries()) {
+                if (!existingLaunchKeys.has(key)) {
+                    const templatePractica = practicasGroup[0];
+                    const nameRaw = templatePractica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
+                    const newLaunch = {
+                        [FIELD_NOMBRE_PPS_LANZAMIENTOS]: Array.isArray(nameRaw) ? nameRaw[0] : nameRaw,
+                        [FIELD_FECHA_INICIO_LANZAMIENTOS]: templatePractica[FIELD_FECHA_INICIO_PRACTICAS],
+                        [FIELD_FECHA_FIN_LANZAMIENTOS]: templatePractica[FIELD_FECHA_FIN_PRACTICAS],
+                        [FIELD_ORIENTACION_LANZAMIENTOS]: templatePractica[FIELD_ESPECIALIDAD_PRACTICAS],
+                        [FIELD_HORAS_ACREDITADAS_LANZAMIENTOS]: templatePractica[FIELD_HORAS_PRACTICAS],
+                        [FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]: 'Cerrado',
+                        [FIELD_ESTADO_GESTION_LANZAMIENTOS]: 'Archivado',
+                    };
+                    newLaunchesToCreate.push(newLaunch);
+                }
+            }
+    
+            if (newLaunchesToCreate.length === 0) {
+                setToastInfo({ message: 'No se encontraron nuevas prácticas para sincronizar. Todo está al día.', type: 'success' });
+                setIsSyncing(false);
+                return;
+            }
+    
+            const createPromises = newLaunchesToCreate.map(launchData => 
+                createAirtableRecord(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, launchData)
+            );
+            
+            const results = await Promise.all(createPromises);
+            const failedCreations = results.filter(res => res.error);
+    
+            if (failedCreations.length > 0) {
+                 throw new Error(`${failedCreations.length} de ${newLaunchesToCreate.length} lanzamientos no pudieron crearse.`);
+            }
+    
+            setToastInfo({ message: `¡Éxito! Se sincronizaron ${newLaunchesToCreate.length} nuevas convocatorias.`, type: 'success' });
+            
+            fetchData(); // Refetch data to update the view
+    
+        } catch (e: any) {
+            setToastInfo({ message: e.message || 'Ocurrió un error inesperado durante la sincronización.', type: 'error' });
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
     const filteredData = useMemo(() => {
         return lanzamientos.filter(pps => {
             const matchesSearch = searchTerm === '' || normalizeStringForComparison(pps[FIELD_NOMBRE_PPS_LANZAMIENTOS]).includes(normalizeStringForComparison(searchTerm));
             
-            const ppsOrientation = normalizeStringForComparison(pps[FIELD_ORIENTACION_LANZAMIENTOS]);
+            const ppsOrientations = (pps[FIELD_ORIENTACION_LANZAMIENTOS] || '').split(',').map(o => normalizeStringForComparison(o.trim()));
 
-            if (forcedOrientation) {
-                const requiredOrientation = normalizeStringForComparison(forcedOrientation);
-                return matchesSearch && ppsOrientation === requiredOrientation;
+            if (forcedOrientations && forcedOrientations.length > 0) {
+                const requiredOrientations = forcedOrientations.map(o => normalizeStringForComparison(o));
+                const hasMatchingOrientation = ppsOrientations.some(po => requiredOrientations.includes(po));
+                return matchesSearch && hasMatchingOrientation;
             }
             
             const selectedOrientation = normalizeStringForComparison(orientationFilter);
-            const matchesOrientation = selectedOrientation === 'all' || ppsOrientation === selectedOrientation;
+            const matchesOrientation = selectedOrientation === 'all' || ppsOrientations.includes(selectedOrientation);
             
             return matchesSearch && matchesOrientation;
         });
-    }, [lanzamientos, searchTerm, orientationFilter, forcedOrientation]);
+    }, [lanzamientos, searchTerm, orientationFilter, forcedOrientations]);
 
     const { finalizadasParaReactivar, relanzamientosConfirmados, activasYPorFinalizar } = useMemo(() => {
         const today = new Date();
@@ -408,7 +515,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
         const hasFinalizadas = finalizadasParaReactivar.length > 0;
         const hasConfirmados = relanzamientosConfirmados.length > 0;
 
-        if (!hasActivas && !hasFinalizadas && !hasConfirmados && (searchTerm || orientationFilter !== 'all' || forcedOrientation)) {
+        if (!hasActivas && !hasFinalizadas && !hasConfirmados && (searchTerm || orientationFilter !== 'all' || (forcedOrientations && forcedOrientations.length > 0))) {
             return <EmptyState icon="search_off" title="Sin Resultados" message="No se encontraron prácticas que coincidan con los filtros aplicados." />;
         }
 
@@ -486,35 +593,50 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
             
             <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/60">
                 <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
-                    <div className="relative w-full sm:w-80">
-                        <input
-                            type="text"
-                            placeholder="Buscar por institución..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors"
-                        />
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 material-icons text-slate-400">search</span>
+                    <div className="flex-grow flex flex-col sm:flex-row gap-4">
+                        <div className="relative w-full sm:w-80">
+                            <input
+                                type="text"
+                                placeholder="Buscar por institución..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors"
+                            />
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 material-icons text-slate-400">search</span>
+                        </div>
+                        
+                        {!forcedOrientations ? (
+                            <div className="relative w-full sm:w-60">
+                                <select 
+                                value={orientationFilter} 
+                                onChange={(e) => setOrientationFilter(e.target.value)}
+                                className="w-full appearance-none pl-4 pr-10 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors"
+                                >
+                                    <option value="all">Todas las Orientaciones</option>
+                                    {ALL_ORIENTACIONES.map(o => <option key={o} value={o}>{o}</option>)}
+                                </select>
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 material-icons text-slate-400 pointer-events-none">expand_more</span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2 bg-blue-100 text-blue-800 text-sm font-semibold px-3 py-2 rounded-lg border border-blue-200/80">
+                                <span className="material-icons !text-base">filter_alt</span>
+                                <span>Mostrando: {forcedOrientations.join(' & ')}</span>
+                            </div>
+                        )}
                     </div>
-                    
-                    {!forcedOrientation ? (
-                        <div className="relative w-full sm:w-60">
-                            <select 
-                            value={orientationFilter} 
-                            onChange={(e) => setOrientationFilter(e.target.value)}
-                            className="w-full appearance-none pl-4 pr-10 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors"
-                            >
-                                <option value="all">Todas las Orientaciones</option>
-                                {ALL_ORIENTACIONES.map(o => <option key={o} value={o}>{o}</option>)}
-                            </select>
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 material-icons text-slate-400 pointer-events-none">expand_more</span>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-2 bg-blue-100 text-blue-800 text-sm font-semibold px-3 py-2 rounded-lg border border-blue-200/80">
-                            <span className="material-icons !text-base">filter_alt</span>
-                            <span>Mostrando: {forcedOrientation}</span>
-                        </div>
-                    )}
+                    <div className="w-full sm:w-auto">
+                        <button
+                            onClick={handleSync}
+                            disabled={isSyncing}
+                            className="w-full sm:w-auto bg-indigo-600 text-white font-bold py-2.5 px-5 rounded-lg text-sm transition-colors shadow-md disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-indigo-700"
+                        >
+                            {isSyncing ? (
+                                <><div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin"/><span>Sincronizando...</span></>
+                            ) : (
+                                <><span className="material-icons !text-base">sync</span><span>Sincronizar Prácticas Antiguas</span></>
+                            )}
+                        </button>
+                    </div>
                 </div>
             </div>
 
