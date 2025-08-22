@@ -16,7 +16,7 @@ export interface SolicitudPPSFields {
 
 export interface PracticaFields {
   [key:string]: any; // Allow other fields
-  'Nombre busqueda'?: string[]; // Lookup field, can be array
+  'Legajo Busqueda'?: (string|number)[]; // Lookup field, can be array of strings or numbers
   'Nombre (de Institución)'?: string[]; // Lookup field
   'Horas Realizadas'?: number;
   'Fecha de Inicio'?: string; // Date string
