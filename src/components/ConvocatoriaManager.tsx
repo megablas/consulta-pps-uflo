@@ -18,6 +18,7 @@ import {
   FIELD_FECHA_INICIO_PRACTICAS,
   FIELD_FECHA_FIN_PRACTICAS,
   FIELD_HORAS_ACREDITADAS_LANZAMIENTOS,
+  FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS,
 } from '../constants';
 import Loader from './Loader';
 import EmptyState from './EmptyState';
@@ -384,6 +385,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                         [FIELD_FECHA_FIN_LANZAMIENTOS]: templatePractica[FIELD_FECHA_FIN_PRACTICAS],
                         [FIELD_ORIENTACION_LANZAMIENTOS]: templatePractica[FIELD_ESPECIALIDAD_PRACTICAS],
                         [FIELD_HORAS_ACREDITADAS_LANZAMIENTOS]: templatePractica[FIELD_HORAS_PRACTICAS],
+                        [FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS]: practicasGroup.length,
                         [FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]: 'Cerrado',
                         [FIELD_ESTADO_GESTION_LANZAMIENTOS]: 'Archivado',
                     };
