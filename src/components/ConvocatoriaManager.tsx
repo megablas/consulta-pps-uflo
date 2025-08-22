@@ -26,7 +26,7 @@ import {
 import Loader from './Loader';
 import EmptyState from './EmptyState';
 import Toast from './Toast';
-import { normalizeStringForComparison, getEspecialidadClasses, formatDate } from '../utils/formatters';
+import { normalizeStringForComparison, getEspecialidadClasses, formatDate, parseToUTCDate } from '../utils/formatters';
 import { ALL_ORIENTACIONES } from '../types';
 
 type LoadingState = 'initial' | 'loading' | 'loaded' | 'error';
@@ -47,11 +47,15 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
   const [relaunchDate, setRelaunchDate] = useState(() => {
     const dateStr = pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS];
     if (!dateStr) return '';
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+    // If it's already in YYYY-MM-DD format (potentially with time), just take the date part.
+    if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+        return dateStr.substring(0, 10);
+    }
+    // If it's in MM/DD/YYYY, convert it
     const parts = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (parts) {
       const [, month, day, year] = parts;
-      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     }
     return '';
   });
@@ -64,15 +68,26 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
   const hasChanges = useMemo(() => {
     const originalStatus = pps[FIELD_ESTADO_GESTION_LANZAMIENTOS] || 'Pendiente de Gestión';
     const originalNotes = pps[FIELD_NOTAS_GESTION_LANZAMIENTOS] || '';
-    const originalRelaunchDate = pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS] || '';
-
-    let currentRelaunchDateForCompare = '';
-    if (relaunchDate) {
-        const [year, month, day] = relaunchDate.split('-');
-        currentRelaunchDateForCompare = `${month}/${day}/${year}`;
+    const originalDateStr = pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS] || '';
+    
+    let originalDateForCompare = '';
+    if (originalDateStr) {
+        if (/^\d{4}-\d{2}-\d{2}/.test(originalDateStr)) {
+            originalDateForCompare = originalDateStr.substring(0, 10);
+        } else {
+            const parts = originalDateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (parts) {
+                const [, month, day, year] = parts;
+                originalDateForCompare = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            }
+        }
     }
+    
+    const statusChanged = status !== originalStatus;
+    const notesChanged = notes !== originalNotes;
+    const dateChanged = relaunchDate !== originalDateForCompare;
 
-    return status !== originalStatus || notes !== originalNotes || currentRelaunchDateForCompare !== originalRelaunchDate;
+    return statusChanged || notesChanged || dateChanged;
   }, [status, notes, relaunchDate, pps]);
 
   const handleSave = async () => {
@@ -87,10 +102,7 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
       [FIELD_ESTADO_GESTION_LANZAMIENTOS]: status,
       [FIELD_NOTAS_GESTION_LANZAMIENTOS]: notes,
       [FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]: status === 'Relanzamiento Confirmado' && relaunchDate
-        ? (() => {
-            const [year, month, day] = relaunchDate.split('-');
-            return `${month}/${day}/${year}`;
-          })()
+        ? relaunchDate // Send in YYYY-MM-DD format
         : null,
     };
     
@@ -132,7 +144,7 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
     today.setHours(0, 0, 0, 0);
 
     if (cardType === 'activasYPorFinalizar') {
-        const endDate = pps[FIELD_FECHA_FIN_LANZAMIENTOS] ? new Date(pps[FIELD_FECHA_FIN_LANZAMIENTOS]) : null;
+        const endDate = parseToUTCDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS]);
         if (!endDate || endDate < today) return null;
 
         const diffTime = endDate.getTime() - today.getTime();
@@ -141,7 +153,7 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
         if (diffDays === 0) return { text: 'Finaliza hoy', color: 'bg-red-100 text-red-800 ring-red-200', icon: 'event_busy' };
         if (diffDays <= 30) return { text: `Finaliza en ${diffDays} día${diffDays !== 1 ? 's' : ''}`, color: 'bg-amber-100 text-amber-800 ring-amber-200', icon: 'hourglass_top' };
         
-        const startDate = pps[FIELD_FECHA_INICIO_LANZAMIENTOS] ? new Date(pps[FIELD_FECHA_INICIO_LANZAMIENTOS]) : null;
+        const startDate = parseToUTCDate(pps[FIELD_FECHA_INICIO_LANZAMIENTOS]);
         if (startDate && startDate <= today && endDate >= today) {
              return { text: 'Activa', color: 'bg-green-100 text-green-800 ring-green-200', icon: 'sync' };
         }
@@ -152,11 +164,11 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
     }
     
     if (cardType === 'relanzamientosConfirmados' && pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]) {
-        return { text: `Relanza ${formatDate(pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS])}`, color: 'bg-indigo-100 text-indigo-800 ring-indigo-200', icon: 'flight_takeoff' };
+        return { text: `Relanza ${formatDate(relaunchDate)}`, color: 'bg-indigo-100 text-indigo-800 ring-indigo-200', icon: 'flight_takeoff' };
     }
     
     return null;
-  }, [pps, cardType]);
+  }, [pps, cardType, relaunchDate]);
 
   const isEnConversacion = status === 'En Conversación';
   const actionButtonClass = "font-bold py-2 px-4 rounded-lg text-sm transition-all duration-300 shadow-md flex items-center justify-center gap-2 w-44";
@@ -562,61 +574,42 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
         const today = new Date();
         today.setHours(0, 0, 0, 0);
     
-        const ppsByInstitution = new Map<string, LanzamientoPPS[]>();
-        for (const pps of filteredData) {
-            const institutionName = pps[FIELD_NOMBRE_PPS_LANZAMIENTOS];
-            if (!institutionName) continue;
-            const normalizedName = normalizeStringForComparison(institutionName);
-            if (!ppsByInstitution.has(normalizedName)) {
-                ppsByInstitution.set(normalizedName, []);
-            }
-            ppsByInstitution.get(normalizedName)!.push(pps);
-        }
-
-        const latestPpsPerInstitution: LanzamientoPPS[] = [];
-        for (const ppsList of ppsByInstitution.values()) {
-            if (ppsList.length > 0) {
-                const latestPps = ppsList.sort((a, b) => {
-                    const dateA = a[FIELD_FECHA_FIN_LANZAMIENTOS] ? new Date(a[FIELD_FECHA_FIN_LANZAMIENTOS]).getTime() : 0;
-                    const dateB = b[FIELD_FECHA_FIN_LANZAMIENTOS] ? new Date(b[FIELD_FECHA_FIN_LANZAMIENTOS]).getTime() : 0;
-                    return dateB - dateA;
-                })[0];
-                latestPpsPerInstitution.push(latestPps);
-            }
-        }
-    
         const fin: LanzamientoPPS[] = [];
         const conf: LanzamientoPPS[] = [];
         const act: LanzamientoPPS[] = [];
         const nonManagedStatuses = ['Archivado', 'No se Relanza'];
     
-        for (const pps of latestPpsPerInstitution) {
+        for (const pps of filteredData) {
             const gestionStatus = pps[FIELD_ESTADO_GESTION_LANZAMIENTOS];
             if (nonManagedStatuses.includes(gestionStatus!)) {
                 continue;
             }
     
-            const endDate = pps[FIELD_FECHA_FIN_LANZAMIENTOS] ? new Date(pps[FIELD_FECHA_FIN_LANZAMIENTOS]) : null;
+            const endDate = parseToUTCDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS]);
+            const relaunchDate = parseToUTCDate(pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]);
     
-            if (gestionStatus === 'Relanzamiento Confirmado' && pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]) {
+            if (gestionStatus === 'Relanzamiento Confirmado' && relaunchDate) {
                 conf.push(pps);
             } else if (endDate && endDate >= today) {
                 act.push(pps);
             } else if (endDate && endDate < today) {
                 fin.push(pps);
+            } else if (!endDate && gestionStatus !== 'Relanzamiento Confirmado' && pps[FIELD_NOMBRE_PPS_LANZAMIENTOS]) {
+                // Also consider launches without an end date as finished/needing review if they are not already managed.
+                fin.push(pps);
             }
         }
         
-        act.sort((a, b) => new Date(a[FIELD_FECHA_FIN_LANZAMIENTOS]!).getTime() - new Date(b[FIELD_FECHA_FIN_LANZAMIENTOS]!).getTime());
-        conf.sort((a, b) => new Date(a[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]!).getTime() - new Date(b[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]!).getTime());
+        act.sort((a, b) => (parseToUTCDate(a[FIELD_FECHA_FIN_LANZAMIENTOS]!)?.getTime() || 0) - (parseToUTCDate(b[FIELD_FECHA_FIN_LANZAMIENTOS]!)?.getTime() || 0));
+        conf.sort((a, b) => (parseToUTCDate(a[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]!)?.getTime() || 0) - (parseToUTCDate(b[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]!)?.getTime() || 0));
         fin.sort((a, b) => {
             const aIsEnConversacion = a[FIELD_ESTADO_GESTION_LANZAMIENTOS] === 'En Conversación';
             const bIsEnConversacion = b[FIELD_ESTADO_GESTION_LANZAMIENTOS] === 'En Conversación';
             if (aIsEnConversacion && !bIsEnConversacion) return -1;
             if (!aIsEnConversacion && bIsEnConversacion) return 1;
 
-            const dateA = a[FIELD_FECHA_FIN_LANZAMIENTOS] ? new Date(a[FIELD_FECHA_FIN_LANZAMIENTOS]).getTime() : 0;
-            const dateB = b[FIELD_FECHA_FIN_LANZAMIENTOS] ? new Date(b[FIELD_FECHA_FIN_LANZAMIENTOS]).getTime() : 0;
+            const dateA = parseToUTCDate(a[FIELD_FECHA_FIN_LANZAMIENTOS])?.getTime() || 0;
+            const dateB = parseToUTCDate(b[FIELD_FECHA_FIN_LANZAMIENTOS])?.getTime() || 0;
             return dateB - dateA;
         });
     
