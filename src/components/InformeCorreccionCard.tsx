@@ -56,10 +56,11 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
   const [justUpdatedPracticaId, setJustUpdatedPracticaId] = useState<string | null>(null);
 
   const stats = useMemo(() => {
+    const qualifiableStudents = students.filter(s => !!s.practicaId);
     const totalStudents = students.length;
     const corregidos = students.filter(s => s.nota && s.nota !== 'Sin calificar').length;
-    const isAllSelected = students.length > 0 && students.every(s => selectedStudents.has(s.practicaId));
-    return { totalStudents, corregidos, isAllSelected };
+    const isAllSelected = qualifiableStudents.length > 0 && qualifiableStudents.every(s => s.practicaId && selectedStudents.has(s.practicaId));
+    return { totalStudents, corregidos, isAllSelected, qualifiableStudents };
   }, [students, selectedStudents]);
 
   const correctionDeadlineInfo = useMemo(() => {
@@ -90,7 +91,7 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     const isChecked = e.target.checked;
-    const allPracticaIds = students.map(s => s.practicaId);
+    const allPracticaIds = stats.qualifiableStudents.map(s => s.practicaId).filter((id): id is string => !!id);
     onSelectAll(allPracticaIds, isChecked);
   };
   
@@ -179,7 +180,8 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
                         type="checkbox"
                         checked={stats.isAllSelected}
                         onChange={handleSelectAll}
-                        className="h-4 w-4 rounded text-blue-600 border-slate-400 focus:ring-2 focus:ring-blue-500/50"
+                        disabled={stats.qualifiableStudents.length === 0}
+                        className="h-4 w-4 rounded text-blue-600 border-slate-400 focus:ring-2 focus:ring-blue-500/50 disabled:cursor-not-allowed disabled:opacity-50"
                         aria-label="Seleccionar todos los alumnos"
                     />
                 </th>
@@ -190,13 +192,14 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
             </thead>
             <tbody className="divide-y divide-slate-200/60">
               {students.map(student => (
-                <tr key={student.practicaId} className={`transition-colors duration-1000 ${selectedStudents.has(student.practicaId) ? 'bg-blue-50/70' : ''} ${justUpdatedPracticaId === student.practicaId ? 'bg-green-100' : 'hover:bg-slate-50/50'}`}>
+                <tr key={student.convocatoriaId} className={`transition-colors duration-1000 ${!!student.practicaId && selectedStudents.has(student.practicaId) ? 'bg-blue-50/70' : ''} ${justUpdatedPracticaId === student.practicaId ? 'bg-green-100' : 'hover:bg-slate-50/50'}`}>
                   <td className="p-3 text-center">
                       <input
                           type="checkbox"
-                          checked={selectedStudents.has(student.practicaId)}
-                          onChange={() => onSelectionChange(student.practicaId)}
-                          className="h-4 w-4 rounded text-blue-600 border-slate-400 focus:ring-2 focus:ring-blue-500/50"
+                          checked={!!student.practicaId && selectedStudents.has(student.practicaId)}
+                          onChange={() => student.practicaId && onSelectionChange(student.practicaId)}
+                          disabled={!student.practicaId}
+                          className="h-4 w-4 rounded text-blue-600 border-slate-400 focus:ring-2 focus:ring-blue-500/50 disabled:cursor-not-allowed disabled:opacity-50"
                           aria-label={`Seleccionar a ${student.studentName}`}
                       />
                   </td>
@@ -215,8 +218,8 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
                     <div className="flex items-center gap-2">
                       <NotaSelector
                         value={student.nota || 'Sin calificar'}
-                        onChange={(e) => handleNotaChange(student.practicaId, e)}
-                        disabled={!student.informeSubido}
+                        onChange={(e) => student.practicaId && handleNotaChange(student.practicaId, e)}
+                        disabled={!student.informeSubido || !student.practicaId}
                         isSaving={updatingNotaId === student.practicaId}
                         ariaLabel={`Nota para ${student.studentName}`}
                       />
