@@ -222,9 +222,10 @@ export function getStatusVisuals(status?: string): { icon: string; iconContainer
 }
 
 
-export function normalizeStringForComparison(str?: string): string {
-  if (!str) return "";
-  return str
+export function normalizeStringForComparison(str?: any): string {
+  const value = String(str || '');
+  if (!value) return "";
+  return value
     .normalize("NFD") // Decompose accented characters into base characters and diacritics
     .replace(/[\u0300-\u036f]/g, "") // Remove diacritics (e.g. accents)
     .toLowerCase()

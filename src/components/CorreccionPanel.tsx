@@ -18,6 +18,7 @@ import {
   FIELD_NOMBRE_PPS_LANZAMIENTOS,
   FIELD_INFORME_LANZAMIENTOS,
   FIELD_FECHA_FIN_LANZAMIENTOS,
+  FIELD_LEGAJO_ESTUDIANTES,
 } from '../constants';
 import Loader from './Loader';
 import EmptyState from './EmptyState';
@@ -65,7 +66,7 @@ const CorreccionPanel: React.FC = () => {
         ]),
         fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS, [], `{${FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS}} = "Seleccionado"`),
         fetchAllAirtableData<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS),
-        fetchAllAirtableData<EstudianteFields>(AIRTABLE_TABLE_NAME_ESTUDIANTES, [FIELD_NOMBRE_ESTUDIANTES])
+        fetchAllAirtableData<EstudianteFields>(AIRTABLE_TABLE_NAME_ESTUDIANTES, [FIELD_NOMBRE_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES])
       ]);
 
       if (lanzamientosRes.error || convocatoriasRes.error || practicasRes.error || estudiantesRes.error) {
@@ -75,10 +76,10 @@ const CorreccionPanel: React.FC = () => {
       const estudiantesMap = new Map(estudiantesRes.records.map(r => [r.id, r.fields]));
       const practicasMap = new Map();
       practicasRes.records.forEach(p => {
-        const studentName = (p.fields[FIELD_NOMBRE_BUSQUEDA_PRACTICAS] || [])[0];
+        const studentLegajo = (p.fields[FIELD_NOMBRE_BUSQUEDA_PRACTICAS] || [])[0];
         const ppsName = (p.fields[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS] || [])[0];
-        if (studentName && ppsName) {
-          const key = `${normalizeStringForComparison(studentName)}-${normalizeStringForComparison(ppsName)}`;
+        if (studentLegajo && ppsName) {
+          const key = `${normalizeStringForComparison(studentLegajo)}-${normalizeStringForComparison(ppsName)}`;
           practicasMap.set(key, { id: p.id, fields: p.fields });
         }
       });
@@ -98,8 +99,9 @@ const CorreccionPanel: React.FC = () => {
 
         const ppsName = lanzamiento.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'N/A';
         const studentName = student[FIELD_NOMBRE_ESTUDIANTES] || 'N/A';
+        const studentLegajo = student[FIELD_LEGAJO_ESTUDIANTES];
         
-        const practicaKey = `${normalizeStringForComparison(studentName)}-${normalizeStringForComparison(ppsName)}`;
+        const practicaKey = `${normalizeStringForComparison(studentLegajo)}-${normalizeStringForComparison(ppsName)}`;
         const practica = practicasMap.get(practicaKey);
 
         if (!practica) continue;
