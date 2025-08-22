@@ -170,28 +170,44 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
 
       const allLanzamientos = lanzamientosRes.records.map(r => ({ ...r.fields, id: r.id }));
 
-      const openLanzamientos = allLanzamientos.filter(l => {
+      const visibleLanzamientos = allLanzamientos.filter(l => {
+          const ppsName = l[FIELD_NOMBRE_PPS_LANZAMIENTOS];
+          const ppsStartDate = l[FIELD_FECHA_INICIO_LANZAMIENTOS];
+          // A launch is only valid and actionable if it has a name and a start date.
+          // We check if they are non-empty strings after trimming whitespace.
+          if (!(typeof ppsName === 'string' && ppsName.trim()) || !(typeof ppsStartDate === 'string' && ppsStartDate.trim())) {
+              return false;
+          }
+
           const status = normalizeStringForComparison(l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]);
+
+          if (status === 'oculto') {
+              return false; // Explicitly hide 'Oculto'
+          }
           
-          if (status === 'abierta' || status === 'abierto') {
-              return true;
+          if (status === 'abierta' || status === 'abierto' || status === 'cerrado') {
+              return true; // Explicitly show 'Abierta' and 'Cerrado'
           }
       
+          // Fallback for when status is not set (e.g., empty or some other value)
+          // This preserves the old behavior for legacy data that might not have a status.
           const endDateString = l[FIELD_FECHA_FIN_LANZAMIENTOS];
           if (!status && endDateString) {
               const today = new Date();
-              today.setHours(0, 0, 0, 0); // Normalize today to the start of the day
-              
+              today.setHours(0, 0, 0, 0);
               const endDate = parseToUTCDate(endDateString);
               
-              if (endDate) { // Check if endDate is not null (i.e., parsing was successful)
-                  return endDate.getTime() >= today.getTime();
+              // If end date is in the future, it could be considered 'open'
+              if (endDate && endDate.getTime() >= today.getTime()) {
+                  return true;
               }
           }
       
+          // By default, if a status is not 'Abierta' or 'Cerrado', and it's not 'Oculto',
+          // and the fallback doesn't apply, it will be hidden.
           return false;
       });
-      setLanzamientos(openLanzamientos);
+      setLanzamientos(visibleLanzamientos);
 
       const informeTasksData = myEnrollmentsData
         .map((enrollment): InformeTask | null => {

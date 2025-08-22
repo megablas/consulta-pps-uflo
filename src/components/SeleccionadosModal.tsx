@@ -9,6 +9,20 @@ interface SeleccionadosModalProps {
   convocatoriaName: string;
 }
 
+// Reusable component for the student list
+const StudentList: React.FC<{ students: SelectedStudent[] }> = ({ students }) => (
+  <ul className="divide-y divide-slate-200/70">
+    {students.map((student) => (
+      <li key={student.legajo} className="flex items-center justify-between py-2.5">
+        <span className="font-medium text-slate-700">{student.nombre}</span>
+        <span className="text-sm text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full font-mono">
+          {student.legajo}
+        </span>
+      </li>
+    ))}
+  </ul>
+);
+
 const SeleccionadosModal: React.FC<SeleccionadosModalProps> = ({
   isOpen,
   onClose,
@@ -18,6 +32,44 @@ const SeleccionadosModal: React.FC<SeleccionadosModalProps> = ({
   if (!isOpen) return null;
 
   const hasSeleccionados = seleccionados && Object.keys(seleccionados).length > 0;
+  
+  const isSingleUnspecifiedGroup = hasSeleccionados &&
+    Object.keys(seleccionados).length === 1 &&
+    Object.keys(seleccionados)[0] === 'No especificado';
+
+  const renderContent = () => {
+    if (!hasSeleccionados) {
+      return (
+        <EmptyState
+          icon="person_off"
+          title="Lista no disponible"
+          message="Aún no se ha publicado la lista de alumnos seleccionados para esta convocatoria."
+        />
+      );
+    }
+    
+    if (isSingleUnspecifiedGroup) {
+      const students = seleccionados['No especificado'];
+      return (
+        <div className="bg-white p-4 rounded-xl border border-slate-200/80">
+          <StudentList students={students} />
+        </div>
+      );
+    }
+    
+    return (
+      <div className="space-y-6">
+        {Object.entries(seleccionados).map(([horario, students]) => (
+          <div key={horario} className="bg-white p-4 rounded-xl border border-slate-200/80">
+            <h3 className="font-semibold text-blue-800 bg-blue-50 px-3 py-2 rounded-md mb-3">
+              Horario: {horario}
+            </h3>
+            <StudentList students={students as SelectedStudent[]} />
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div
@@ -58,33 +110,7 @@ const SeleccionadosModal: React.FC<SeleccionadosModalProps> = ({
 
         {/* Content */}
         <div className="p-6 overflow-y-auto flex-grow bg-slate-50/50">
-          {hasSeleccionados ? (
-            <div className="space-y-6">
-              {Object.entries(seleccionados).map(([horario, students]) => (
-                <div key={horario} className="bg-white p-4 rounded-xl border border-slate-200/80">
-                  <h3 className="font-semibold text-blue-800 bg-blue-50 px-3 py-2 rounded-md mb-3">
-                    Horario: {horario}
-                  </h3>
-                  <ul className="divide-y divide-slate-200/70">
-                    {(students as SelectedStudent[]).map((student) => (
-                      <li key={student.legajo} className="flex items-center justify-between py-2.5">
-                        <span className="font-medium text-slate-700">{student.nombre}</span>
-                        <span className="text-sm text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full font-mono">
-                          {student.legajo}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-                icon="person_off"
-                title="Lista no disponible"
-                message="Aún no se ha publicado la lista de alumnos seleccionados para esta convocatoria."
-            />
-          )}
+          {renderContent()}
         </div>
       </div>
     </div>

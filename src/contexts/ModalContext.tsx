@@ -10,7 +10,9 @@ import {
   FIELD_HORARIO_FORMULA_CONVOCATORIAS,
   AIRTABLE_TABLE_NAME_ESTUDIANTES,
   FIELD_NOMBRE_ESTUDIANTES,
-  FIELD_LEGAJO_ESTUDIANTES
+  FIELD_LEGAJO_ESTUDIANTES,
+  FIELD_NOMBRE_PPS_LANZAMIENTOS,
+  FIELD_FECHA_INICIO_LANZAMIENTOS,
 } from '../constants';
 
 interface ModalContextType {
@@ -73,17 +75,28 @@ export const ModalProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const handleVerSeleccionados = useCallback(async (lanzamiento: LanzamientoPPS) => {
     setLoadingSeleccionadosId(lanzamiento.id);
-    setConvocatoriaForModal(lanzamiento['Nombre PPS'] || 'Convocatoria');
+    setConvocatoriaForModal(lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'Convocatoria');
 
     try {
-      const ppsName = lanzamiento['Nombre PPS']?.replace(/'/g, "\\'");
-      const ppsStartDate = lanzamiento['Fecha de Inicio'];
+      const ppsNameRaw = lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS];
+      const ppsStartDate = lanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS];
 
-      if (!ppsName || !ppsStartDate) {
-        showModal('Error', 'La convocatoria seleccionada no tiene un nombre o fecha de inicio válidos.');
-        setLoadingSeleccionadosId(null);
-        return;
+      const errorMessages: string[] = [];
+      if (typeof ppsNameRaw !== 'string' || !ppsNameRaw.trim()) {
+          errorMessages.push(`- El nombre de la PPS es inválido. Valor recibido: ${JSON.stringify(ppsNameRaw)} (tipo: ${typeof ppsNameRaw})`);
       }
+      if (typeof ppsStartDate !== 'string' || !ppsStartDate.trim()) {
+          errorMessages.push(`- La fecha de inicio es inválida. Valor recibido: ${JSON.stringify(ppsStartDate)} (tipo: ${typeof ppsStartDate})`);
+      }
+  
+      if (errorMessages.length > 0) {
+          const fullErrorMessage = `La convocatoria seleccionada tiene datos incorrectos que impiden continuar. Por favor, revisa la información en Airtable.\n\nDetalles:\n${errorMessages.join('\n')}\n\nDatos completos de la convocatoria recibida:\n${JSON.stringify(lanzamiento, null, 2)}`;
+          showModal('Error de Datos de la Convocatoria', fullErrorMessage);
+          setLoadingSeleccionadosId(null);
+          return;
+      }
+
+      const ppsName = ppsNameRaw.replace(/'/g, "\\'");
 
       const { records: convocatoriaRecords, error: convocatoriaError } = await fetchAirtableData<ConvocatoriaFields>(
         AIRTABLE_TABLE_NAME_CONVOCATORIAS,
