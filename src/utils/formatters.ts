@@ -231,3 +231,38 @@ export function normalizeStringForComparison(str?: any): string {
     .toLowerCase()
     .trim();
 }
+
+/**
+ * Parses a date string from various formats (YYYY-MM-DD, D/M/YYYY) into a standardized UTC Date object.
+ * This ensures that date comparisons are accurate regardless of the source string format.
+ * @param dateString The date string to parse.
+ * @returns A Date object in UTC, or null if the string is invalid.
+ */
+export function parseToUTCDate(dateString?: string): Date | null {
+    if (!dateString) return null;
+
+    // Try parsing ISO format (YYYY-MM-DD) first, which Airtable API uses for date fields.
+    // Appending T00:00:00Z forces the parser to treat the date as UTC, avoiding timezone shifts.
+    const isoDate = new Date(`${dateString}T00:00:00Z`);
+    if (!isNaN(isoDate.getTime()) && dateString.includes('-')) {
+        return isoDate;
+    }
+
+    // If ISO parsing fails or wasn't an ISO string, try D/M/YYYY or D-M-YYYY
+    const parts = dateString.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+    if (parts) {
+        // parts[1] = day, parts[2] = month, parts[3] = year
+        const day = parseInt(parts[1], 10);
+        const month = parseInt(parts[2], 10) - 1; // Month is 0-indexed in JS
+        const year = parseInt(parts[3], 10);
+        if (year > 1000 && month >= 0 && month < 12 && day > 0 && day <= 31) {
+            const utcDate = new Date(Date.UTC(year, month, day));
+             // Verify that the created date is valid (e.g., handles Feb 30th)
+            if (utcDate.getUTCFullYear() === year && utcDate.getUTCMonth() === month && utcDate.getUTCDate() === day) {
+                return utcDate;
+            }
+        }
+    }
+
+    return null; // Return null if no valid format is found
+}
