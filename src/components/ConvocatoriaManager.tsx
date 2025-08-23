@@ -36,7 +36,7 @@ interface GestionCardProps {
   pps: LanzamientoPPS;
   onSave: (id: string, updates: Partial<LanzamientoPPS>) => Promise<boolean>;
   isUpdating: boolean;
-  cardType: 'activasYPorFinalizar' | 'finalizadasParaReactivar' | 'relanzamientosConfirmados';
+  cardType: 'activasYPorFinalizar' | 'finalizadasParaReactivar' | 'relanzamientosConfirmados' | 'activasIndefinidas';
   institution?: { id: string; phone?: string };
   onSavePhone: (institutionId: string, phone: string) => Promise<boolean>;
 }
@@ -134,6 +134,7 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
   const headerTextColor = isJustSaved ? 'text-emerald-900' : especialidadVisuals.headerText;
   
   const cardIcon = useMemo(() => {
+    if (cardType === 'activasIndefinidas') return 'hourglass_empty';
     if (cardType === 'activasYPorFinalizar') return 'pending_actions';
     if (cardType === 'finalizadasParaReactivar') return 'history';
     return 'event_repeat';
@@ -143,20 +144,34 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    if (cardType === 'activasIndefinidas') {
+        return { text: 'Sin fecha de fin', color: 'bg-slate-100 text-slate-600 ring-slate-200', icon: 'date_range' };
+    }
+
     if (cardType === 'activasYPorFinalizar') {
         const endDate = parseToUTCDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS]);
-        if (!endDate || endDate < today) return null;
+        // If there's no end date, we can't show remaining time, so we show nothing.
+        if (!endDate) return null;
 
         const diffTime = endDate.getTime() - today.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        if (diffDays === 0) return { text: 'Finaliza hoy', color: 'bg-red-100 text-red-800 ring-red-200', icon: 'event_busy' };
-        if (diffDays <= 30) return { text: `Finaliza en ${diffDays} día${diffDays !== 1 ? 's' : ''}`, color: 'bg-amber-100 text-amber-800 ring-amber-200', icon: 'hourglass_top' };
         
-        const startDate = parseToUTCDate(pps[FIELD_FECHA_INICIO_LANZAMIENTOS]);
-        if (startDate && startDate <= today && endDate >= today) {
-             return { text: 'Activa', color: 'bg-green-100 text-green-800 ring-green-200', icon: 'sync' };
+        // This card type is for active/upcoming, so we shouldn't see negative days, but as a safeguard.
+        if (diffDays < 0) return null;
+
+        if (diffDays === 0) {
+            return { text: 'Finaliza hoy', color: 'bg-red-100 text-red-800 ring-red-200', icon: 'event_busy' };
         }
+        
+        const text = `Finaliza en ${diffDays} día${diffDays !== 1 ? 's' : ''}`;
+        
+        // Use amber for anything ending in the next 30 days
+        if (diffDays <= 30) {
+             return { text, color: 'bg-amber-100 text-amber-800 ring-amber-200', icon: 'hourglass_top' };
+        }
+
+        // Use green for practices ending further out
+        return { text, color: 'bg-green-100 text-green-800 ring-green-200', icon: 'event_available' };
     }
 
     if (cardType === 'finalizadasParaReactivar') {
@@ -346,6 +361,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                     FIELD_ESTADO_GESTION_LANZAMIENTOS,
                     FIELD_NOTAS_GESTION_LANZAMIENTOS,
                     FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS,
+                    FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS,
                 ],
                 undefined,
                 [{ field: FIELD_FECHA_FIN_LANZAMIENTOS, direction: 'desc' }]
@@ -570,13 +586,25 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
         });
     }, [lanzamientos, searchTerm, orientationFilter, forcedOrientations]);
 
-    const { finalizadasParaReactivar, relanzamientosConfirmados, activasYPorFinalizar } = useMemo(() => {
+    const { finalizadasParaReactivar, relanzamientosConfirmados, activasYPorFinalizar, activasIndefinidas } = useMemo(() => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+    
+        const activePpsNames = new Set<string>();
+        for (const pps of filteredData) {
+            const endDate = parseToUTCDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS]);
+            if (!endDate || endDate >= today) {
+                const ppsName = pps[FIELD_NOMBRE_PPS_LANZAMIENTOS];
+                if (ppsName) {
+                    activePpsNames.add(normalizeStringForComparison(ppsName));
+                }
+            }
+        }
     
         const fin: LanzamientoPPS[] = [];
         const conf: LanzamientoPPS[] = [];
         const act: LanzamientoPPS[] = [];
+        const actIndef: LanzamientoPPS[] = [];
         const nonManagedStatuses = ['Archivado', 'No se Relanza'];
     
         for (const pps of filteredData) {
@@ -585,24 +613,52 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                 continue;
             }
     
-            const endDate = parseToUTCDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS]);
             const relaunchDate = parseToUTCDate(pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]);
     
             if (gestionStatus === 'Relanzamiento Confirmado' && relaunchDate) {
                 conf.push(pps);
-            } else if (endDate && endDate >= today) {
-                act.push(pps);
-            } else if (endDate && endDate < today) {
-                fin.push(pps);
-            } else if (!endDate && gestionStatus !== 'Relanzamiento Confirmado' && pps[FIELD_NOMBRE_PPS_LANZAMIENTOS]) {
-                // Also consider launches without an end date as finished/needing review if they are not already managed.
-                fin.push(pps);
+            } else {
+                const endDate = parseToUTCDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS]);
+                const ppsName = pps[FIELD_NOMBRE_PPS_LANZAMIENTOS];
+                const normalizedName = ppsName ? normalizeStringForComparison(ppsName) : '';
+    
+                if (!endDate) {
+                    actIndef.push(pps);
+                } else if (endDate >= today) {
+                    act.push(pps);
+                } else if (endDate < today) {
+                    if (!activePpsNames.has(normalizedName)) {
+                        fin.push(pps);
+                    }
+                }
             }
         }
         
+        const mostRecentFinished = new Map<string, LanzamientoPPS>();
+        for (const pps of fin) {
+            const ppsName = pps[FIELD_NOMBRE_PPS_LANZAMIENTOS];
+            if (!ppsName) continue;
+            
+            const normalizedName = normalizeStringForComparison(ppsName);
+            const existing = mostRecentFinished.get(normalizedName);
+            
+            if (!existing) {
+                mostRecentFinished.set(normalizedName, pps);
+            } else {
+                const existingEndDate = parseToUTCDate(existing[FIELD_FECHA_FIN_LANZAMIENTOS]);
+                const currentEndDate = parseToUTCDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS]);
+                
+                // Keep the one that finished most recently
+                if (currentEndDate && (!existingEndDate || currentEndDate > existingEndDate)) {
+                    mostRecentFinished.set(normalizedName, pps);
+                }
+            }
+        }
+        const uniqueFin = Array.from(mostRecentFinished.values());
+
         act.sort((a, b) => (parseToUTCDate(a[FIELD_FECHA_FIN_LANZAMIENTOS]!)?.getTime() || 0) - (parseToUTCDate(b[FIELD_FECHA_FIN_LANZAMIENTOS]!)?.getTime() || 0));
         conf.sort((a, b) => (parseToUTCDate(a[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]!)?.getTime() || 0) - (parseToUTCDate(b[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]!)?.getTime() || 0));
-        fin.sort((a, b) => {
+        uniqueFin.sort((a, b) => {
             const aIsEnConversacion = a[FIELD_ESTADO_GESTION_LANZAMIENTOS] === 'En Conversación';
             const bIsEnConversacion = b[FIELD_ESTADO_GESTION_LANZAMIENTOS] === 'En Conversación';
             if (aIsEnConversacion && !bIsEnConversacion) return -1;
@@ -610,10 +666,10 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
 
             const dateA = parseToUTCDate(a[FIELD_FECHA_FIN_LANZAMIENTOS])?.getTime() || 0;
             const dateB = parseToUTCDate(b[FIELD_FECHA_FIN_LANZAMIENTOS])?.getTime() || 0;
-            return dateB - dateA;
+            return dateB - dateA; // Most recently finished first
         });
     
-        return { finalizadasParaReactivar: fin, relanzamientosConfirmados: conf, activasYPorFinalizar: act };
+        return { finalizadasParaReactivar: uniqueFin, relanzamientosConfirmados: conf, activasYPorFinalizar: act, activasIndefinidas: actIndef };
     }, [filteredData]);
     
     const getInstitutionForPps = useCallback((pps: LanzamientoPPS) => {
@@ -630,8 +686,9 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
         const hasActivas = activasYPorFinalizar.length > 0;
         const hasFinalizadas = finalizadasParaReactivar.length > 0;
         const hasConfirmados = relanzamientosConfirmados.length > 0;
+        const hasActivasIndefinidas = activasIndefinidas.length > 0;
 
-        if (!hasActivas && !hasFinalizadas && !hasConfirmados && (searchTerm || orientationFilter !== 'all' || (forcedOrientations && forcedOrientations.length > 0))) {
+        if (!hasActivas && !hasFinalizadas && !hasConfirmados && !hasActivasIndefinidas && (searchTerm || orientationFilter !== 'all' || (forcedOrientations && forcedOrientations.length > 0))) {
             return <EmptyState icon="search_off" title="Sin Resultados" message="No se encontraron prácticas que coincidan con los filtros aplicados." />;
         }
 
@@ -675,6 +732,27 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                             </div>
                         ) : (
                             <p className="text-slate-500 text-sm p-4 bg-white rounded-lg border border-slate-200/70">No hay prácticas con relanzamiento confirmado.</p>
+                        )}
+                    </CollapsibleSection>
+                </section>
+
+                <section>
+                    <CollapsibleSection 
+                        title="Activas (Sin Fecha de Fin)"
+                        count={activasIndefinidas.length}
+                        icon="hourglass_empty"
+                        iconBgColor="bg-slate-100"
+                        iconColor="text-slate-600"
+                        borderColor="border-slate-300"
+                    >
+                        {hasActivasIndefinidas ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-4">
+                                {activasIndefinidas.map(pps => (
+                                    <GestionCard key={pps.id} pps={pps} onSave={handleSave} isUpdating={updatingIds.has(pps.id)} cardType="activasIndefinidas" institution={getInstitutionForPps(pps)} onSavePhone={handleUpdateInstitutionPhone} />
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-slate-500 text-sm p-4 bg-white rounded-lg border border-slate-200/70">No hay prácticas activas sin una fecha de finalización definida.</p>
                         )}
                     </CollapsibleSection>
                 </section>
