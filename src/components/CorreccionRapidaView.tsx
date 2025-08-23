@@ -6,7 +6,7 @@ import { formatDate } from '../utils/formatters';
 
 interface CorreccionRapidaViewProps {
   students: FlatCorreccionStudent[];
-  onNotaChange: (practicaId: string, newNota: string) => Promise<void>;
+  onNotaChange: (practicaId: string, newNota: string, convocatoriaId?: string) => Promise<void>;
   updatingNotaId: string | null;
   searchTerm: string;
 }
@@ -60,8 +60,8 @@ const CorreccionRapidaView: React.FC<CorreccionRapidaViewProps> = ({ students, o
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' }>({ key: 'correctionDeadline', direction: 'ascending' });
   const [justUpdatedPracticaId, setJustUpdatedPracticaId] = useState<string | null>(null);
 
-  const handleNotaChange = async (practicaId: string, e: React.ChangeEvent<HTMLSelectElement>) => {
-    await onNotaChange(practicaId, e.target.value);
+  const handleNotaChange = async (practicaId: string, newNota: string, convocatoriaId: string) => {
+    await onNotaChange(practicaId, newNota, convocatoriaId);
     setJustUpdatedPracticaId(practicaId);
     setTimeout(() => setJustUpdatedPracticaId(null), 1500); 
   };
@@ -105,7 +105,7 @@ const CorreccionRapidaView: React.FC<CorreccionRapidaViewProps> = ({ students, o
   }, [students, sortConfig]);
 
   const getDeadlineVisuals = (deadlineString?: string) => {
-    if (!deadlineString) return { text: 'N/A', className: 'text-slate-500' };
+    if (!deadlineString) return { text: 'Sin fecha de fin', className: 'text-slate-500 italic' };
     
     const deadline = new Date(deadlineString);
     const today = new Date();
@@ -163,8 +163,8 @@ const CorreccionRapidaView: React.FC<CorreccionRapidaViewProps> = ({ students, o
                     <div className="flex items-center gap-2">
                       <NotaSelector
                         value={student.nota || 'Sin calificar'}
-                        onChange={(e) => student.practicaId && handleNotaChange(student.practicaId, e)}
-                        disabled={!student.informeSubido || !student.practicaId}
+                        onChange={(e) => student.practicaId && handleNotaChange(student.practicaId, e.target.value, student.convocatoriaId)}
+                        disabled={!student.practicaId}
                         isSaving={updatingNotaId === student.practicaId}
                         ariaLabel={`Nota para ${student.studentName} en ${student.ppsName}`}
                       />

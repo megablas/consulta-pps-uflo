@@ -1,11 +1,10 @@
 export function addBusinessDays(startDate: Date, days: number): Date {
-    let date = new Date(startDate.getTime());
+    let date = new Date(startDate.getTime()); // Creates a copy
     let added = 0;
     while (added < days) {
-        // getDate returns the day of the month, setDate sets the day of the month
-        // This will automatically handle month and year changes.
-        date.setDate(date.getDate() + 1);
-        const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
+        // Use UTC date methods to avoid timezone issues
+        date.setUTCDate(date.getUTCDate() + 1);
+        const dayOfWeek = date.getUTCDay(); // 0 = Sunday, 6 = Saturday
         if (dayOfWeek !== 0 && dayOfWeek !== 6) {
             added++;
         }
@@ -233,36 +232,44 @@ export function normalizeStringForComparison(str?: any): string {
 }
 
 /**
- * Parses a date string from various formats (YYYY-MM-DD, D/M/YYYY) into a standardized UTC Date object.
+ * Parses a date string from various formats into a standardized UTC Date object.
  * This ensures that date comparisons are accurate regardless of the source string format.
  * @param dateString The date string to parse.
  * @returns A Date object in UTC, or null if the string is invalid.
  */
 export function parseToUTCDate(dateString?: string): Date | null {
-    if (!dateString) return null;
+    if (!dateString || typeof dateString !== 'string') return null;
 
-    // Try parsing ISO format (YYYY-MM-DD) first, which Airtable API uses for date fields.
-    // Appending T00:00:00Z forces the parser to treat the date as UTC, avoiding timezone shifts.
-    const isoDate = new Date(`${dateString}T00:00:00Z`);
-    if (!isNaN(isoDate.getTime()) && dateString.includes('-')) {
-        return isoDate;
-    }
+    const trimmedStr = dateString.trim();
+    if (!trimmedStr) return null;
 
-    // If ISO parsing fails or wasn't an ISO string, try D/M/YYYY or D-M-YYYY
-    const parts = dateString.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
-    if (parts) {
-        // parts[1] = day, parts[2] = month, parts[3] = year
-        const day = parseInt(parts[1], 10);
-        const month = parseInt(parts[2], 10) - 1; // Month is 0-indexed in JS
-        const year = parseInt(parts[3], 10);
-        if (year > 1000 && month >= 0 && month < 12 && day > 0 && day <= 31) {
-            const utcDate = new Date(Date.UTC(year, month, day));
-             // Verify that the created date is valid (e.g., handles Feb 30th)
-            if (utcDate.getUTCFullYear() === year && utcDate.getUTCMonth() === month && utcDate.getUTCDate() === day) {
-                return utcDate;
-            }
+    // Case 1: DD/MM/YYYY or DD-MM-YYYY, potentially with trailing time string.
+    // This regex now only checks the start of the string.
+    const euroParts = trimmedStr.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+    if (euroParts) {
+        const day = parseInt(euroParts[1], 10);
+        const month = parseInt(euroParts[2], 10) - 1; // JS months are 0-indexed
+        const year = parseInt(euroParts[3], 10);
+        const d = new Date(Date.UTC(year, month, day));
+        // Validate to catch invalid dates like '30/02/2024'
+        if (!isNaN(d.getTime()) && d.getUTCFullYear() === year && d.getUTCMonth() === month && d.getUTCDate() === day) {
+            return d;
         }
     }
 
-    return null; // Return null if no valid format is found
+    // Case 2: Standard ISO formats (YYYY-MM-DD, YYYY-MM-DDTHH:mm, etc.)
+    // `new Date()` is generally reliable for these.
+    const d = new Date(trimmedStr);
+    if (!isNaN(d.getTime())) {
+        // If the string was just a date (e.g., "2024-11-26"), new Date() creates it in the local timezone.
+        // We convert it to a UTC date at the start of that day to avoid off-by-one errors.
+        if (!trimmedStr.includes('T')) {
+            return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+        }
+        // If it was a full ISO string, it's already parsed correctly relative to UTC.
+        return d;
+    }
+
+    console.warn(`[parseToUTCDate] Could not parse date string: "${dateString}"`);
+    return null;
 }

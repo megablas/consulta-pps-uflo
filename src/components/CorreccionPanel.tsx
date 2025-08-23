@@ -25,7 +25,7 @@ import EmptyState from './EmptyState';
 import Toast from './Toast';
 import InformeCorreccionCard from './InformeCorreccionCard';
 import CorreccionRapidaView from './CorreccionRapidaView';
-import { normalizeStringForComparison, addBusinessDays } from '../utils/formatters';
+import { normalizeStringForComparison, addBusinessDays, parseToUTCDate } from '../utils/formatters';
 import { useAuth } from '../contexts/AuthContext';
 
 type LoadingState = 'initial' | 'loading' | 'loaded' | 'error';
@@ -140,31 +140,75 @@ const CorreccionPanel: React.FC = () => {
     fetchData();
   }, [fetchData]);
 
-  const handleNotaChange = useCallback(async (practicaId: string, newNota: string) => {
+  const handleNotaChange = useCallback(async (practicaId: string, newNota: string, convocatoriaId?: string) => {
     setUpdatingNotaId(practicaId);
-    
-    const valueToSend = newNota === 'Sin calificar' ? null : newNota;
 
-    const { error } = await updateAirtableRecord(AIRTABLE_TABLE_NAME_PRACTICAS, practicaId, {
-      [FIELD_NOTA_PRACTICAS]: valueToSend
-    });
+    if (newNota === 'No Entregado' && convocatoriaId) {
+      // Step 1: Update the Convocatoria record to uncheck 'Informe Subido'
+      const { error: convError } = await updateAirtableRecord(
+        AIRTABLE_TABLE_NAME_CONVOCATORIAS,
+        convocatoriaId,
+        { [FIELD_INFORME_SUBIDO_CONVOCATORIAS]: false }
+      );
 
-    if (error) {
-      setToastInfo({ message: 'Error al guardar la nota.', type: 'error' });
-    } else {
-      setToastInfo({ message: 'Nota guardada exitosamente.', type: 'success' });
-      setAllPpsGroups(prev => {
-        const newGroups = new Map(prev);
-        for (const pps of newGroups.values()) {
-          const student = pps.students.find(s => s.practicaId === practicaId);
-          if (student) {
-            student.nota = newNota;
-            break;
+      if (convError) {
+        setToastInfo({ message: 'Error al actualizar el estado del informe.', type: 'error' });
+        setUpdatingNotaId(null);
+        return;
+      }
+      
+      // Step 2: Update the Practica record with the 'No Entregado' grade
+      const { error: practicasError } = await updateAirtableRecord(
+        AIRTABLE_TABLE_NAME_PRACTICAS,
+        practicaId,
+        { [FIELD_NOTA_PRACTICAS]: 'No Entregado' }
+      );
+
+      if (practicasError) {
+        setToastInfo({ message: 'Error al actualizar la nota.', type: 'error' });
+      } else {
+        setToastInfo({ message: 'El informe fue marcado como "No Entregado".', type: 'success' });
+        // Update local state for immediate UI feedback
+        setAllPpsGroups(prev => {
+          const newGroups = new Map(prev);
+          for (const pps of newGroups.values()) {
+            const student = pps.students.find(s => s.practicaId === practicaId);
+            if (student) {
+              student.nota = 'No Entregado';
+              student.informeSubido = false; // This is the key part for the UI
+              break;
+            }
           }
-        }
-        return newGroups;
-      });
+          return newGroups;
+        });
+      }
+    } else {
+      // Handle regular grading
+      const valueToSend = newNota === 'Sin calificar' ? null : newNota;
+      const { error } = await updateAirtableRecord(
+        AIRTABLE_TABLE_NAME_PRACTICAS,
+        practicaId,
+        { [FIELD_NOTA_PRACTICAS]: valueToSend }
+      );
+
+      if (error) {
+        setToastInfo({ message: 'Error al guardar la nota.', type: 'error' });
+      } else {
+        setToastInfo({ message: 'Nota guardada exitosamente.', type: 'success' });
+        setAllPpsGroups(prev => {
+          const newGroups = new Map(prev);
+          for (const pps of newGroups.values()) {
+            const student = pps.students.find(s => s.practicaId === practicaId);
+            if (student) {
+              student.nota = newNota;
+              break;
+            }
+          }
+          return newGroups;
+        });
+      }
     }
+
     setUpdatingNotaId(null);
   }, []);
   
@@ -249,8 +293,11 @@ const CorreccionPanel: React.FC = () => {
     const flatList: FlatCorreccionStudent[] = [];
     for (const group of filteredGroups) {
       for (const student of group.students) {
-        if (student.informeSubido && student.nota === 'Sin calificar' && student.practicaId) {
-            const deadline = group.fechaFinalizacion ? addBusinessDays(new Date(group.fechaFinalizacion), 30) : undefined;
+        // A student appears in the quick correction list if they need a grade and have a practice record.
+        // The submission status is shown in the UI but doesn't prevent them from appearing here.
+        if (student.nota === 'Sin calificar' && student.practicaId) {
+            const finalizacionDate = group.fechaFinalizacion ? parseToUTCDate(group.fechaFinalizacion) : undefined;
+            const deadline = finalizacionDate ? addBusinessDays(finalizacionDate, 30) : undefined;
             flatList.push({ 
                 ...student, 
                 ppsName: group.ppsName, 

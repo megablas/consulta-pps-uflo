@@ -2,13 +2,13 @@ import React, { useMemo, useState } from 'react';
 import type { InformeCorreccionPPS, InformeCorreccionStudent } from '../types';
 import NotaSelector from './NotaSelector';
 import Checkbox from './Checkbox';
-import { addBusinessDays, formatDate } from '../utils/formatters';
+import { addBusinessDays, formatDate, parseToUTCDate } from '../utils/formatters';
 
-const NOTA_OPTIONS = ['Sin calificar', 'Desaprobado', '4', '5', '6', '7', '8', '9', '10'];
+const NOTA_OPTIONS = ['Sin calificar', 'No Entregado', 'Desaprobado', '4', '5', '6', '7', '8', '9', '10'];
 
 interface InformeCorreccionCardProps {
   ppsGroup: InformeCorreccionPPS;
-  onNotaChange: (practicaId: string, newNota: string) => Promise<void>;
+  onNotaChange: (practicaId: string, newNota: string, convocatoriaId?: string) => Promise<void>;
   updatingNotaId: string | null;
   // Batch update props
   selectedStudents: Set<string>;
@@ -64,11 +64,33 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
   }, [students, selectedStudents]);
 
   const correctionDeadlineInfo = useMemo(() => {
-    if (!fechaFinalizacion) return null;
-    const needsCorrection = students.some(s => s.informeSubido && (!s.nota || s.nota === 'Sin calificar'));
-    if (!needsCorrection) return null;
+    // The correction deadline is relevant for any PPS group where at least one student is pending a grade.
+    // We display it based on the end date, regardless of individual report submission status,
+    // as it provides a clear timeline for the person correcting.
+    const isPending = students.some(s => !s.nota || s.nota === 'Sin calificar');
+    if (!isPending) return null;
 
-    const deadline = addBusinessDays(new Date(fechaFinalizacion), 30);
+    if (!fechaFinalizacion) {
+        return {
+            text: 'Límite no calculable (sin fecha de fin)',
+            className: 'bg-slate-100 text-slate-600',
+            icon: 'help_outline',
+            date: null
+        };
+    }
+    
+    const finalizacionDate = parseToUTCDate(fechaFinalizacion);
+
+    if (!finalizacionDate) {
+        return {
+            text: 'Límite no calculable (fecha inválida)',
+            className: 'bg-slate-100 text-slate-600',
+            icon: 'help_outline',
+            date: null
+        };
+    }
+
+    const deadline = addBusinessDays(finalizacionDate, 30);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const diffDays = Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 3600 * 24));
@@ -79,12 +101,12 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
     } else if (diffDays <= 7) {
       className = 'bg-amber-100 text-amber-700';
     }
-    return { date: deadline, className };
+    return { date: deadline, className, icon: 'alarm', text: null };
   }, [fechaFinalizacion, students]);
 
 
-  const handleNotaChange = async (practicaId: string, e: React.ChangeEvent<HTMLSelectElement>) => {
-    await onNotaChange(practicaId, e.target.value);
+  const handleNotaChange = async (practicaId: string, newNota: string, convocatoriaId: string) => {
+    await onNotaChange(practicaId, newNota, convocatoriaId);
     setJustUpdatedPracticaId(practicaId);
     setTimeout(() => setJustUpdatedPracticaId(null), 1500); 
   };
@@ -109,8 +131,13 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
           <p className="text-sm text-slate-500">{orientacion}</p>
           {correctionDeadlineInfo && (
             <p className={`text-xs font-semibold px-2 py-1 rounded-md inline-flex items-center gap-1 mt-2 ${correctionDeadlineInfo.className}`}>
-                <span className="material-icons !text-sm">alarm</span>
-                <span>Límite de corrección: {formatDate(correctionDeadlineInfo.date.toISOString())}</span>
+                <span className="material-icons !text-sm">{correctionDeadlineInfo.icon}</span>
+                <span>
+                    {correctionDeadlineInfo.date
+                        ? `Límite de corrección: ${formatDate(correctionDeadlineInfo.date.toISOString())}`
+                        : correctionDeadlineInfo.text
+                    }
+                </span>
             </p>
           )}
         </div>
@@ -150,7 +177,7 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
                       className="text-sm rounded-lg border border-slate-300/80 p-2 bg-white shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus-ring-blue-500/20"
                       aria-label="Seleccionar nota para el lote"
                   >
-                      {NOTA_OPTIONS.filter(o => o !== 'Sin calificar').map(option => (
+                      {NOTA_OPTIONS.filter(o => o !== 'Sin calificar' && o !== 'No Entregado').map(option => (
                           <option key={option} value={option}>{option}</option>
                       ))}
                   </select>
@@ -218,8 +245,8 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
                     <div className="flex items-center gap-2">
                       <NotaSelector
                         value={student.nota || 'Sin calificar'}
-                        onChange={(e) => student.practicaId && handleNotaChange(student.practicaId, e)}
-                        disabled={!student.informeSubido || !student.practicaId}
+                        onChange={(e) => student.practicaId && handleNotaChange(student.practicaId, e.target.value, student.convocatoriaId)}
+                        disabled={!student.practicaId}
                         isSaving={updatingNotaId === student.practicaId}
                         ariaLabel={`Nota para ${student.studentName}`}
                       />
