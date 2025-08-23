@@ -51,7 +51,9 @@ const InformeCard: React.FC<InformeCardProps> = ({ task, onConfirmar }) => {
     };
   }, [task.fechaFinalizacion]);
 
-  const handleConfirmClick = async () => {
+  const handleConfirmClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault(); // Evita que el enlace padre se active
+    e.stopPropagation(); // Detiene la propagación del evento
     setIsConfirming(true);
     try {
       await onConfirmar(task.convocatoriaId);
@@ -91,16 +93,13 @@ const InformeCard: React.FC<InformeCardProps> = ({ task, onConfirmar }) => {
     switch (statusInfo.key) {
       case 'calificado':
         return (
-          <a
-            href={task.informeLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`${baseButtonClass} bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 focus:ring-blue-500 px-4`}
-            aria-label={`Ver corrección en el campus con nota final ${nota}`}
+          <div
+            className={`${baseLabelClass} bg-blue-50 text-blue-800 border-blue-200`}
+            aria-label={`Nota final ${nota}`}
           >
+            <span className="material-icons !text-base">grading</span>
             <span>Nota: {nota}</span>
-            <span className="material-icons !text-base">launch</span>
-          </a>
+          </div>
         );
       case 'en_correccion':
         return (
@@ -114,31 +113,19 @@ const InformeCard: React.FC<InformeCardProps> = ({ task, onConfirmar }) => {
         );
       case 'pendiente':
         return (
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <a
-              href={task.informeLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`${baseButtonClass} bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500`}
-              aria-label="Subir informe"
-            >
-              <span className="material-icons !text-base">launch</span>
-              <span>Subir</span>
-            </a>
             <button
               onClick={handleConfirmClick}
               disabled={isConfirming}
               className={`${baseButtonClass} bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed`}
-              aria-label="Confirmar entrega"
+              aria-label="Confirmar entrega del informe"
             >
               {isConfirming ? (
                 <div className="border-2 border-slate-400/50 border-t-slate-500 rounded-full w-4 h-4 animate-spin"></div>
               ) : (
                 <span className="material-icons !text-base">task_alt</span>
               )}
-              <span>Confirmar</span>
+              <span>Confirmar Entrega</span>
             </button>
-          </div>
         );
       default:
         return null;
@@ -146,32 +133,38 @@ const InformeCard: React.FC<InformeCardProps> = ({ task, onConfirmar }) => {
   };
 
   return (
-    <article
-      className="bg-white p-5 rounded-2xl shadow-xl border border-slate-100/50 flex items-center gap-5 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:bg-gradient-to-br from-white to-slate-50/50 animate-fade-in"
+    <a
+      href={task.informeLink}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group block bg-white p-5 rounded-2xl shadow-xl border border-slate-100/50 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:bg-gradient-to-br from-white to-slate-50/50 animate-fade-in"
       aria-labelledby={`task-${task.convocatoriaId}`}
     >
-      <div
-        className={`flex-shrink-0 size-12 rounded-xl flex items-center justify-center ${statusInfo.iconContainerClass} transition-transform duration-300 hover:scale-110`}
-      >
-        <span className="material-icons !text-2xl">{statusInfo.icon}</span>
-      </div>
+        <article className="flex items-center gap-5">
+            <div
+                className={`flex-shrink-0 size-12 rounded-xl flex items-center justify-center ${statusInfo.iconContainerClass} transition-transform duration-300 group-hover:scale-110`}
+            >
+                <span className="material-icons !text-2xl">{statusInfo.icon}</span>
+            </div>
 
-      <div className="flex-grow flex flex-col sm:flex-row justify-between sm:items-center min-w-0 gap-4">
-        <div className="flex-grow min-w-0">
-          <h3
-            id={`task-${task.convocatoriaId}`}
-            className="text-slate-900 font-semibold text-lg leading-tight tracking-tight"
-          >
-            {task.ppsName}
-          </h3>
-          <DeadlineInfo />
-        </div>
+            <div className="flex-grow flex flex-col sm:flex-row justify-between sm:items-center min-w-0 gap-4">
+                <div className="flex-grow min-w-0">
+                <h3
+                    id={`task-${task.convocatoriaId}`}
+                    className="text-slate-900 font-semibold text-lg leading-tight tracking-tight flex items-center"
+                >
+                    {task.ppsName}
+                    <span className="material-icons !text-base text-slate-400 ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity">launch</span>
+                </h3>
+                <DeadlineInfo />
+                </div>
 
-        <div className="flex-shrink-0 self-start sm:self-center">
-          <ActionComponent />
-        </div>
-      </div>
-    </article>
+                <div className="flex-shrink-0 self-start sm:self-center">
+                <ActionComponent />
+                </div>
+            </div>
+        </article>
+    </a>
   );
 };
 

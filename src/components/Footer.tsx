@@ -1,5 +1,5 @@
 import React from 'react';
-import { ALERT_PRACTICAS_TITLE, ALERT_PRACTICAS_TEXT, ALERT_INFORMES_TITLE, ALERT_INFORMES_TEXT } from '../constants';
+import { ALERT_PRACTICAS_TITLE, ALERT_PRACTICAS_TEXT, ALERT_INFORMES_TITLE } from '../constants';
 import Card from './Card';
 import type { TabId } from '../types';
 
@@ -27,7 +27,7 @@ const noticeConfig: Partial<Record<TabId, NoticeConfig>> = {
   },
   informes: {
     title: ALERT_INFORMES_TITLE,
-    text: ALERT_INFORMES_TEXT,
+    text: 'El proceso de entrega tiene dos pasos: primero, haz clic en la tarjeta del informe para ir al campus y subir tu archivo. Luego, regresa a este panel y presiona "Confirmar Entrega" para notificarnos. Las fechas límite pueden variar levemente; siempre se respetarán los 30 días reglamentarios desde tu finalización real para la entrega.',
     icon: 'rule_folder',
     mailToSubject: 'Consulta sobre Fecha de Entrega de Informe - Mi Panel Académico',
     mailToBody: 'Hola,\n\nQuisiera solicitar una corrección o consultar sobre la fecha de entrega de un informe.\n\n- Nombre Completo: [Escribe tu nombre]\n- Legajo: [Escribe tu legajo]\n- PPS Involucrada: [Escribe el nombre de la PPS]\n\nGracias.',

@@ -293,9 +293,8 @@ const CorreccionPanel: React.FC = () => {
     const flatList: FlatCorreccionStudent[] = [];
     for (const group of filteredGroups) {
       for (const student of group.students) {
-        // A student appears in the quick correction list if they need a grade and have a practice record.
-        // The submission status is shown in the UI but doesn't prevent them from appearing here.
-        if (student.nota === 'Sin calificar' && student.practicaId) {
+        // A student appears in the quick correction list if they have submitted their report, need a grade, and have a practice record.
+        if (student.informeSubido && student.nota === 'Sin calificar' && student.practicaId) {
             const finalizacionDate = group.fechaFinalizacion ? parseToUTCDate(group.fechaFinalizacion) : undefined;
             const deadline = finalizacionDate ? addBusinessDays(finalizacionDate, 30) : undefined;
             flatList.push({ 
