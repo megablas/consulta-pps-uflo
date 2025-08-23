@@ -32,7 +32,7 @@ interface DataContextType {
 
   fetchStudentData: () => void;
   handleOrientacionChange: (orientacion: Orientacion | "") => void;
-  handleNotaChange: (practicaId: string, nota: string) => void;
+  handleNotaChange: (practicaId: string, nota: string, convocatoriaId?: string) => void;
   handleConfirmarInforme: (convocatoriaId: string) => void;
   handleEnrollmentSubmit: (formData: any, selectedLanzamiento: LanzamientoPPS) => Promise<void>;
 }
@@ -152,7 +152,7 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
       const [practicasRes, ppsRes, convocatoriasRes, lanzamientosRes] = await Promise.all([
         fetchAllAirtableData<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS, [], `SEARCH('${user.legajo}', ARRAYJOIN({${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}}))`),
         fetchAirtableData<SolicitudPPSFields>(AIRTABLE_TABLE_NAME_PPS, [], `{${FIELD_LEGAJO_PPS}} = '${user.legajo}'`, 50, [{ field: FIELD_ULTIMA_ACTUALIZACION_PPS, direction: 'desc' }]),
-        fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS, [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS, FIELD_INFORME_SUBIDO_CONVOCATORIAS], `SEARCH('${user.legajo}', ARRAYJOIN({${FIELD_LEGAJO_CONVOCATORIAS}}))`),
+        fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS, [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS, FIELD_INFORME_SUBIDO_CONVOCATORIAS, FIELD_NOMBRE_PPS_CONVOCATORIAS, FIELD_FECHA_INICIO_CONVOCATORIAS], `SEARCH('${user.legajo}', ARRAYJOIN({${FIELD_LEGAJO_CONVOCATORIAS}}))`),
         fetchAllAirtableData<LanzamientoPPSFields>(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, [], undefined, [{field: FIELD_FECHA_INICIO_LANZAMIENTOS, direction: 'desc'}])
       ]);
 
@@ -173,79 +173,79 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
       const visibleLanzamientos = allLanzamientos.filter(l => {
           const ppsName = l[FIELD_NOMBRE_PPS_LANZAMIENTOS];
           const ppsStartDate = l[FIELD_FECHA_INICIO_LANZAMIENTOS];
-          // A launch is only valid and actionable if it has a name and a start date.
-          // We check if they are non-empty strings after trimming whitespace.
           if (!(typeof ppsName === 'string' && ppsName.trim()) || !(typeof ppsStartDate === 'string' && ppsStartDate.trim())) {
               return false;
           }
-
           const status = normalizeStringForComparison(l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]);
-
-          if (status === 'oculto') {
-              return false; // Explicitly hide 'Oculto'
-          }
-          
-          if (status === 'abierta' || status === 'abierto' || status === 'cerrado') {
-              return true; // Explicitly show 'Abierta' and 'Cerrado'
-          }
+          if (status === 'oculto') return false;
+          if (status === 'abierta' || status === 'abierto' || status === 'cerrado') return true;
       
-          // Fallback for when status is not set (e.g., empty or some other value)
-          // This preserves the old behavior for legacy data that might not have a status.
           const endDateString = l[FIELD_FECHA_FIN_LANZAMIENTOS];
           if (!status && endDateString) {
               const today = new Date();
               today.setHours(0, 0, 0, 0);
               const endDate = parseToUTCDate(endDateString);
-              
-              // If end date is in the future, it could be considered 'open'
-              if (endDate && endDate.getTime() >= today.getTime()) {
-                  return true;
-              }
+              if (endDate && endDate.getTime() >= today.getTime()) return true;
           }
-      
-          // By default, if a status is not 'Abierta' or 'Cerrado', and it's not 'Oculto',
-          // and the fallback doesn't apply, it will be hidden.
           return false;
       });
       setLanzamientos(visibleLanzamientos);
 
       const informeTasksData = myEnrollmentsData
         .map((enrollment): InformeTask | null => {
+          let lanzamiento: LanzamientoPPS | undefined;
+          
+          // Method 1: Direct Link (most reliable)
           const lanzamientoId = (enrollment[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])[0];
-          if (!lanzamientoId) return null;
+          if (lanzamientoId) {
+            lanzamiento = allLanzamientos.find(l => l.id === lanzamientoId);
+          }
 
-          const lanzamiento = allLanzamientos.find(l => l.id === lanzamientoId);
+          // Method 2: Fallback by matching name and start date (for legacy data)
+          if (!lanzamiento) {
+            const enrollmentPpsName = enrollment[FIELD_NOMBRE_PPS_CONVOCATORIAS];
+            const enrollmentStartDate = parseToUTCDate(enrollment[FIELD_FECHA_INICIO_CONVOCATORIAS]);
+
+            if (enrollmentPpsName && enrollmentStartDate) {
+              lanzamiento = allLanzamientos.find(l => {
+                const launchStartDate = parseToUTCDate(l[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+                return (
+                  normalizeStringForComparison(l[FIELD_NOMBRE_PPS_LANZAMIENTOS]) === normalizeStringForComparison(enrollmentPpsName) &&
+                  launchStartDate?.getTime() === enrollmentStartDate.getTime()
+                );
+              });
+            }
+          }
+
           if (!lanzamiento || !lanzamiento[FIELD_INFORME_LANZAMIENTOS] || !lanzamiento[FIELD_FECHA_FIN_LANZAMIENTOS]) {
             return null;
           }
           
+          const estadoInscripcion = normalizeStringForComparison(enrollment[FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS]);
+          if (estadoInscripcion !== 'seleccionado') {
+              return null;
+          }
+
           const practicaVinculada = allPracticas.find(p => {
               const ppsNameRaw = p[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
               const ppsName = Array.isArray(ppsNameRaw) ? ppsNameRaw[0] : ppsNameRaw;
 
               const practicaStartDate = parseToUTCDate(p[FIELD_FECHA_INICIO_PRACTICAS]);
-              const lanzamientoStartDate = parseToUTCDate(lanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+              const lanzamientoStartDate = parseToUTCDate(lanzamiento![FIELD_FECHA_INICIO_LANZAMIENTOS]);
               
-              const isNameMatch = normalizeStringForComparison(ppsName) === normalizeStringForComparison(lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS]);
+              const isNameMatch = normalizeStringForComparison(ppsName) === normalizeStringForComparison(lanzamiento![FIELD_NOMBRE_PPS_LANZAMIENTOS]);
               
               let isDateMatch = false;
               if (practicaStartDate && lanzamientoStartDate) {
                   const timeDiff = Math.abs(practicaStartDate.getTime() - lanzamientoStartDate.getTime());
-                  // Difference in days, allowing for a 7-day tolerance
                   const dayDiff = timeDiff / (1000 * 3600 * 24);
                   isDateMatch = dayDiff <= 7;
               }
 
               return isNameMatch && isDateMatch;
           });
-
-          // An InformeTask should only be created if there is a corresponding Practica record.
-          // This implies the student participated, regardless of the 'Estado' in the Convocatoria.
-          if (!practicaVinculada) {
-            return null;
-          }
           
-          const nota = practicaVinculada[FIELD_NOTA_PRACTICAS] || 'Sin calificar';
+          const nota = practicaVinculada ? (practicaVinculada[FIELD_NOTA_PRACTICAS] || 'Sin calificar') : 'Sin calificar';
 
           return {
               convocatoriaId: enrollment.id,
@@ -289,18 +289,49 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
     }
   }, [studentAirtableId, practicas, calculateCriterios, showModal]);
 
-  const handleNotaChange = useCallback(async (practicaId: string, nota: string) => {
-    const valueToSend = nota === 'Sin calificar' ? null : nota;
-    const { error } = await updateAirtableRecord(AIRTABLE_TABLE_NAME_PRACTICAS, practicaId, {
-      [FIELD_NOTA_PRACTICAS]: valueToSend
-    });
+  const handleNotaChange = useCallback(async (practicaId: string, nota: string, convocatoriaId?: string) => {
+    if (nota === 'No Entregado') {
+        if (convocatoriaId) {
+            const { error: convError } = await updateAirtableRecord(AIRTABLE_TABLE_NAME_CONVOCATORIAS, convocatoriaId, {
+                [FIELD_INFORME_SUBIDO_CONVOCATORIAS]: false
+            });
+            if (convError) {
+                showModal('Error', 'No se pudo actualizar el estado de entrega del informe.');
+                return;
+            }
+        }
+        
+        const { error: practicasError } = await updateAirtableRecord(AIRTABLE_TABLE_NAME_PRACTICAS, practicaId, {
+            [FIELD_NOTA_PRACTICAS]: 'No Entregado'
+        });
 
-    if (!error) {
-      setPracticas(prev => prev.map(p => p.id === practicaId ? { ...p, [FIELD_NOTA_PRACTICAS]: nota } : p));
+        if (practicasError) {
+            showModal('Error', 'No se pudo actualizar la nota de la práctica.');
+        } else {
+            setPracticas(prev => prev.map(p => p.id === practicaId ? { ...p, [FIELD_NOTA_PRACTICAS]: 'No Entregado' } : p));
+            if (convocatoriaId) {
+                setMyEnrollments(prev => prev.map(e => e.id === convocatoriaId ? { ...e, [FIELD_INFORME_SUBIDO_CONVOCATORIAS]: false } : e));
+                setInformeTasks(prev => prev.map(t => t.convocatoriaId === convocatoriaId ? { ...t, informeSubido: false, nota: 'No Entregado' } : t));
+            }
+            showModal('Actualización Exitosa', 'El estado del informe se ha cambiado a "No Entregado". El estudiante verá que su informe ya no figura como enviado.');
+        }
+
     } else {
-      showModal('Error', 'No se pudo actualizar la nota.');
+        const valueToSend = nota === 'Sin calificar' ? null : nota;
+        const { error } = await updateAirtableRecord(AIRTABLE_TABLE_NAME_PRACTICAS, practicaId, {
+            [FIELD_NOTA_PRACTICAS]: valueToSend
+        });
+
+        if (!error) {
+            setPracticas(prev => prev.map(p => p.id === practicaId ? { ...p, [FIELD_NOTA_PRACTICAS]: nota } : p));
+            if (convocatoriaId) {
+                setInformeTasks(prev => prev.map(t => t.convocatoriaId === convocatoriaId ? { ...t, nota: nota } : t));
+            }
+        } else {
+            showModal('Error', 'No se pudo actualizar la nota.');
+        }
     }
-  }, [showModal]);
+  }, [showModal, setPracticas, setMyEnrollments, setInformeTasks]);
 
   const handleConfirmarInforme = useCallback(async (convocatoriaId: string) => {
     const { error } = await updateAirtableRecord(AIRTABLE_TABLE_NAME_CONVOCATORIAS, convocatoriaId, {
@@ -324,18 +355,13 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
     setIsSubmitting(true);
     setEnrollingId(selectedLanzamiento.id);
     
-    // The 'Fecha de Inicio' and 'Fecha de Finalización' fields are now native Airtable Date types.
-    // The Airtable API always provides and expects dates in 'YYYY-MM-DD' format for these fields, regardless of the UI display format.
-    // Therefore, we directly transfer the date strings from the Lanzamiento record to the new Convocatoria record without any conversion.
     const fechaInicio = selectedLanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS];
     const fechaFin = selectedLanzamiento[FIELD_FECHA_FIN_LANZAMIENTOS];
 
-    // Determine the selected schedule string
     const horarioSeleccionado = Array.isArray(formData.horarios) && formData.horarios.length > 0
       ? formData.horarios.join(', ')
       : selectedLanzamiento[FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS] || 'No especificado';
       
-    // Create new record for Convocatorias
     const newRecord: Partial<ConvocatoriaFields> = {
         [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS]: [selectedLanzamiento.id],
         [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: [studentAirtableId],
@@ -348,13 +374,11 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
         [FIELD_HORAS_ACREDITADAS_CONVOCATORIAS]: selectedLanzamiento[FIELD_HORAS_ACREDITADAS_LANZAMIENTOS],
         [FIELD_CUPOS_DISPONIBLES_CONVOCATORIAS]: selectedLanzamiento[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS],
         [FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS]: 'Inscripto',
-        // Copy student details
         [FIELD_LEGAJO_CONVOCATORIAS]: studentDetails[FIELD_LEGAJO_ESTUDIANTES] ? parseInt(studentDetails[FIELD_LEGAJO_ESTUDIANTES], 10) : undefined,
         [FIELD_DNI_CONVOCATORIAS]: studentDetails[FIELD_DNI_ESTUDIANTES] ? Number(studentDetails[FIELD_DNI_ESTUDIANTES]) : undefined,
         [FIELD_CORREO_CONVOCATORIAS]: studentDetails[FIELD_CORREO_ESTUDIANTES],
         [FIELD_FECHA_NACIMIENTO_CONVOCATORIAS]: studentDetails[FIELD_FECHA_NACIMIENTO_ESTUDIANTES],
         [FIELD_TELEFONO_CONVOCATORIAS]: studentDetails[FIELD_TELEFONO_ESTUDIANTES],
-        // Form data
         [FIELD_TERMINO_CURSAR_CONVOCATORIAS]: formData.terminoDeCursar ? 'Sí' : 'No',
         [FIELD_CURSANDO_ELECTIVAS_CONVOCATORIAS]: formData.cursandoElectivas ? 'Sí' : 'No',
         [FIELD_FINALES_ADEUDA_CONVOCATORIAS]: formData.finalesAdeudados || null,
@@ -374,7 +398,6 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
     } else {
         closeEnrollmentForm();
         showModal('¡Inscripción Exitosa!', 'Tu postulación ha sido enviada correctamente. Recibirás un correo con la confirmación.');
-        // Refetch data to show the new enrollment status
         fetchStudentData();
     }
 

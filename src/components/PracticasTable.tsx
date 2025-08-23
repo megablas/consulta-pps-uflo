@@ -18,7 +18,7 @@ import {
 import EmptyState from './EmptyState';
 import { useData } from '../contexts/DataContext';
 
-const NOTA_OPTIONS = ['Sin calificar', '4', '5', '6', '7', '8', '9', '10'];
+const NOTA_OPTIONS = ['Sin calificar', 'No Entregado', 'Desaprobado', '4', '5', '6', '7', '8', '9', '10'];
 
 const notaColors: Record<string, string> = {
   '10': 'bg-green-50 text-green-800 border border-green-200 px-3 py-1 rounded-full text-sm font-semibold shadow-sm',
@@ -28,6 +28,8 @@ const notaColors: Record<string, string> = {
   '6': 'bg-yellow-50 text-yellow-800 border border-yellow-200 px-3 py-1 rounded-full text-sm font-semibold shadow-sm',
   '5': 'bg-orange-50 text-orange-800 border border-orange-200 px-3 py-1 rounded-full text-sm font-semibold shadow-sm',
   '4': 'bg-red-50 text-red-800 border border-red-200 px-3 py-1 rounded-full text-sm font-semibold shadow-sm',
+  'Desaprobado': 'bg-red-50 text-red-800 border border-red-200 px-3 py-1 rounded-full text-sm font-semibold shadow-sm',
+  'No Entregado': 'bg-rose-50 text-rose-800 border border-rose-200 px-3 py-1 rounded-full text-sm font-medium shadow-sm',
   'Sin calificar': 'bg-slate-50 text-slate-600 border border-slate-200 px-3 py-1 rounded-full text-sm font-medium shadow-sm'
 };
 
