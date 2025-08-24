@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { fetchAllAirtableData, updateAirtableRecord, updateAirtableRecords } from '../services/airtableService';
-import type { InformeCorreccionPPS, InformeCorreccionStudent, ConvocatoriaFields, PracticaFields, EstudianteFields, LanzamientoPPSFields, FlatCorreccionStudent } from '../types';
+import type { InformeCorreccionPPS, InformeCorreccionStudent, ConvocatoriaFields, PracticaFields, EstudianteFields, LanzamientoPPSFields, FlatCorreccionStudent, AirtableRecord, LanzamientoPPS } from '../types';
 import {
   AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
   AIRTABLE_TABLE_NAME_CONVOCATORIAS,
@@ -19,6 +19,10 @@ import {
   FIELD_INFORME_LANZAMIENTOS,
   FIELD_FECHA_FIN_LANZAMIENTOS,
   FIELD_LEGAJO_ESTUDIANTES,
+  FIELD_ESPECIALIDAD_PRACTICAS,
+  FIELD_NOMBRE_PPS_CONVOCATORIAS,
+  FIELD_FECHA_INICIO_CONVOCATORIAS,
+  FIELD_FECHA_INICIO_LANZAMIENTOS,
 } from '../constants';
 import Loader from './Loader';
 import EmptyState from './EmptyState';
@@ -62,9 +66,10 @@ const CorreccionPanel: React.FC = () => {
           FIELD_NOMBRE_PPS_LANZAMIENTOS,
           FIELD_ORIENTACION_LANZAMIENTOS,
           FIELD_INFORME_LANZAMIENTOS,
-          FIELD_FECHA_FIN_LANZAMIENTOS
+          FIELD_FECHA_FIN_LANZAMIENTOS,
+          FIELD_FECHA_INICIO_LANZAMIENTOS,
         ]),
-        fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS, [], `{${FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS}} = "Seleccionado"`),
+        fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS), // Fetch all convocatorias without filters
         fetchAllAirtableData<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS),
         fetchAllAirtableData<EstudianteFields>(AIRTABLE_TABLE_NAME_ESTUDIANTES, [FIELD_NOMBRE_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES])
       ]);
@@ -86,30 +91,82 @@ const CorreccionPanel: React.FC = () => {
 
       const ppsGroups = new Map<string, InformeCorreccionPPS>();
 
-      for (const conv of convocatoriasRes.records) {
-        const lanzamientoId = (conv.fields[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])[0];
-        const studentId = (conv.fields[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] || [])[0];
+      // Filter on client side for robustness against case/whitespace issues in Airtable
+      const validConvocatorias = convocatoriasRes.records.filter(conv => {
+        const estado = normalizeStringForComparison(conv.fields[FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS]);
+        return estado !== 'inscripto' && estado !== 'no seleccionado';
+      });
+      
+      const allLanzamientos = lanzamientosRes.records;
+      const lanzamientosToUpdate = new Map<string, { id: string; fields: Partial<LanzamientoPPSFields> }>();
 
-        if (!lanzamientoId || !studentId) continue;
+      for (const convRecord of validConvocatorias) {
+        const studentId = (convRecord.fields[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] || [])[0];
+        if (!studentId) continue;
         
-        const lanzamiento = lanzamientosRes.records.find(l => l.id === lanzamientoId);
         const student = estudiantesMap.get(studentId);
-        
-        if (!lanzamiento || !student) continue;
+        if (!student) continue;
 
+        let lanzamiento: AirtableRecord<LanzamientoPPSFields> | undefined;
+        const linkedLanzamientoId = (convRecord.fields[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])[0];
+
+        if (linkedLanzamientoId) {
+            lanzamiento = allLanzamientos.find(l => l.id === linkedLanzamientoId);
+        }
+
+        // Fallback if no linked record or if linked record not found
+        if (!lanzamiento) {
+            const convPpsNameRaw = convRecord.fields[FIELD_NOMBRE_PPS_CONVOCATORIAS];
+            const convStartDate = parseToUTCDate(convRecord.fields[FIELD_FECHA_INICIO_CONVOCATORIAS]);
+
+            const ppsNameToMatch = Array.isArray(convPpsNameRaw) ? convPpsNameRaw[0] : convPpsNameRaw;
+
+            if (ppsNameToMatch && convStartDate) {
+                lanzamiento = allLanzamientos.find(l => {
+                    const launchStartDate = parseToUTCDate(l.fields[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+                    const launchName = l.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS];
+                    
+                    return (
+                        normalizeStringForComparison(launchName) === normalizeStringForComparison(ppsNameToMatch) &&
+                        launchStartDate?.getTime() === convStartDate.getTime()
+                    );
+                });
+            }
+        }
+        
+        if (!lanzamiento) continue; // If still no lanzamiento, skip this convocatoria.
+        
         const ppsName = lanzamiento.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'N/A';
-        const studentName = student[FIELD_NOMBRE_ESTUDIANTES] || 'N/A';
         const studentLegajo = student[FIELD_LEGAJO_ESTUDIANTES];
         
         const practicaKey = `${normalizeStringForComparison(studentLegajo)}-${normalizeStringForComparison(ppsName)}`;
         const practica = practicasMap.get(practicaKey);
+
+        // If there's no matching practica record, this student should not appear in the correction panel.
+        if (!practica) {
+            continue;
+        }
+        
+        // If a PPS appears in the correction panel but has no report link, flag it for update.
+        const informeLink = lanzamiento.fields[FIELD_INFORME_LANZAMIENTOS];
+        if (!informeLink) {
+            if (!lanzamientosToUpdate.has(lanzamiento.id)) {
+                lanzamientosToUpdate.set(lanzamiento.id, {
+                    id: lanzamiento.id,
+                    fields: { [FIELD_INFORME_LANZAMIENTOS]: 'poner link de informe' }
+                });
+            }
+        }
+        
+        const lanzamientoId = lanzamiento.id;
+        const studentName = student[FIELD_NOMBRE_ESTUDIANTES] || 'N/A';
 
         if (!ppsGroups.has(lanzamientoId)) {
           ppsGroups.set(lanzamientoId, {
             lanzamientoId: lanzamientoId,
             ppsName: ppsName,
             orientacion: lanzamiento.fields[FIELD_ORIENTACION_LANZAMIENTOS] || 'N/A',
-            informeLink: lanzamiento.fields[FIELD_INFORME_LANZAMIENTOS],
+            informeLink: informeLink,
             fechaFinalizacion: lanzamiento.fields[FIELD_FECHA_FIN_LANZAMIENTOS],
             students: []
           });
@@ -118,16 +175,57 @@ const CorreccionPanel: React.FC = () => {
         const studentData: InformeCorreccionStudent = {
           studentId: studentId,
           studentName: studentName,
-          convocatoriaId: conv.id,
+          convocatoriaId: convRecord.id,
           practicaId: practica?.id,
-          informeSubido: !!conv.fields[FIELD_INFORME_SUBIDO_CONVOCATORIAS],
+          informeSubido: !!convRecord.fields[FIELD_INFORME_SUBIDO_CONVOCATORIAS],
           nota: practica?.fields?.[FIELD_NOTA_PRACTICAS] || 'Sin calificar'
         };
         
         ppsGroups.get(lanzamientoId)!.students.push(studentData);
       }
       
-      setAllPpsGroups(ppsGroups);
+      // After processing, fire-and-forget the updates to Airtable
+      if (lanzamientosToUpdate.size > 0) {
+        const recordsToUpdate = Array.from(lanzamientosToUpdate.values());
+        updateAirtableRecords(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, recordsToUpdate)
+            .then(({ error }) => {
+                if (!error) {
+                    setToastInfo({
+                        message: `${recordsToUpdate.length} PPS sin link de informe fueron marcadas para completar.`,
+                        type: 'success'
+                    });
+                } else {
+                     console.error("Failed to flag Lanzamientos for missing report links:", error);
+                }
+            });
+      }
+
+      // Filter out any PPS groups that have no students left after filtering.
+      const finalPpsGroups = new Map<string, InformeCorreccionPPS>();
+      for (const [key, group] of ppsGroups.entries()) {
+          if (group.students.length > 0) {
+              finalPpsGroups.set(key, group);
+          }
+      }
+
+      // Fallback logic: If a Lanzamiento is missing an orientation,
+      // try to infer it from the students' linked Practica records.
+      for (const group of finalPpsGroups.values()) {
+        if (!group.orientacion || group.orientacion.trim() === '' || group.orientacion === 'N/A') {
+          for (const student of group.students) {
+            if (student.practicaId) {
+              const practicaRecord = practicasRes.records.find(p => p.id === student.practicaId);
+              const practicaEspecialidad = practicaRecord?.fields[FIELD_ESPECIALIDAD_PRACTICAS];
+              if (practicaEspecialidad && practicaEspecialidad.trim() !== '') {
+                group.orientacion = practicaEspecialidad;
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      setAllPpsGroups(finalPpsGroups);
       setLoadingState('loaded');
 
     } catch (e: any) {

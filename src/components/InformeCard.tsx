@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import type { InformeTask } from '../types';
-import { formatDate } from '../utils/formatters';
+import { formatDate, parseToUTCDate } from '../utils/formatters';
 
 interface InformeCardProps {
   task: InformeTask;
@@ -34,12 +34,20 @@ const InformeCard: React.FC<InformeCardProps> = ({ task, onConfirmar }) => {
   }, [nota, informeSubido]);
 
   const { deadline, daysRemaining, isOverdue } = useMemo(() => {
-    const finalizacionDate = new Date(task.fechaFinalizacion);
-    const deadlineDate = new Date(finalizacionDate);
-    deadlineDate.setDate(deadlineDate.getDate() + 30);
+    const finalizacionDate = parseToUTCDate(task.fechaFinalizacion);
+    if (!finalizacionDate) {
+      return {
+        deadline: null,
+        daysRemaining: 0,
+        isOverdue: false,
+      };
+    }
+
+    const deadlineDate = new Date(finalizacionDate.getTime());
+    deadlineDate.setUTCDate(deadlineDate.getUTCDate() + 30);
 
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
 
     const timeDiff = deadlineDate.getTime() - today.getTime();
     const days = Math.floor(timeDiff / (1000 * 3600 * 24));
@@ -63,6 +71,17 @@ const InformeCard: React.FC<InformeCardProps> = ({ task, onConfirmar }) => {
   };
 
   const DeadlineInfo: React.FC = () => {
+    if (!deadline) {
+        return (
+            <p className="text-sm font-medium mt-1.5 text-slate-500 italic">
+                Fecha límite no disponible
+            </p>
+        );
+    }
+    if (nota && nota !== 'Sin calificar') {
+      return null;
+    }
+    
     let textColor = 'text-slate-600';
     let text = `Vence en ${daysRemaining + 1} día${daysRemaining + 1 !== 1 ? 's' : ''}`;
 
