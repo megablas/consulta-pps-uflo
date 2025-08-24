@@ -234,42 +234,38 @@ export function normalizeStringForComparison(str?: any): string {
 /**
  * Parses a date string from various formats into a standardized UTC Date object.
  * This ensures that date comparisons are accurate regardless of the source string format.
+ * It explicitly handles YYYY-MM-DD and DD/MM/YYYY formats.
  * @param dateString The date string to parse.
  * @returns A Date object in UTC, or null if the string is invalid.
  */
 export function parseToUTCDate(dateString?: string): Date | null {
     if (!dateString || typeof dateString !== 'string') return null;
 
-    const trimmedStr = dateString.trim();
+    const trimmedStr = dateString.trim().split('T')[0]; // Get only the date part
     if (!trimmedStr) return null;
 
-    // Case 1: DD/MM/YYYY or DD-MM-YYYY, potentially with trailing time string.
-    // This regex now only checks the start of the string.
-    const euroParts = trimmedStr.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
-    if (euroParts) {
-        const day = parseInt(euroParts[1], 10);
-        const month = parseInt(euroParts[2], 10) - 1; // JS months are 0-indexed
-        const year = parseInt(euroParts[3], 10);
-        const d = new Date(Date.UTC(year, month, day));
-        // Validate to catch invalid dates like '30/02/2024'
-        if (!isNaN(d.getTime()) && d.getUTCFullYear() === year && d.getUTCMonth() === month && d.getUTCDate() === day) {
+    // Try YYYY-MM-DD format (ISO standard)
+    let parts = trimmedStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (parts) {
+        const [, year, month, day] = parts.map(Number);
+        // Create UTC date and validate it to avoid issues like month 13 or day 32
+        const d = new Date(Date.UTC(year, month - 1, day));
+        if (d.getUTCFullYear() === year && d.getUTCMonth() === month - 1 && d.getUTCDate() === day) {
             return d;
         }
     }
 
-    // Case 2: Standard ISO formats (YYYY-MM-DD, YYYY-MM-DDTHH:mm, etc.)
-    // `new Date()` is generally reliable for these.
-    const d = new Date(trimmedStr);
-    if (!isNaN(d.getTime())) {
-        // If the string was just a date (e.g., "2024-11-26"), new Date() creates it in the local timezone.
-        // We convert it to a UTC date at the start of that day to avoid off-by-one errors.
-        if (!trimmedStr.includes('T')) {
-            return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    // Try DD/MM/YYYY or DD-MM-YYYY format
+    parts = trimmedStr.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+    if (parts) {
+        const [, day, month, year] = parts.map(Number);
+        // Create UTC date and validate it
+        const d = new Date(Date.UTC(year, month - 1, day));
+        if (d.getUTCFullYear() === year && d.getUTCMonth() === month - 1 && d.getUTCDate() === day) {
+            return d;
         }
-        // If it was a full ISO string, it's already parsed correctly relative to UTC.
-        return d;
     }
 
-    console.warn(`[parseToUTCDate] Could not parse date string: "${dateString}"`);
+    console.warn(`[parseToUTCDate] Could not parse date string with known formats: "${dateString}"`);
     return null;
 }

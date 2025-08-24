@@ -144,38 +144,49 @@ const updateAirtableRecords = async <TFields>(
   records: { id: string; fields: Partial<TFields> }[]
 ): Promise<{ records: AirtableRecord<TFields>[] | null, error: AirtableErrorResponse | null }> => {
   
+  const CHUNK_SIZE = 10;
+  let allUpdatedRecords: AirtableRecord<TFields>[] = [];
   const url = `${API_BASE}/${encodeURIComponent(tableName)}`;
-  
-  try {
-    const response = await fetch(url, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `Bearer ${AIRTABLE_PAT}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ records })
-    });
 
-    if (!response.ok) {
-       let errorData: AirtableErrorResponse;
-       try {
-           const jsonError = await response.json();
-           errorData = jsonError as AirtableErrorResponse;
-       } catch (e) {
-           const textError = await response.text().catch(() => "Could not read error response body.");
-           errorData = { error: { type: `HTTP_ERROR_${response.status}`, message: `Error ${response.status}: ${textError}` } };
-       }
-       console.error('[updateAirtableRecords] Airtable API Error:', response.status, JSON.stringify(errorData));
-       return { records: null, error: errorData };
+  for (let i = 0; i < records.length; i += CHUNK_SIZE) {
+    const chunk = records.slice(i, i + CHUNK_SIZE);
+    
+    try {
+      const response = await fetch(url, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${AIRTABLE_PAT}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ records: chunk })
+      });
+
+      if (!response.ok) {
+         let errorData: AirtableErrorResponse;
+         try {
+             const jsonError = await response.json();
+             errorData = jsonError as AirtableErrorResponse;
+         } catch (e) {
+             const textError = await response.text().catch(() => "Could not read error response body.");
+             errorData = { error: { type: `HTTP_ERROR_${response.status}`, message: `Error ${response.status}: ${textError}` } };
+         }
+         console.error('[updateAirtableRecords] Airtable API Error:', response.status, JSON.stringify(errorData));
+         // Return on first error. The caller can decide what to do with partial success.
+         return { records: allUpdatedRecords.length > 0 ? allUpdatedRecords : null, error: errorData };
+      }
+
+      const data = await response.json() as AirtableResponse<TFields>;
+      if (data.records) {
+          allUpdatedRecords.push(...data.records);
+      }
+
+    } catch (networkError) {
+      console.error('[updateAirtableRecords] Network or Fetch Error:', networkError);
+      return { records: allUpdatedRecords.length > 0 ? allUpdatedRecords : null, error: { error: { type: 'NETWORK_ERROR', message: 'No se pudo conectar con el servidor. Revisa tu conexión a internet.' } } };
     }
-
-    const data = await response.json() as AirtableResponse<TFields>;
-    return { records: data.records, error: null };
-
-  } catch (networkError) {
-    console.error('[updateAirtableRecords] Network or Fetch Error:', networkError);
-    return { records: null, error: { error: { type: 'NETWORK_ERROR', message: 'No se pudo conectar con el servidor. Revisa tu conexión a internet.' } } };
   }
+
+  return { records: allUpdatedRecords, error: null };
 }
 
 const fetchAllAirtableData = async <TFields>(
