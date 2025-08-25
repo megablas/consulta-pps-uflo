@@ -484,7 +484,7 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
             if (group.students.length === 0) return;
 
             const mailToSubject = `Reporte de Seguro - ${group.institucion}`;
-            const mailToBody = `Hola Sergio,\n\nTe adjunto el seguro de la PPS.\n\nSaludos!`;
+            const mailToBody = `Buenos días,\n\nAdjunto el seguro de la PPS.\n\nSaludos.`;
             const mailtoLink = `mailto:${EMAIL_SEGUROS}?subject=${encodeURIComponent(mailToSubject)}&body=${encodeURIComponent(mailToBody)}`;
             
             window.location.href = mailtoLink;

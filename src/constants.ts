@@ -109,5 +109,5 @@ export const ALERT_INFORMES_TEXT = 'Las fechas de entrega de los informes pueden
 
 
 // --- Misc ---
-export const EMAIL_SEGUROS = 'sergio.rivera@uflouniversidad.edu.ar';
+export const EMAIL_SEGUROS = 'mesadeayuda.patagonia@uflouniversidad.edu.ar';
 export const TEMPLATE_PPS_NAME = 'Colegio Virgen de Luján';
