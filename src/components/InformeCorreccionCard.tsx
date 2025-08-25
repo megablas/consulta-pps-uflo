@@ -4,7 +4,7 @@ import NotaSelector from './NotaSelector';
 import Checkbox from './Checkbox';
 import { addBusinessDays, formatDate, parseToUTCDate } from '../utils/formatters';
 
-const NOTA_OPTIONS = ['Sin calificar', 'No Entregado', 'Desaprobado', '4', '5', '6', '7', '8', '9', '10'];
+const NOTA_OPTIONS = ['Sin calificar', 'Entregado (sin corregir)', 'No Entregado', 'Desaprobado', '4', '5', '6', '7', '8', '9', '10'];
 
 interface InformeCorreccionCardProps {
   ppsGroup: InformeCorreccionPPS;
@@ -58,7 +58,7 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
   const stats = useMemo(() => {
     const qualifiableStudents = students.filter(s => !!s.practicaId);
     const totalStudents = students.length;
-    const corregidos = students.filter(s => s.nota && s.nota !== 'Sin calificar').length;
+    const corregidos = students.filter(s => s.nota && s.nota !== 'Sin calificar' && s.nota !== 'Entregado (sin corregir)').length;
     const isAllSelected = qualifiableStudents.length > 0 && qualifiableStudents.every(s => s.practicaId && selectedStudents.has(s.practicaId));
     return { totalStudents, corregidos, isAllSelected, qualifiableStudents };
   }, [students, selectedStudents]);
@@ -67,7 +67,7 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
     // The correction deadline is relevant for any PPS group where at least one student is pending a grade.
     // We display it based on the end date, regardless of individual report submission status,
     // as it provides a clear timeline for the person correcting.
-    const isPending = students.some(s => !s.nota || s.nota === 'Sin calificar');
+    const isPending = students.some(s => !s.nota || s.nota === 'Sin calificar' || s.nota === 'Entregado (sin corregir)');
     if (!isPending) return null;
 
     if (!fechaFinalizacion) {
@@ -177,7 +177,7 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
                       className="text-sm rounded-lg border border-slate-300/80 p-2 bg-white shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus-ring-blue-500/20"
                       aria-label="Seleccionar nota para el lote"
                   >
-                      {NOTA_OPTIONS.filter(o => o !== 'Sin calificar' && o !== 'No Entregado').map(option => (
+                      {NOTA_OPTIONS.filter(o => o !== 'Sin calificar' && o !== 'No Entregado' && o !== 'Entregado (sin corregir)').map(option => (
                           <option key={option} value={option}>{option}</option>
                       ))}
                   </select>
@@ -203,62 +203,71 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
             <thead className="bg-slate-50/70">
               <tr>
                 <th className="p-3 w-12 text-center">
-                    <input
-                        type="checkbox"
+                   <Checkbox
+                        id={`select-all-${ppsGroup.lanzamientoId}`}
+                        name="selectAll"
                         checked={stats.isAllSelected}
                         onChange={handleSelectAll}
+                        label=""
                         disabled={stats.qualifiableStudents.length === 0}
-                        className="h-4 w-4 rounded text-blue-600 border-slate-400 focus:ring-2 focus:ring-blue-500/50 disabled:cursor-not-allowed disabled:opacity-50"
-                        aria-label="Seleccionar todos los alumnos"
                     />
                 </th>
                 <th className="p-3 text-left font-semibold text-slate-500">Alumno</th>
-                <th className="p-3 text-center font-semibold text-slate-500">Entrega</th>
-                <th className="p-3 text-left font-semibold text-slate-500">Nota</th>
+                <th className="p-3 text-left font-semibold text-slate-500 w-56">Nota</th>
+                <th className="p-3 text-center font-semibold text-slate-500">Informe Subido</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200/60">
-              {students.map(student => (
-                <tr key={student.convocatoriaId} className={`transition-colors duration-1000 ${!!student.practicaId && selectedStudents.has(student.practicaId) ? 'bg-blue-50/70' : ''} ${justUpdatedPracticaId === student.practicaId ? 'bg-green-100' : 'hover:bg-slate-50/50'}`}>
-                  <td className="p-3 text-center">
-                      <input
-                          type="checkbox"
-                          checked={!!student.practicaId && selectedStudents.has(student.practicaId)}
-                          onChange={() => student.practicaId && onSelectionChange(student.practicaId)}
+              {students.map(student => {
+                const isSelected = student.practicaId ? selectedStudents.has(student.practicaId) : false;
+                return (
+                  <tr key={student.studentId} className={`transition-colors duration-1000 ${justUpdatedPracticaId === student.practicaId ? 'bg-green-100' : (isSelected ? 'bg-blue-50/50' : 'hover:bg-slate-50/50')}`}>
+                    <td className="p-3 text-center">
+                       {student.practicaId && (
+                           <Checkbox
+                                id={`select-${student.practicaId}`}
+                                name="selectStudent"
+                                checked={isSelected}
+                                onChange={() => onSelectionChange(student.practicaId!)}
+                                label=""
+                           />
+                       )}
+                    </td>
+                    <td className="p-3 font-medium text-slate-800">
+                      <HighlightedName text={student.studentName} highlight={searchTerm} />
+                    </td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        <NotaSelector
+                          value={student.nota || 'Sin calificar'}
+                          onChange={(e) => student.practicaId && handleNotaChange(student.practicaId, e.target.value, student.convocatoriaId)}
                           disabled={!student.practicaId}
-                          className="h-4 w-4 rounded text-blue-600 border-slate-400 focus:ring-2 focus:ring-blue-500/50 disabled:cursor-not-allowed disabled:opacity-50"
-                          aria-label={`Seleccionar a ${student.studentName}`}
-                      />
-                  </td>
-                  <td className="p-3 font-medium text-slate-800">
-                    <HighlightedName text={student.studentName} highlight={searchTerm} />
-                  </td>
-                  <td className="p-3 text-center">
-                    <span 
-                      className={`material-icons !text-xl ${student.informeSubido ? 'text-green-500' : 'text-slate-300'}`}
-                      title={student.informeSubido ? 'Informe entregado' : 'Informe pendiente'}
-                    >
-                      {student.informeSubido ? 'check_circle' : 'circle'}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <div className="flex items-center gap-2">
-                      <NotaSelector
-                        value={student.nota || 'Sin calificar'}
-                        onChange={(e) => student.practicaId && handleNotaChange(student.practicaId, e.target.value, student.convocatoriaId)}
-                        disabled={!student.practicaId}
-                        isSaving={updatingNotaId === student.practicaId}
-                        ariaLabel={`Nota para ${student.studentName}`}
-                      />
-                      {justUpdatedPracticaId === student.practicaId && (
-                        <span className="text-xs font-bold text-emerald-600 animate-fade-in-up" style={{ animationDuration: '300ms' }}>
-                            Guardado ✓
+                          isSaving={updatingNotaId === student.practicaId}
+                          ariaLabel={`Nota para ${student.studentName}`}
+                        />
+                         {justUpdatedPracticaId === student.practicaId && (
+                            <span className="text-xs font-bold text-emerald-600 animate-fade-in-up" style={{ animationDuration: '300ms' }}>
+                                Guardado ✓
+                            </span>
+                         )}
+                      </div>
+                    </td>
+                    <td className="p-3 text-center">
+                      {student.informeSubido ? (
+                        <span className="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-800 text-xs font-semibold px-2.5 py-1 rounded-full" title="Informe subido por el alumno">
+                          <span className="material-icons !text-sm">check</span>
+                          <span>Sí</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 bg-rose-100 text-rose-800 text-xs font-semibold px-2.5 py-1 rounded-full" title="Informe no subido o marcado como 'No Entregado'">
+                           <span className="material-icons !text-sm">close</span>
+                           <span>No</span>
                         </span>
                       )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

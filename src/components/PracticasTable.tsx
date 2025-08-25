@@ -18,7 +18,7 @@ import {
 import EmptyState from './EmptyState';
 import { useData } from '../contexts/DataContext';
 
-const NOTA_OPTIONS = ['Sin calificar', 'No Entregado', 'Desaprobado', '4', '5', '6', '7', '8', '9', '10'];
+const NOTA_OPTIONS = ['Sin calificar', 'Entregado (sin corregir)', 'No Entregado', 'Desaprobado', '4', '5', '6', '7', '8', '9', '10'];
 
 const notaColors: Record<string, string> = {
   '10': 'bg-gradient-to-r from-emerald-400 to-teal-400 text-white shadow-lg shadow-emerald-500/20',
@@ -30,6 +30,7 @@ const notaColors: Record<string, string> = {
   '4': 'bg-red-100 text-red-800',
   'Desaprobado': 'bg-red-200 text-red-900 font-bold',
   'No Entregado': 'bg-rose-100 text-rose-800',
+  'Entregado (sin corregir)': 'bg-sky-100 text-sky-800',
   'Sin calificar': 'bg-slate-100 text-slate-700'
 };
 
@@ -163,6 +164,7 @@ const PracticasTable: React.FC = () => {
               const statusVisuals = getStatusVisuals(status);
               const nota = practica[FIELD_NOTA_PRACTICAS] || 'Sin calificar';
               const notaClass = `inline-block px-3 py-1 rounded-full text-xs font-semibold transition-transform hover:scale-105 shadow-sm ${notaColors[nota] || notaColors['Sin calificar']}`;
+              const isEditable = nota === 'Sin calificar' || nota === 'Entregado (sin corregir)';
 
               return (
                 <tr 
@@ -192,7 +194,7 @@ const PracticasTable: React.FC = () => {
                     </span>
                   </td>
                   <td className="p-4 align-middle w-48 text-center">
-                    {nota === 'Sin calificar' ? (
+                    {isEditable ? (
                       <div className="relative">
                         <select
                           value={nota}

@@ -1,6 +1,6 @@
 import React from 'react';
 
-const NOTA_OPTIONS = ['Sin calificar', 'No Entregado', 'Desaprobado', '4', '5', '6', '7', '8', '9', '10'];
+const NOTA_OPTIONS = ['Sin calificar', 'Entregado (sin corregir)', 'No Entregado', 'Desaprobado', '4', '5', '6', '7', '8', '9', '10'];
 
 interface NotaSelectorProps {
   value: string;
@@ -13,6 +13,7 @@ interface NotaSelectorProps {
 const NotaSelector: React.FC<NotaSelectorProps> = ({ value, onChange, disabled, isSaving, ariaLabel }) => {
   
   const getBackgroundColor = (nota: string) => {
+    if (nota === 'Entregado (sin corregir)') return 'bg-sky-100';
     if (nota === 'No Entregado') return 'bg-rose-100';
     if (nota === 'Desaprobado') return 'bg-red-100';
     if (nota === 'Sin calificar') return 'bg-slate-100';

@@ -10,6 +10,7 @@ import ConvocatoriaManager from '../components/ConvocatoriaManager';
 import CorreccionPanel from '../components/CorreccionPanel';
 import type { TabId } from '../types';
 import ConvocatoriaStatusManager from '../components/ConvocatoriaStatusManager';
+import RepitentesPanel from '../components/RepitentesPanel';
 
 
 interface StudentTab {
@@ -67,6 +68,13 @@ const AdminView: React.FC = () => {
             icon: 'tune',
             isClosable: false,
             content: <ConvocatoriaManager />
+        },
+        {
+            id: 'repitentes',
+            label: 'Repitentes de PPS',
+            icon: 'history_edu',
+            isClosable: false,
+            content: <RepitentesPanel />
         },
         {
             id: 'status-manager',
