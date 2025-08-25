@@ -44,23 +44,7 @@ interface GestionCardProps {
 const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpdating, cardType, institution, onSavePhone }) => {
   const [status, setStatus] = useState(pps[FIELD_ESTADO_GESTION_LANZAMIENTOS] || 'Pendiente de Gestión');
   const [notes, setNotes] = useState(pps[FIELD_NOTAS_GESTION_LANZAMIENTOS] || '');
-  const [relaunchDate, setRelaunchDate] = useState(() => {
-    const dateStr = pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS];
-    if (!dateStr) return '';
-    // If it's already in YYYY-MM-DD format (potentially with time), just take the date part.
-    if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
-        return dateStr.substring(0, 10);
-    }
-    // If it's in MM/DD/YYYY, convert it
-    const parts = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if (parts) {
-      const [, month, day, year] = parts;
-      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    }
-    return '';
-  });
   const [isJustSaved, setIsJustSaved] = useState(false);
-  const [error, setError] = useState<string|null>(null);
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [newPhone, setNewPhone] = useState('');
   const especialidadVisuals = getEspecialidadClasses(pps[FIELD_ORIENTACION_LANZAMIENTOS]);
@@ -68,42 +52,19 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
   const hasChanges = useMemo(() => {
     const originalStatus = pps[FIELD_ESTADO_GESTION_LANZAMIENTOS] || 'Pendiente de Gestión';
     const originalNotes = pps[FIELD_NOTAS_GESTION_LANZAMIENTOS] || '';
-    const originalDateStr = pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS] || '';
-    
-    let originalDateForCompare = '';
-    if (originalDateStr) {
-        if (/^\d{4}-\d{2}-\d{2}/.test(originalDateStr)) {
-            originalDateForCompare = originalDateStr.substring(0, 10);
-        } else {
-            const parts = originalDateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-            if (parts) {
-                const [, month, day, year] = parts;
-                originalDateForCompare = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            }
-        }
-    }
     
     const statusChanged = status !== originalStatus;
     const notesChanged = notes !== originalNotes;
-    const dateChanged = relaunchDate !== originalDateForCompare;
 
-    return statusChanged || notesChanged || dateChanged;
-  }, [status, notes, relaunchDate, pps]);
+    return statusChanged || notesChanged;
+  }, [status, notes, pps]);
 
   const handleSave = async () => {
-    setError(null);
     if (!hasChanges) return;
-    if (status === 'Relanzamiento Confirmado' && !relaunchDate) {
-        setError('Por favor, selecciona una fecha de relanzamiento.');
-        return;
-    }
-
-    const updates = {
+    
+    const updates: Partial<LanzamientoPPS> = {
       [FIELD_ESTADO_GESTION_LANZAMIENTOS]: status,
       [FIELD_NOTAS_GESTION_LANZAMIENTOS]: notes,
-      [FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]: status === 'Relanzamiento Confirmado' && relaunchDate
-        ? relaunchDate // Send in YYYY-MM-DD format
-        : null,
     };
     
     const success = await onSave(pps.id, updates);
@@ -178,12 +139,14 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
         return { text: `Finalizó ${formatDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS])}`, color: 'bg-slate-100 text-slate-600 ring-slate-200', icon: 'history_toggle_off' };
     }
     
-    if (cardType === 'relanzamientosConfirmados' && pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]) {
-        return { text: `Relanza ${formatDate(relaunchDate)}`, color: 'bg-indigo-100 text-indigo-800 ring-indigo-200', icon: 'flight_takeoff' };
+    if (cardType === 'relanzamientosConfirmados') {
+        const relaunchDateValue = pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS];
+        const text = relaunchDateValue ? `Relanza ${formatDate(relaunchDateValue)}` : 'Relanzamiento Confirmado';
+        return { text, color: 'bg-indigo-100 text-indigo-800 ring-indigo-200', icon: 'flight_takeoff' };
     }
     
     return null;
-  }, [pps, cardType, relaunchDate]);
+  }, [pps, cardType]);
 
   const isEnConversacion = status === 'En Conversación';
   const actionButtonClass = "font-bold py-2 px-4 rounded-lg text-sm transition-all duration-300 shadow-md flex items-center justify-center gap-2 w-44";
@@ -228,19 +191,6 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
                         </div>
                     </div>
                 </div>
-                {status === 'Relanzamiento Confirmado' && (
-                    <div className="animate-fade-in-up">
-                        <label htmlFor={`relaunch-${pps.id}`} className="text-xs font-semibold text-slate-600 mb-1 block">Fecha de Relanzamiento</label>
-                        <input
-                            type="date"
-                            id={`relaunch-${pps.id}`}
-                            value={relaunchDate}
-                            onChange={(e) => setRelaunchDate(e.target.value)}
-                            className="w-full text-sm rounded-lg border border-slate-300 p-2 bg-white shadow-sm outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 transition"
-                        />
-                         {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
-                    </div>
-                )}
                 <div>
                     <label htmlFor={`notes-${pps.id}`} className="text-xs font-semibold text-slate-600 mb-1 block">Notas de Gestión</label>
                     <textarea 
@@ -613,9 +563,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                 continue;
             }
     
-            const relaunchDate = parseToUTCDate(pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]);
-    
-            if (gestionStatus === 'Relanzamiento Confirmado' && relaunchDate) {
+            if (gestionStatus === 'Relanzamiento Confirmado') {
                 conf.push(pps);
             } else {
                 const endDate = parseToUTCDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS]);
