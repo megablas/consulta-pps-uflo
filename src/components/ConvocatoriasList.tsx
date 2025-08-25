@@ -1,10 +1,18 @@
 import React from 'react';
 import type { Convocatoria, LanzamientoPPS } from '../types';
 import ConvocatoriaCard from './ConvocatoriaCard';
-import { FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS as FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS } from '../constants';
+import { 
+    FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, 
+    FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS as FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS,
+    FIELD_NOMBRE_PPS_LANZAMIENTOS,
+    FIELD_ORIENTACION_LANZAMIENTOS,
+    FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS,
+    FIELD_ESPECIALIDAD_PRACTICAS
+} from '../constants';
 import EmptyState from './EmptyState';
 import { useData } from '../contexts/DataContext';
 import { useModal } from '../contexts/ModalContext';
+import { normalizeStringForComparison } from '../utils/formatters';
 
 interface ConvocatoriasListProps {
   lanzamientos: LanzamientoPPS[];
@@ -12,7 +20,7 @@ interface ConvocatoriasListProps {
 }
 
 const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myEnrollments }) => {
-    const { studentAirtableId } = useData();
+    const { studentAirtableId, practicas } = useData();
     const { 
       enrollingId,
       loadingSeleccionadosId,
@@ -51,6 +59,22 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myE
                 const isEnrolling = enrollingId === lanzamiento.id;
                 const isVerSeleccionadosLoading = loadingSeleccionadosId === lanzamiento.id;
                 
+                const isCompleted = practicas.some(practica => {
+                    const practicaInstitucionRaw = practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
+                    const practicaInstitucion = Array.isArray(practicaInstitucionRaw) ? practicaInstitucionRaw[0] : practicaInstitucionRaw;
+                    const practicaOrientacion = practica[FIELD_ESPECIALIDAD_PRACTICAS];
+
+                    const lanzamientoInstitucion = lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS];
+                    const lanzamientoOrientacion = lanzamiento[FIELD_ORIENTACION_LANZAMIENTOS];
+
+                    if (!practicaInstitucion || !practicaOrientacion || !lanzamientoInstitucion || !lanzamientoOrientacion) {
+                        return false;
+                    }
+
+                    return normalizeStringForComparison(practicaInstitucion) === normalizeStringForComparison(lanzamientoInstitucion) &&
+                           normalizeStringForComparison(practicaOrientacion) === normalizeStringForComparison(lanzamientoOrientacion);
+                });
+                
                 return (
                   <ConvocatoriaCard 
                       key={lanzamiento.id} 
@@ -60,6 +84,7 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myE
                       isVerSeleccionadosLoading={isVerSeleccionadosLoading}
                       onInscribir={handleInscribir}
                       onVerSeleccionados={handleVerSeleccionados}
+                      isCompleted={isCompleted}
                   />
                 );
               })}

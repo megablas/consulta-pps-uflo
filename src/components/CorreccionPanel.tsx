@@ -392,7 +392,7 @@ const CorreccionPanel: React.FC = () => {
     for (const group of filteredGroups) {
       for (const student of group.students) {
         // A student appears in the quick correction list if they have submitted their report, need a grade, and have a practice record.
-        if (student.informeSubido && student.nota === 'Sin calificar' && student.practicaId) {
+        if (student.informeSubido && (student.nota === 'Sin calificar' || student.nota === 'Entregado (sin corregir)') && student.practicaId) {
             const finalizacionDate = group.fechaFinalizacion ? parseToUTCDate(group.fechaFinalizacion) : undefined;
             const deadline = finalizacionDate ? addBusinessDays(finalizacionDate, 30) : undefined;
             flatList.push({ 
@@ -429,10 +429,10 @@ const CorreccionPanel: React.FC = () => {
     }
 
     const pendientes = ppsFilteredGroups.filter(group => 
-      group.students.some(s => !s.nota || s.nota === 'Sin calificar')
+      group.students.some(s => !s.nota || s.nota === 'Sin calificar' || s.nota === 'Entregado (sin corregir)')
     );
     const finalizados = ppsFilteredGroups.filter(group => 
-      group.students.every(s => s.nota && s.nota !== 'Sin calificar')
+      group.students.every(s => s.nota && s.nota !== 'Sin calificar' && s.nota !== 'Entregado (sin corregir)')
     );
     
     return { pendientes, finalizados, flatList: searchFilteredFlatList, totalSinCorregir };
