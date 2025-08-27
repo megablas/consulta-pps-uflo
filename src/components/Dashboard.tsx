@@ -12,6 +12,7 @@ import WelcomeBanner from './WelcomeBanner';
 import ConvocatoriasList from './ConvocatoriasList';
 import InformesList from './InformesList';
 import type { TabId } from '../types';
+import WhatsAppExportButton from './WhatsAppExportButton';
 
 // Tipos para mejor tipado
 type LoadingState = 'initial' | 'loading' | 'loaded' | 'error';
@@ -19,6 +20,7 @@ type LoadingState = 'initial' | 'loading' | 'loaded' | 'error';
 interface DashboardProps {
   activeTab: TabId;
   onTabChange: (tabId: TabId) => void;
+  showExportButton?: boolean;
 }
 
 
@@ -65,7 +67,7 @@ const ErrorState: React.FC<{ error: string; onRetry?: () => void }> = ({ error, 
 );
 
 // --- Componente Principal Dashboard ---
-const Dashboard: React.FC<DashboardProps> = ({ activeTab, onTabChange }) => {
+const Dashboard: React.FC<DashboardProps> = ({ activeTab, onTabChange, showExportButton = false }) => {
   const { 
     practicas, 
     solicitudes, 
@@ -196,6 +198,7 @@ const Dashboard: React.FC<DashboardProps> = ({ activeTab, onTabChange }) => {
                 }
               />
             </Card>
+             {showExportButton && <WhatsAppExportButton />}
           </div>
         );
       }
@@ -222,6 +225,7 @@ const Dashboard: React.FC<DashboardProps> = ({ activeTab, onTabChange }) => {
               />
             </Card>
           )}
+           {showExportButton && <WhatsAppExportButton />}
         </div>
       );
     

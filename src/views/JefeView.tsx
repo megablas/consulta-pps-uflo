@@ -20,7 +20,7 @@ const StudentDashboard: React.FC = () => {
     const [activeTab, setActiveTab] = useState<TabId>('convocatorias');
     // The Dashboard for a student in the admin view is self-contained.
     // Its tab state doesn't need to be shared with other components like the footer.
-    return <Dashboard activeTab={activeTab} onTabChange={setActiveTab} />;
+    return <Dashboard activeTab={activeTab} onTabChange={setActiveTab} showExportButton />;
 };
 
 const JefeWelcomeBanner: React.FC<{ name: string }> = ({ name }) => {
