@@ -383,7 +383,7 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
     const fechaFin = selectedLanzamiento[FIELD_FECHA_FIN_LANZAMIENTOS];
 
     const horarioSeleccionado = Array.isArray(formData.horarios) && formData.horarios.length > 0
-      ? formData.horarios.join(', ')
+      ? formData.horarios.join('; ')
       : selectedLanzamiento[FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS] || 'No especificado';
       
     const newRecord: Partial<ConvocatoriaFields> = {
