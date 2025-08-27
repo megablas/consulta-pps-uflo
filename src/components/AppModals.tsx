@@ -4,6 +4,7 @@ import { useData } from '../contexts/DataContext';
 import Modal from './Modal';
 import { EnrollmentForm } from './EnrollmentForm';
 import SeleccionadosModal from './SeleccionadosModal';
+import { FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS } from '../constants';
 
 const AppModals: React.FC = () => {
     const { 
@@ -28,8 +29,8 @@ const AppModals: React.FC = () => {
         }
     };
 
-    const horariosStr = selectedLanzamientoForEnrollment?.['Horario Seleccionado'] || '';
-    const horariosArray = horariosStr ? horariosStr.split(',').map(h => h.trim()).filter(Boolean) : [];
+    const horariosStr = selectedLanzamientoForEnrollment?.[FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS] || '';
+    const horariosArray = horariosStr ? horariosStr.split(';').map(h => h.trim()).filter(Boolean) : [];
 
     return (
         <>
