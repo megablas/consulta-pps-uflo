@@ -219,17 +219,20 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({
 
   const ActionButton: React.FC = () => {
     if (isCompleted) {
-        return <CompletedButton />;
+      return <CompletedButton />;
     }
-    
-    if (convocatoriaState === 'abierta' && enrollmentState === 'none') {
+  
+    // Si el usuario no está inscripto y la convocatoria está abierta, puede postularse.
+    if (enrollmentState === 'none' && convocatoriaState === 'abierta') {
       return <InscribirButton />;
     }
-    
+  
+    // Si la convocatoria está cerrada, todos pueden ver los resultados.
     if (convocatoriaState === 'cerrada') {
       return <VerSeleccionadosButton />;
     }
-    
+  
+    // Para todos los demás casos (ya inscripto, no seleccionado, etc.), se muestra el estado actual.
     return <StatusDisplay />;
   };
 
