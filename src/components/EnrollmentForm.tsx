@@ -28,8 +28,8 @@ const finalesOptions = [
 const RadioButton: React.FC<{
   id: string; name: string; value: string; checked: boolean;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  label: string; disabled?: boolean; error?: boolean;
-}> = ({ id, name, value, checked, onChange, label, disabled, error }) => (
+  label: string; disabled?: boolean; error?: boolean; 'aria-describedby'?: string;
+}> = ({ id, name, value, checked, onChange, label, disabled, error, 'aria-describedby': ariaDescribedby }) => (
   <label 
     htmlFor={id} 
     className={`flex items-center p-3.5 border rounded-lg cursor-pointer transition-all duration-200 group relative ${
@@ -57,6 +57,8 @@ const RadioButton: React.FC<{
       checked={checked}
       onChange={onChange}
       disabled={disabled}
+      aria-invalid={error}
+      aria-describedby={ariaDescribedby}
       className="opacity-0 absolute"
     />
     <span className={`ml-3 text-sm font-medium transition-colors ${
@@ -134,6 +136,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   
   const formRef = useRef<HTMLFormElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   const showHorarios = Array.isArray(horariosDisponibles) && horariosDisponibles.length > 1;
 
@@ -223,18 +226,40 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
     }
   }, [terminoDeCursar]);
 
-  // Keyboard navigation
+  // Focus trap and Escape key listener
   useEffect(() => {
+    if (!isOpen || !modalRef.current) return;
+
+    const modalNode = modalRef.current;
+    const focusableElements = modalNode.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    firstElement?.focus();
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !isSubmitting) {
         onClose();
       }
+      if (e.key === 'Tab') {
+        if (e.shiftKey) { // Shift+Tab
+          if (document.activeElement === firstElement) {
+            lastElement.focus();
+            e.preventDefault();
+          }
+        } else { // Tab
+          if (document.activeElement === lastElement) {
+            firstElement.focus();
+            e.preventDefault();
+          }
+        }
+      }
     };
 
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
-    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, isSubmitting, onClose]);
 
   const handleHorarioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -296,6 +321,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
 
   return (
     <div
+      ref={modalRef}
       className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-fade-in-up"
       aria-labelledby="enrollment-modal-title"
       role="dialog"
@@ -364,24 +390,26 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                 <p className="text-sm text-slate-600 mb-6 leading-relaxed">
                   Selecciona los horarios en los que puedes participar. Puedes elegir múltiples opciones.
                 </p>
-                <div className="space-y-3" role="group" aria-labelledby="horarios-group">
-                  {horariosDisponibles.map((horario) => (
-                    <Checkbox
-                      key={horario}
-                      id={`horario-${horario.replace(/\s+/g, '-')}`}
-                      name="horario"
-                      value={horario}
-                      checked={selectedHorarios.includes(horario)}
-                      onChange={handleHorarioChange}
-                      onBlur={(e) => handleFieldBlur('horarios')}
-                      label={horario}
-                      disabled={isSubmitting}
-                      error={touched.horarios && !!errors.horarios}
-                    />
-                  ))}
+                <div role="group" aria-labelledby="horarios-group" aria-describedby={errors.horarios ? "horarios-error" : undefined}>
+                  <div className="space-y-3">
+                    {horariosDisponibles.map((horario) => (
+                      <Checkbox
+                        key={horario}
+                        id={`horario-${horario.replace(/\s+/g, '-')}`}
+                        name="horario"
+                        value={horario}
+                        checked={selectedHorarios.includes(horario)}
+                        onChange={handleHorarioChange}
+                        onBlur={(e) => handleFieldBlur('horarios')}
+                        label={horario}
+                        disabled={isSubmitting}
+                        error={touched.horarios && !!errors.horarios}
+                      />
+                    ))}
+                  </div>
                 </div>
                 {touched.horarios && errors.horarios && (
-                  <p className="mt-3 text-sm text-red-600 font-medium" role="alert">
+                  <p id="horarios-error" className="mt-3 text-sm text-red-600 font-medium" role="alert">
                     {errors.horarios}
                   </p>
                 )}
@@ -406,7 +434,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                   <h4 className="text-sm font-medium text-slate-800 mb-4">
                     ¿Terminaste de cursar todas las materias de la carrera?
                   </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup">
+                  <div role="radiogroup" aria-describedby={errors.terminoDeCursar ? "termino-cursar-error" : undefined} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <RadioButton 
                       id="cursar-si"
                       name="terminoDeCursar"
@@ -435,7 +463,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                     />
                   </div>
                   {touched.terminoDeCursar && errors.terminoDeCursar && (
-                    <p className="mt-3 text-sm text-red-600 font-medium" role="alert">
+                    <p id="termino-cursar-error" className="mt-3 text-sm text-red-600 font-medium" role="alert">
                       {errors.terminoDeCursar}
                     </p>
                   )}
@@ -447,7 +475,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                     <h4 className="text-sm font-medium text-slate-800 mb-4">
                       ¿Cuántos finales adeudas?
                     </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup">
+                    <div role="radiogroup" aria-describedby={errors.finalesAdeudados ? "finales-error" : undefined} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {finalesOptions.map(option => (
                         <RadioButton
                           key={option}
@@ -466,7 +494,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                       ))}
                     </div>
                     {touched.finalesAdeudados && errors.finalesAdeudados && (
-                      <p className="mt-3 text-sm text-red-600 font-medium" role="alert">
+                      <p id="finales-error" className="mt-3 text-sm text-red-600 font-medium" role="alert">
                         {errors.finalesAdeudados}
                       </p>
                     )}
@@ -478,7 +506,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                     <h4 className="text-sm font-medium text-slate-800 mb-4">
                       ¿Estás cursando actualmente materias electivas?
                     </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup">
+                    <div role="radiogroup" aria-describedby={errors.cursandoElectivas ? "electivas-error" : undefined} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <RadioButton 
                         id="electivas-si"
                         name="cursandoElectivas"
@@ -507,7 +535,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                       />
                     </div>
                     {touched.cursandoElectivas && errors.cursandoElectivas && (
-                      <p className="mt-3 text-sm text-red-600 font-medium" role="alert">
+                      <p id="electivas-error" className="mt-3 text-sm text-red-600 font-medium" role="alert">
                         {errors.cursandoElectivas}
                       </p>
                     )}
@@ -541,9 +569,10 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                     : 'border-slate-300/80 focus:border-blue-500 focus:ring-blue-500/20 hover:border-blue-400'
                 }`}
                 aria-invalid={!!errors.otraSituacionAcademica}
+                aria-describedby={errors.otraSituacionAcademica ? "otra-situacion-error" : undefined}
               />
               {touched.otraSituacionAcademica && errors.otraSituacionAcademica && (
-                <p className="mt-2 text-sm text-red-600 font-medium" role="alert">
+                <p id="otra-situacion-error" className="mt-2 text-sm text-red-600 font-medium" role="alert">
                   {errors.otraSituacionAcademica}
                 </p>
               )}
