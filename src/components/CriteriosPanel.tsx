@@ -214,9 +214,6 @@ const CriteriosPanel: React.FC = () => {
           />
           <div className="flex-1 text-center sm:text-left">
             <div className="flex items-center gap-3 mb-4 justify-center sm:justify-start">
-              <div className="p-2 rounded-lg bg-slate-100">
-                <span className="material-icons text-slate-500 !text-xl">schedule</span>
-              </div>
               <h3 className="text-3xl font-black text-slate-900 tracking-tight">
                 Horas Totales
               </h3>
@@ -236,33 +233,26 @@ const CriteriosPanel: React.FC = () => {
 
         {/* Criterios Secundarios */}
         <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6 border-t-2 lg:border-t-0 lg:border-l-2 border-slate-200/60 pt-8 lg:pt-0 lg:pl-8 z-10">
-          <CriterionCard isComplete={criterios.cumpleRotacion}>
-            <RotationTracker
-              count={criterios.orientacionesCursadasCount}
-              orientacionesUnicas={criterios.orientacionesUnicas}
-            />
-          </CriterionCard>
+          <RotationTracker
+            count={criterios.orientacionesCursadasCount}
+            orientacionesUnicas={criterios.orientacionesUnicas}
+          />
           
-          <CriterionCard 
-            isComplete={criterios.cumpleHorasOrientacion} 
-            disableHover={!selectedOrientacion}
-          >
-            {selectedOrientacion ? (
-              <ProgressBar
-                label={`Horas en ${selectedOrientacion}`}
-                value={criterios.horasOrientacionElegida}
-                max={HORAS_OBJETIVO_ORIENTACION}
-                unit="hs"
-                isComplete={criterios.cumpleHorasOrientacion}
-              />
-            ) : (
-              <OrientacionSelector
-                selectedOrientacion={selectedOrientacion}
-                onOrientacionChange={handleOrientacionChange}
-                showSaveConfirmation={showSaveConfirmation}
-              />
-            )}
-          </CriterionCard>
+          {selectedOrientacion ? (
+            <ProgressBar
+              label={`Horas en ${selectedOrientacion}`}
+              value={criterios.horasOrientacionElegida}
+              max={HORAS_OBJETIVO_ORIENTACION}
+              unit="hs"
+              isComplete={criterios.cumpleHorasOrientacion}
+            />
+          ) : (
+            <OrientacionSelector
+              selectedOrientacion={selectedOrientacion}
+              onOrientacionChange={handleOrientacionChange}
+              showSaveConfirmation={showSaveConfirmation}
+            />
+          )}
         </div>
       </div>
     </section>
