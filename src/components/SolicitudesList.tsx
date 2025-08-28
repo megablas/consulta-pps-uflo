@@ -36,4 +36,4 @@ const SolicitudesList: React.FC = () => {
   );
 };
 
-export default SolicitudesList;
+export default React.memo(SolicitudesList);

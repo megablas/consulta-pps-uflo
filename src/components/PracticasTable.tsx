@@ -47,13 +47,20 @@ const SortableHeader: React.FC<{
 
   return (
     <th
-      className={`p-4 ${className} cursor-pointer select-none group transition-colors hover:bg-slate-200/50`}
-      onClick={() => requestSort(sortKey)}
+      scope="col"
+      className={`p-0 ${className}`}
     >
-      <div className={`flex items-center gap-2 ${className.includes('text-left') ? 'justify-start' : 'justify-center'}`}>
-        <span className="font-bold text-slate-600 text-xs uppercase tracking-wider">{label}</span>
-        <span className={`material-icons !text-base transition-opacity ${isActive ? 'opacity-100 text-slate-900' : 'opacity-50 group-hover:opacity-80'}`}>{icon}</span>
-      </div>
+      <button
+        type="button"
+        onClick={() => requestSort(sortKey)}
+        className="w-full h-full p-4 flex items-center gap-2 cursor-pointer select-none group transition-colors hover:bg-slate-200/50"
+        aria-label={`Ordenar por ${label} en orden ${isActive && sortConfig.direction === 'ascending' ? 'descendiente' : 'ascendiente'}`}
+      >
+        <div className={`flex items-center gap-2 w-full ${className.includes('text-left') ? 'justify-start' : 'justify-center'}`}>
+            <span className="font-bold text-slate-600 text-xs uppercase tracking-wider">{label}</span>
+            <span className={`material-icons !text-base transition-opacity ${isActive ? 'opacity-100 text-slate-900' : 'opacity-50 group-hover:opacity-80'}`}>{icon}</span>
+        </div>
+      </button>
     </th>
   );
 };
@@ -145,6 +152,7 @@ const PracticasTable: React.FC = () => {
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[800px] text-sm">
+          <caption className="sr-only">Historial de Prácticas Profesionales Supervisadas</caption>
           <thead className="bg-slate-100/70">
             <tr className="border-b-2 border-slate-200">
               <SortableHeader label="Institución" sortKey="institucion" sortConfig={sortConfig} requestSort={requestSort} className="text-left w-2/5" />
@@ -152,7 +160,7 @@ const PracticasTable: React.FC = () => {
               <SortableHeader label="Horas" sortKey="horas" sortConfig={sortConfig} requestSort={requestSort} />
               <SortableHeader label="Periodo" sortKey="fechaInicio" sortConfig={sortConfig} requestSort={requestSort} />
               <SortableHeader label="Estado" sortKey="estado" sortConfig={sortConfig} requestSort={requestSort} />
-              <th className="p-4 text-center font-bold text-slate-600 text-xs uppercase tracking-wider">Nota</th>
+              <th scope="col" className="p-4 text-center font-bold text-slate-600 text-xs uppercase tracking-wider">Nota</th>
             </tr>
           </thead>
           <tbody>
@@ -227,4 +235,4 @@ const PracticasTable: React.FC = () => {
   );
 };
 
-export default PracticasTable;
+export default React.memo(PracticasTable);

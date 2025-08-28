@@ -35,7 +35,11 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose, duration = 4000 }
   const iconColor = isSuccess ? 'text-emerald-500' : 'text-rose-500';
 
   return (
-    <div className={`${baseClasses} ${stateClasses} ${visibilityClasses}`} role="alert">
+    <div 
+      className={`${baseClasses} ${stateClasses} ${visibilityClasses}`} 
+      role="alert"
+      aria-live="polite"
+    >
       <div className={`flex-shrink-0 ${iconColor}`}>
         <span className="material-icons">{icon}</span>
       </div>
