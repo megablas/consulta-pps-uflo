@@ -12,14 +12,15 @@ interface StudentPreviewProps {
 }
 
 const StudentPreview: React.FC<StudentPreviewProps> = ({ student, onClose, onOpenPanel }) => {
-  const { practicas, criterios, isLoading, error, selectedOrientacion, fetchStudentData } = useData();
+  // FIX: Changed `fetchStudentData` to `refetchStudentData` to match the context provider.
+  const { practicas, criterios, isLoading, error, selectedOrientacion, refetchStudentData } = useData();
   const { showModal } = useModal();
 
   useEffect(() => {
-    if (fetchStudentData) {
-      fetchStudentData();
+    if (refetchStudentData) {
+      refetchStudentData();
     }
-  }, [fetchStudentData]);
+  }, [refetchStudentData]);
 
   const handleExport = () => {
     if (isLoading || !criterios || !practicas) {
