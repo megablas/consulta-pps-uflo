@@ -78,7 +78,8 @@ const Dashboard: React.FC<DashboardProps> = ({ activeTab, onTabChange, showExpor
     isLoading,
     error,
     initialLoadCompleted,
-    fetchStudentData,
+    // FIX: Changed `fetchStudentData` to `refetchStudentData` to match the context provider.
+    refetchStudentData,
     studentDetails,
     studentNameForPanel
   } = useData();
@@ -143,16 +144,16 @@ const Dashboard: React.FC<DashboardProps> = ({ activeTab, onTabChange, showExpor
 
   // Callback para reintentar la carga
   const handleRetry = useCallback(() => {
-    fetchStudentData();
-  }, [fetchStudentData]);
+    refetchStudentData();
+  }, [refetchStudentData]);
 
 
   // Efectos
   useEffect(() => {
     if (!initialLoadCompleted) {
-      fetchStudentData();
+      refetchStudentData();
     }
-  }, [fetchStudentData, initialLoadCompleted]);
+  }, [refetchStudentData, initialLoadCompleted]);
 
   // Set initial tab once after load
   useEffect(() => {
