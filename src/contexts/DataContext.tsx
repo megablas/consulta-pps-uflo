@@ -1,15 +1,17 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Practica, SolicitudPPS, CriteriosCalculados, Orientacion, LanzamientoPPS, 
   Convocatoria, EstudianteFields, PracticaFields, SolicitudPPSFields, 
-  LanzamientoPPSFields, ConvocatoriaFields, ALL_ORIENTACIONES, InformeTask
+  LanzamientoPPSFields, ConvocatoriaFields, ALL_ORIENTACIONES, InformeTask, AirtableRecord, AirtableErrorResponse
 } from '../types';
-import { HORAS_OBJETIVO_TOTAL, HORAS_OBJETIVO_ORIENTACION, ROTACION_OBJETIVO_ORIENTACIONES, AIRTABLE_TABLE_NAME_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES, FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES, AIRTABLE_TABLE_NAME_PRACTICAS, FIELD_NOMBRE_BUSQUEDA_PRACTICAS, FIELD_HORAS_PRACTICAS, FIELD_NOTA_PRACTICAS, FIELD_ESPECIALIDAD_PRACTICAS, AIRTABLE_TABLE_NAME_PPS, FIELD_LEGAJO_PPS, FIELD_EMPRESA_PPS_SOLICITUD, FIELD_ESTADO_PPS, FIELD_NOTAS_PPS, FIELD_ULTIMA_ACTUALIZACION_PPS, AIRTABLE_TABLE_NAME_CONVOCATORIAS, FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_NOMBRE_PPS_CONVOCATORIAS, FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS, FIELD_FECHA_INICIO_LANZAMIENTOS, FIELD_NOMBRE_PPS_LANZAMIENTOS, FIELD_FECHA_FIN_LANZAMIENTOS, FIELD_DIRECCION_LANZAMIENTOS, FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS, FIELD_ORIENTACION_LANZAMIENTOS, FIELD_HORAS_ACREDITADAS_LANZAMIENTOS, FIELD_DNI_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_FECHA_NACIMIENTO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES, FIELD_TERMINO_CURSAR_CONVOCATORIAS, FIELD_CURSANDO_ELECTIVAS_CONVOCATORIAS, FIELD_FINALES_ADEUDA_CONVOCATORIAS, FIELD_OTRA_SITUACION_CONVOCATORIAS, FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS as FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS, FIELD_DNI_CONVOCATORIAS, FIELD_CORREO_CONVOCATORIAS, FIELD_FECHA_NACIMIENTO_CONVOCATORIAS, FIELD_TELEFONO_CONVOCATORIAS, FIELD_LEGAJO_CONVOCATORIAS, FIELD_FECHA_INICIO_CONVOCATORIAS, FIELD_FECHA_FIN_CONVOCATORIAS, FIELD_DIRECCION_CONVOCATORIAS, FIELD_HORARIO_FORMULA_CONVOCATORIAS, FIELD_ORIENTACION_CONVOCATORIAS, FIELD_NOMBRE_ESTUDIANTES, FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS, FIELD_FECHA_INICIO_PRACTICAS, FIELD_FECHA_FIN_PRACTICAS, FIELD_ESTADO_PRACTICA, FIELD_GENERO_ESTUDIANTES, FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS, FIELD_HORAS_ACREDITADAS_CONVOCATORIAS, FIELD_CUPOS_DISPONIBLES_CONVOCATORIAS, FIELD_INFORME_LANZAMIENTOS, FIELD_INFORME_SUBIDO_CONVOCATORIAS } from '../constants';
-import { fetchAirtableData, updateAirtableRecord, createAirtableRecord } from '../services/airtableService';
-import { normalizeStringForComparison } from '../utils/formatters';
+import { HORAS_OBJETIVO_TOTAL, HORAS_OBJETIVO_ORIENTACION, ROTACION_OBJETIVO_ORIENTACIONES, AIRTABLE_TABLE_NAME_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES, FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES, AIRTABLE_TABLE_NAME_PRACTICAS, FIELD_HORAS_PRACTICAS, FIELD_NOTA_PRACTICAS, FIELD_ESPECIALIDAD_PRACTICAS, AIRTABLE_TABLE_NAME_PPS, FIELD_LEGAJO_PPS, FIELD_ULTIMA_ACTUALIZACION_PPS, AIRTABLE_TABLE_NAME_CONVOCATORIAS, FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_NOMBRE_PPS_CONVOCATORIAS, FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS, FIELD_FECHA_INICIO_LANZAMIENTOS, FIELD_NOMBRE_PPS_LANZAMIENTOS, FIELD_FECHA_FIN_LANZAMIENTOS, FIELD_DIRECCION_LANZAMIENTOS, FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS, FIELD_ORIENTACION_LANZAMIENTOS, FIELD_HORAS_ACREDITADAS_LANZAMIENTOS, FIELD_DNI_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_FECHA_NACIMIENTO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES, FIELD_TERMINO_CURSAR_CONVOCATORIAS, FIELD_CURSANDO_ELECTIVAS_CONVOCATORIAS, FIELD_FINALES_ADEUDA_CONVOCATORIAS, FIELD_OTRA_SITUACION_CONVOCATORIAS, FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS as FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS, FIELD_DNI_CONVOCATORIAS, FIELD_CORREO_CONVOCATORIAS, FIELD_FECHA_NACIMIENTO_CONVOCATORIAS, FIELD_TELEFONO_CONVOCATORIAS, FIELD_LEGAJO_CONVOCATORIAS, FIELD_FECHA_INICIO_CONVOCATORIAS, FIELD_FECHA_FIN_CONVOCATORIAS, FIELD_DIRECCION_CONVOCATORIAS, FIELD_HORARIO_FORMULA_CONVOCATORIAS, FIELD_ORIENTACION_CONVOCATORIAS, FIELD_NOMBRE_ESTUDIANTES, FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS, FIELD_FECHA_INICIO_PRACTICAS, FIELD_FECHA_FIN_PRACTICAS, FIELD_ESTADO_PRACTICA, FIELD_GENERO_ESTUDIANTES, FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS, FIELD_HORAS_ACREDITADAS_CONVOCATORIAS, FIELD_CUPOS_DISPONIBLES_CONVOCATORIAS, FIELD_INFORME_LANZAMIENTOS, FIELD_INFORME_SUBIDO_CONVOCATORIAS, FIELD_NOMBRE_BUSQUEDA_PRACTICAS } from '../constants';
+import { fetchAirtableData, updateAirtableRecord, createAirtableRecord, fetchAllAirtableData } from '../services/airtableService';
+import { normalizeStringForComparison, parseToUTCDate } from '../utils/formatters';
 import type { AuthUser } from './AuthContext';
 import { useModal } from './ModalContext';
 
+// --- Type Definitions ---
 type UserGender = 'masculino' | 'femenino' | 'neutro';
 
 interface DataContextType {
@@ -30,15 +32,14 @@ interface DataContextType {
   studentDetails: EstudianteFields | null;
   userGender: UserGender;
 
-  fetchStudentData: (legajo?: string, nombre?: string) => void;
+  refetchStudentData: () => void;
   handleOrientacionChange: (orientacion: Orientacion | "") => void;
-  handleNotaChange: (practicaId: string, nota: string) => void;
+  handleNotaChange: (practicaId: string, nota: string, convocatoriaId?: string) => void;
   handleConfirmarInforme: (convocatoriaId: string) => void;
   handleEnrollmentSubmit: (formData: any, selectedLanzamiento: LanzamientoPPS) => Promise<void>;
 }
 
-const DataContext = createContext<DataContextType | undefined>(undefined);
-
+// --- Initial States ---
 const initialCriterios: CriteriosCalculados = {
     horasTotales: 0,
     horasFaltantes250: HORAS_OBJETIVO_TOTAL,
@@ -51,322 +52,281 @@ const initialCriterios: CriteriosCalculados = {
     cumpleRotacion: false,
 };
 
-/**
- * Extracts the schedule part from a full string like "Device: Mon 9-12" -> "Mon 9-12"
- * @param fullSchedule The full schedule string.
- * @returns The extracted concise schedule.
- */
-const extractSchedulePart = (fullSchedule: string): string => {
-  if (!fullSchedule) return '';
-  const parts = fullSchedule.split(':');
-  if (parts.length > 1) {
-    // Join all parts after the first colon to handle cases like "Time: 10:00 AM"
-    return parts.slice(1).join(':').trim();
-  }
-  return fullSchedule;
+const DataContext = createContext<DataContextType | undefined>(undefined);
+
+// --- Fetcher Functions for TanStack Query ---
+const fetchStudent = async (legajo: string): Promise<AirtableRecord<EstudianteFields>> => {
+    const { records, error } = await fetchAirtableData<EstudianteFields>(AIRTABLE_TABLE_NAME_ESTUDIANTES, [], `{${FIELD_LEGAJO_ESTUDIANTES}} = '${legajo}'`, 1);
+    if (error) throw new Error(`Error al buscar estudiante: ${typeof error.error === 'string' ? error.error : error.error.message}`);
+    if (records.length === 0) throw new Error('No se encontró al estudiante con el legajo proporcionado.');
+    return records[0];
 };
 
+// FIX: Rewrote as a standard async function to resolve a strange parsing error with async generic arrow functions.
+async function fetchDataForUser<T>(tableName: string, legajo: string, searchField: string, fields: string[] = [], sortOptions: any[] = []) {
+    const { records, error } = await fetchAllAirtableData<T>(tableName, fields, `SEARCH('${legajo}', ARRAYJOIN({${searchField}}))`, sortOptions.length > 0 ? sortOptions : undefined);
+    if (error) throw new Error(`Error al cargar datos de ${tableName}: ${typeof error.error === 'string' ? error.error : error.error.message}`);
+    return records.map(r => ({ ...r.fields, id: r.id }));
+}
 
+const fetchAllLanzamientos = async () => {
+    const { records, error } = await fetchAllAirtableData<LanzamientoPPSFields>(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, [], undefined, [{ field: FIELD_FECHA_INICIO_LANZAMIENTOS, direction: 'desc' }]);
+    if (error) throw new Error(`Error al cargar lanzamientos: ${typeof error.error === 'string' ? error.error : error.error.message}`);
+    return records.map(r => ({ ...r.fields, id: r.id }));
+};
+
+// --- Main Data Provider Component ---
 export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = ({ children, user }) => {
-  const [practicas, setPracticas] = useState<Practica[]>([]);
-  const [solicitudes, setSolicitudes] = useState<SolicitudPPS[]>([]);
-  const [lanzamientos, setLanzamientos] = useState<LanzamientoPPS[]>([]);
-  const [myEnrollments, setMyEnrollments] = useState<Convocatoria[]>([]);
-  const [informeTasks, setInformeTasks] = useState<InformeTask[]>([]);
-  const [criterios, setCriterios] = useState<CriteriosCalculados>(initialCriterios);
-  const [selectedOrientacion, setSelectedOrientacion] = useState<Orientacion | "">("");
-  const [studentAirtableId, setStudentAirtableId] = useState<string | null>(null);
-  const [studentDetails, setStudentDetails] = useState<EstudianteFields | null>(null);
-  const [userGender, setUserGender] = useState<UserGender>('neutro');
-
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
-  const [initialLoadCompleted, setInitialLoadCompleted] = useState(false);
-  const [studentNameForPanel, setStudentNameForPanel] = useState(user.nombre);
-
+  const queryClient = useQueryClient();
   const { showModal, closeEnrollmentForm, setEnrollingId } = useModal();
 
-  const calculateCriterios = useCallback((allPracticas: Practica[], orientacionElegida: Orientacion | "") => {
-      const horasTotales = allPracticas.reduce((acc, p) => acc + (p[FIELD_HORAS_PRACTICAS] || 0), 0);
-      const cumpleHorasTotales = horasTotales >= HORAS_OBJETIVO_TOTAL;
-
-      const practicasConOrientacionValida = allPracticas
-        .map(p => p[FIELD_ESPECIALIDAD_PRACTICAS])
-        .filter((o): o is string => !!o);
-
-      const orientacionesUnicas = ALL_ORIENTACIONES.filter(canonicalOrientacion => {
-          const normalizedCanonical = normalizeStringForComparison(canonicalOrientacion);
-          return practicasConOrientacionValida.some(practicaOrientacion => 
-              normalizeStringForComparison(practicaOrientacion) === normalizedCanonical
-          );
-      });
-
-      const orientacionesCursadasCount = orientacionesUnicas.length;
-      const cumpleRotacion = orientacionesCursadasCount >= ROTACION_OBJETIVO_ORIENTACIONES;
-
-      let horasOrientacionElegida = 0;
-      if (orientacionElegida) {
-          horasOrientacionElegida = allPracticas
-              .filter(p => normalizeStringForComparison(p[FIELD_ESPECIALIDAD_PRACTICAS]) === normalizeStringForComparison(orientacionElegida))
-              .reduce((acc, p) => acc + (p[FIELD_HORAS_PRACTICAS] || 0), 0);
-      }
-      const cumpleHorasOrientacion = horasOrientacionElegida >= HORAS_OBJETIVO_ORIENTACION;
-      
-      setCriterios({
-          horasTotales,
-          horasFaltantes250: Math.max(0, HORAS_OBJETIVO_TOTAL - horasTotales),
-          cumpleHorasTotales,
-          horasOrientacionElegida,
-          horasFaltantesOrientacion: Math.max(0, HORAS_OBJETIVO_ORIENTACION - horasOrientacionElegida),
-          cumpleHorasOrientacion,
-          orientacionesCursadasCount,
-          orientacionesUnicas,
-          cumpleRotacion,
-      });
-  }, []);
-
-  const fetchStudentData = useCallback(async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-          const studentFieldsToFetch = [
-            FIELD_LEGAJO_ESTUDIANTES, FIELD_NOMBRE_ESTUDIANTES, FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES,
-            FIELD_DNI_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_FECHA_NACIMIENTO_ESTUDIANTES,
-            FIELD_TELEFONO_ESTUDIANTES, FIELD_GENERO_ESTUDIANTES
-          ];
-          const { records: studentRecords, error: studentError } = await fetchAirtableData<EstudianteFields>(
-              AIRTABLE_TABLE_NAME_ESTUDIANTES,
-              studentFieldsToFetch,
-              `{${FIELD_LEGAJO_ESTUDIANTES}} = '${user.legajo}'`,
-              1
-          );
-          if (studentError || studentRecords.length === 0) throw new Error("No se pudo encontrar la información del estudiante.");
-
-          const studentRecord = studentRecords[0];
-          const studentId = studentRecord.id;
-          const studentName = studentRecord.fields[FIELD_NOMBRE_ESTUDIANTES] || user.nombre;
-          const orientacionElegida = (studentRecord.fields[FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES] as Orientacion) || "";
-
-          setStudentAirtableId(studentId);
-          setStudentNameForPanel(studentName);
-          setSelectedOrientacion(orientacionElegida);
-          setStudentDetails(studentRecord.fields);
-          
-          const existingAirtableGender = studentRecord.fields[FIELD_GENERO_ESTUDIANTES] as string | undefined;
-          let genderToSet: UserGender = 'neutro'; // Default to neutro
-
-          if (existingAirtableGender) {
-              const lowerGender = existingAirtableGender.toLowerCase().trim();
-              if (lowerGender === 'varon') {
-                  genderToSet = 'masculino';
-              } else if (lowerGender === 'mujer') {
-                  genderToSet = 'femenino';
-              }
-          }
-          // If the field is empty or has a value other than 'varon' or 'mujer', it defaults to 'neutro'
-          setUserGender(genderToSet);
-
-          const lanzamientosFieldsToFetch = [
-              FIELD_NOMBRE_PPS_LANZAMIENTOS, FIELD_ORIENTACION_LANZAMIENTOS, FIELD_DIRECCION_LANZAMIENTOS,
-              FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS, FIELD_FECHA_INICIO_LANZAMIENTOS, FIELD_FECHA_FIN_LANZAMIENTOS,
-              FIELD_HORAS_ACREDITADAS_LANZAMIENTOS, FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS,
-              FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS, FIELD_INFORME_LANZAMIENTOS,
-          ];
-          
-          const [practicasResult, solicitudesResult, lanzamientosResult, enrollmentsResult] = await Promise.all([
-              fetchAirtableData<PracticaFields>(
-                  AIRTABLE_TABLE_NAME_PRACTICAS, 
-                  [FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS, FIELD_ESPECIALIDAD_PRACTICAS, FIELD_HORAS_PRACTICAS, FIELD_FECHA_INICIO_PRACTICAS, FIELD_FECHA_FIN_PRACTICAS, FIELD_ESTADO_PRACTICA, FIELD_NOTA_PRACTICAS], 
-                  `{${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}} = '${studentName}'`
-              ),
-              fetchAirtableData<SolicitudPPSFields>(
-                  AIRTABLE_TABLE_NAME_PPS, 
-                  [FIELD_EMPRESA_PPS_SOLICITUD, FIELD_ESTADO_PPS, FIELD_NOTAS_PPS, FIELD_ULTIMA_ACTUALIZACION_PPS], 
-                  `{${FIELD_LEGAJO_PPS}} = '${user.legajo}'`
-              ),
-              fetchAirtableData<LanzamientoPPSFields>(
-                  AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, 
-                  lanzamientosFieldsToFetch
-              ),
-              fetchAirtableData<ConvocatoriaFields>(
-                  AIRTABLE_TABLE_NAME_CONVOCATORIAS, 
-                  [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS, FIELD_INFORME_SUBIDO_CONVOCATORIAS], 
-                  `{${FIELD_LEGAJO_CONVOCATORIAS}} = ${user.legajo}`
-              ),
-          ]);
-          
-          if (practicasResult.error) console.error("Error fetching practicas:", practicasResult.error);
-          const practicasData = practicasResult.records.map(r => ({ ...r.fields, id: r.id })) as Practica[];
-          setPracticas(practicasData);
-
-          if (solicitudesResult.error) console.error("Error fetching solicitudes:", solicitudesResult.error);
-          const solicitudesData = solicitudesResult.records.map(r => ({ ...r.fields, id: r.id })) as SolicitudPPS[];
-          setSolicitudes(solicitudesData);
-
-          if (lanzamientosResult.error) console.error("Error fetching lanzamientos:", lanzamientosResult.error);
-          const allLanzamientosData = lanzamientosResult.records.map(r => ({ ...r.fields, id: r.id })) as LanzamientoPPS[];
-
-          const visibleLanzamientos = allLanzamientosData.filter(l => 
-              normalizeStringForComparison(l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]) !== 'oculto'
-          );
-          setLanzamientos(visibleLanzamientos);
-
-
-          if (enrollmentsResult.error) console.error("Error fetching enrollments:", enrollmentsResult.error);
-          const enrollmentsData = enrollmentsResult.records.map(r => ({ ...r.fields, id: r.id })) as Convocatoria[];
-          setMyEnrollments(enrollmentsData);
-          
-          calculateCriterios(practicasData, orientacionElegida);
-          
-          // Process data for "Informes" tab
-          const selectedEnrollments = enrollmentsData.filter(e => e[FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS] === 'Seleccionado');
-          const tasks: InformeTask[] = selectedEnrollments.map(enrollment => {
-              const lanzamientoId = (enrollment[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])[0];
-              const pps = allLanzamientosData.find(l => l.id === lanzamientoId);
-              if (!pps || !pps[FIELD_INFORME_LANZAMIENTOS] || !pps[FIELD_FECHA_FIN_LANZAMIENTOS]) {
-                  return null;
-              }
-              
-              const ppsName = pps[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'PPS sin nombre';
-
-              // Find the corresponding practica to get the grade
-              const matchingPractica = practicasData.find(p => {
-                  const practicaPpsNameRaw = p[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
-                  // Handle lookup fields which can be arrays
-                  const practicaPpsName = Array.isArray(practicaPpsNameRaw) ? practicaPpsNameRaw[0] : practicaPpsNameRaw;
-                  return normalizeStringForComparison(practicaPpsName) === normalizeStringForComparison(ppsName);
-              });
-              
-              return {
-                  convocatoriaId: enrollment.id,
-                  ppsName: ppsName,
-                  informeLink: pps[FIELD_INFORME_LANZAMIENTOS] as string,
-                  fechaFinalizacion: pps[FIELD_FECHA_FIN_LANZAMIENTOS] as string,
-                  informeSubido: !!enrollment[FIELD_INFORME_SUBIDO_CONVOCATORIAS],
-                  nota: matchingPractica ? matchingPractica[FIELD_NOTA_PRACTICAS] : undefined,
-              };
-          }).filter(task => task !== null) as InformeTask[];
-
-          setInformeTasks(tasks);
-
-
-      } catch (e: any) {
-          setError(e.message || "Ocurrió un error inesperado al cargar los datos.");
-          console.error(e);
-      } finally {
-          setIsLoading(false);
-          setInitialLoadCompleted(true);
-      }
-  }, [user.legajo, user.nombre, calculateCriterios]);
-
-  const handleOrientacionChange = useCallback(async (orientacion: Orientacion | "") => {
-    setSelectedOrientacion(orientacion);
-    calculateCriterios(practicas, orientacion);
-    if (studentAirtableId) {
-        const { error } = await updateAirtableRecord(AIRTABLE_TABLE_NAME_ESTUDIANTES, studentAirtableId, {
-            [FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES]: orientacion || null
-        });
-        if (error) {
-            showModal('Error', 'No se pudo guardar la orientación seleccionada.');
-        } else {
-            setShowSaveConfirmation(true);
-            setTimeout(() => setShowSaveConfirmation(false), 2000);
-        }
-    }
-}, [practicas, studentAirtableId, calculateCriterios, showModal]);
-
-  const handleNotaChange = useCallback(async (practicaId: string, nota: string) => {
-    const updatedPracticas = practicas.map(p => p.id === practicaId ? { ...p, [FIELD_NOTA_PRACTICAS]: nota } : p);
-    setPracticas(updatedPracticas);
-    
-    const valueToSend = nota === 'Sin calificar' ? null : nota;
-    
-    const { error } = await updateAirtableRecord(AIRTABLE_TABLE_NAME_PRACTICAS, practicaId, { [FIELD_NOTA_PRACTICAS]: valueToSend });
-    if (error) {
-        showModal('Error', `No se pudo guardar la nota para la práctica. ${typeof error.error === 'string' ? error.error : error.error.message}`);
-        setPracticas(practicas); // Revert on error
-    }
-  }, [practicas, showModal]);
+  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
   
-  const handleConfirmarInforme = useCallback(async (convocatoriaId: string) => {
-      const originalTasks = [...informeTasks];
+  const isCorrector = user.role === 'SuperUser' || user.role === 'Jefe';
+  
+  // --- Queries ---
+  const studentQuery = useQuery({
+    queryKey: ['student', user.legajo],
+    queryFn: () => fetchStudent(user.legajo),
+    enabled: !isCorrector,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const studentAirtableId = studentQuery.data?.id ?? null;
+
+  const practicasQuery = useQuery({
+    queryKey: ['practicas', user.legajo],
+    queryFn: () => fetchDataForUser<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS, user.legajo, FIELD_NOMBRE_BUSQUEDA_PRACTICAS),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const solicitudesQuery = useQuery({
+    queryKey: ['solicitudes', user.legajo],
+    queryFn: () => fetchDataForUser<SolicitudPPSFields>(AIRTABLE_TABLE_NAME_PPS, user.legajo, FIELD_LEGAJO_PPS, [], [{ field: FIELD_ULTIMA_ACTUALIZACION_PPS, direction: 'desc' }]),
+    enabled: !isCorrector,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const convocatoriasQuery = useQuery({
+    queryKey: ['convocatorias', user.legajo],
+    queryFn: () => fetchDataForUser<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS, user.legajo, FIELD_LEGAJO_CONVOCATORIAS, [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS, FIELD_INFORME_SUBIDO_CONVOCATORIAS, FIELD_NOMBRE_PPS_CONVOCATORIAS, FIELD_FECHA_INICIO_CONVOCATORIAS]),
+    enabled: !isCorrector,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const lanzamientosQuery = useQuery({
+    queryKey: ['lanzamientos'],
+    queryFn: fetchAllLanzamientos,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // --- Derived State and Data Processing ---
+  const studentDetails = useMemo(() => studentQuery.data?.fields ?? null, [studentQuery.data]);
+
+  const selectedOrientacion = useMemo(() => (studentDetails?.[FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES] as Orientacion) || "", [studentDetails]);
+  
+  const studentNameForPanel = useMemo(() => studentDetails?.[FIELD_NOMBRE_ESTUDIANTES] || user.nombre, [studentDetails, user.nombre]);
+  
+  const userGender = useMemo((): UserGender => {
+      const gender = studentDetails?.[FIELD_GENERO_ESTUDIANTES];
+      if (gender === 'Mujer') return 'femenino';
+      if (gender === 'Varon') return 'masculino';
+      return 'neutro';
+  }, [studentDetails]);
+
+  const visibleLanzamientos = useMemo(() => {
+    const allLanzamientos = lanzamientosQuery.data || [];
+    return allLanzamientos.filter(l => {
+        const ppsName = l[FIELD_NOMBRE_PPS_LANZAMIENTOS];
+        if (!(typeof ppsName === 'string' && ppsName.trim())) return false;
+
+        const status = normalizeStringForComparison(l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]);
+        if (isCorrector) return true;
+        if (status === 'oculto') return false;
+        if (status === 'abierta' || status === 'abierto') return true;
+        
+        const endDateString = l[FIELD_FECHA_FIN_LANZAMIENTOS];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (endDateString) {
+          const endDate = parseToUTCDate(endDateString);
+          if (endDate && endDate.getTime() >= today.getTime()) return true;
+        }
+        
+        const startDate = parseToUTCDate(l[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+        if (status === 'cerrado' && startDate) {
+          const diffDays = Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+          return diffDays <= 2;
+        }
+        
+        return false;
+    });
+  }, [lanzamientosQuery.data, isCorrector]);
+
+  const criterios = useMemo((): CriteriosCalculados => {
+    const allPracticas = practicasQuery.data || [];
+    if (allPracticas.length === 0) return initialCriterios;
+
+    const horasTotales = allPracticas.reduce((acc, p) => acc + (p[FIELD_HORAS_PRACTICAS] || 0), 0);
+    const cumpleHorasTotales = horasTotales >= HORAS_OBJETIVO_TOTAL;
+
+    const orientacionesUnicas = [...new Set(allPracticas.map(p => p[FIELD_ESPECIALIDAD_PRACTICAS]).filter(Boolean))] as string[];
+    const cumpleRotacion = orientacionesUnicas.length >= ROTACION_OBJETIVO_ORIENTACIONES;
+    
+    let horasOrientacionElegida = 0;
+    if (selectedOrientacion) {
+      horasOrientacionElegida = allPracticas
+        .filter(p => normalizeStringForComparison(p[FIELD_ESPECIALIDAD_PRACTICAS]) === normalizeStringForComparison(selectedOrientacion))
+        .reduce((acc, p) => acc + (p[FIELD_HORAS_PRACTICAS] || 0), 0);
+    }
+    const cumpleHorasOrientacion = horasOrientacionElegida >= HORAS_OBJETIVO_ORIENTACION;
+
+    return {
+      horasTotales,
+      cumpleHorasTotales,
+      horasOrientacionElegida,
+      cumpleHorasOrientacion,
+      orientacionesCursadasCount: orientacionesUnicas.length,
+      orientacionesUnicas,
+      cumpleRotacion,
+      horasFaltantes250: Math.max(0, HORAS_OBJETIVO_TOTAL - horasTotales),
+      horasFaltantesOrientacion: Math.max(0, HORAS_OBJETIVO_ORIENTACION - horasOrientacionElegida),
+    };
+  }, [practicasQuery.data, selectedOrientacion]);
+
+  const informeTasks = useMemo((): InformeTask[] => {
+    const myEnrollmentsData = convocatoriasQuery.data || [];
+    const allLanzamientos = lanzamientosQuery.data || [];
+    const allPracticas = practicasQuery.data || [];
+    if (isCorrector || myEnrollmentsData.length === 0 || allLanzamientos.length === 0) return [];
+    
+    return myEnrollmentsData.map((enrollment): InformeTask | null => {
+      const lanzamientoId = (enrollment[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])[0];
+      const lanzamiento = allLanzamientos.find(l => l.id === lanzamientoId);
       
-      // Optimistic update
-      const updatedTasks = informeTasks.map(task => 
-          task.convocatoriaId === convocatoriaId ? { ...task, informeSubido: true } : task
-      );
-      setInformeTasks(updatedTasks);
-      
-      const { error } = await updateAirtableRecord(AIRTABLE_TABLE_NAME_CONVOCATORIAS, convocatoriaId, {
-          [FIELD_INFORME_SUBIDO_CONVOCATORIAS]: true
+      if (!lanzamiento || !lanzamiento[FIELD_INFORME_LANZAMIENTOS] || !lanzamiento[FIELD_FECHA_FIN_LANZAMIENTOS] || normalizeStringForComparison(enrollment[FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS]) !== 'seleccionado') {
+        return null;
+      }
+
+      const practicaVinculada = allPracticas.find(p => {
+          const ppsName = (p[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS] as string[] | undefined)?.[0] ?? '';
+          const practicaStartDate = parseToUTCDate(p[FIELD_FECHA_INICIO_PRACTICAS]);
+          const lanzamientoStartDate = parseToUTCDate(lanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+          return normalizeStringForComparison(ppsName) === normalizeStringForComparison(lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS]) &&
+                 practicaStartDate?.getTime() === lanzamientoStartDate?.getTime();
       });
-      
-      if (error) {
-          showModal('Error de Confirmación', 'No se pudo guardar la confirmación. Por favor, inténtalo de nuevo.');
-          setInformeTasks(originalTasks); // Revert on error
-      }
-  }, [informeTasks, showModal]);
 
-  const handleEnrollmentSubmit = useCallback(async (formData: any, selectedLanzamientoForEnrollment: LanzamientoPPS) => {
-      if (!studentAirtableId || !studentDetails) {
-        showModal('Error', 'No se puede procesar la inscripción. Faltan datos del estudiante o de la convocatoria.');
-        return;
-      }
-      
-      setIsSubmitting(true);
-      setEnrollingId(selectedLanzamientoForEnrollment.id);
+      return {
+        convocatoriaId: enrollment.id,
+        ppsName: lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'N/A',
+        informeLink: lanzamiento[FIELD_INFORME_LANZAMIENTOS],
+        fechaFinalizacion: lanzamiento[FIELD_FECHA_FIN_LANZAMIENTOS],
+        informeSubido: !!enrollment[FIELD_INFORME_SUBIDO_CONVOCATORIAS],
+        nota: practicaVinculada?.[FIELD_NOTA_PRACTICAS] || 'Sin calificar',
+      };
+    }).filter((task): task is InformeTask => task !== null)
+      .sort((a, b) => new Date(a.fechaFinalizacion).getTime() - new Date(b.fechaFinalizacion).getTime());
 
-      try {
-          const conciseHorarios = formData.horarios
-              .map(extractSchedulePart)
-              .join(', ');
-          
-          const enrollmentData: Partial<ConvocatoriaFields> = {
-            [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS]: [selectedLanzamientoForEnrollment.id],
+  }, [convocatoriasQuery.data, lanzamientosQuery.data, practicasQuery.data, isCorrector]);
+
+  // --- Mutations ---
+  const updateOrientationMutation = useMutation({
+    mutationFn: (orientacion: Orientacion | "") => {
+        if (!studentAirtableId) throw new Error("Student ID not available.");
+        return updateAirtableRecord(AIRTABLE_TABLE_NAME_ESTUDIANTES, studentAirtableId, { [FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES]: orientacion || null });
+    },
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['student', user.legajo] });
+        setShowSaveConfirmation(true);
+        setTimeout(() => setShowSaveConfirmation(false), 2000);
+    },
+    onError: (error) => showModal('Error', `No se pudo guardar tu orientación: ${error.message}`),
+  });
+
+  const updateNotaMutation = useMutation<
+    { record: AirtableRecord<any> | null; error: AirtableErrorResponse | null }[],
+    Error,
+    { practicaId: string; nota: string; convocatoriaId?: string }
+  >({
+    // FIX: Explicitly typed the mutation to handle multiple return paths with different array lengths and content types, resolving a type mismatch.
+    mutationFn: ({ practicaId, nota, convocatoriaId }) => {
+        if (nota === 'No Entregado' && convocatoriaId) {
+            return Promise.all([
+                updateAirtableRecord(AIRTABLE_TABLE_NAME_CONVOCATORIAS, convocatoriaId, { [FIELD_INFORME_SUBIDO_CONVOCATORIAS]: false }),
+                updateAirtableRecord(AIRTABLE_TABLE_NAME_PRACTICAS, practicaId, { [FIELD_NOTA_PRACTICAS]: 'No Entregado' })
+            ]);
+        }
+        const valueToSend = nota === 'Sin calificar' ? null : nota;
+        return updateAirtableRecord(AIRTABLE_TABLE_NAME_PRACTICAS, practicaId, { [FIELD_NOTA_PRACTICAS]: valueToSend }).then(res => [res]);
+    },
+    onSuccess: (_, variables) => {
+        if (variables.nota === 'No Entregado') {
+            showModal('Actualización Exitosa', 'El estado del informe se ha cambiado a "No Entregado".');
+        }
+        queryClient.invalidateQueries({ queryKey: ['practicas', user.legajo] });
+        queryClient.invalidateQueries({ queryKey: ['convocatorias', user.legajo] });
+    },
+    onError: () => showModal('Error', 'No se pudo actualizar la nota.'),
+  });
+
+  const confirmInformeMutation = useMutation({
+    mutationFn: (convocatoriaId: string) => updateAirtableRecord(AIRTABLE_TABLE_NAME_CONVOCATORIAS, convocatoriaId, { [FIELD_INFORME_SUBIDO_CONVOCATORIAS]: true }),
+    onSuccess: () => {
+        showModal('Confirmación Exitosa', 'Se ha registrado la entrega de tu informe.');
+        queryClient.invalidateQueries({ queryKey: ['convocatorias', user.legajo] });
+    },
+    onError: () => showModal('Error', 'No se pudo confirmar la entrega. Inténtalo de nuevo.'),
+  });
+
+  const enrollmentMutation = useMutation({
+    mutationFn: ({ formData, selectedLanzamiento }: { formData: any, selectedLanzamiento: LanzamientoPPS }) => {
+        if (!studentAirtableId || !studentDetails) throw new Error("No se pudo identificar al estudiante.");
+        const newRecord: Partial<ConvocatoriaFields> = {
+            [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS]: [selectedLanzamiento.id],
             [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: [studentAirtableId],
-            [FIELD_NOMBRE_PPS_CONVOCATORIAS]: selectedLanzamientoForEnrollment[FIELD_NOMBRE_PPS_LANZAMIENTOS],
-            [FIELD_FECHA_INICIO_CONVOCATORIAS]: selectedLanzamientoForEnrollment[FIELD_FECHA_INICIO_LANZAMIENTOS],
-            [FIELD_FECHA_FIN_CONVOCATORIAS]: selectedLanzamientoForEnrollment[FIELD_FECHA_FIN_LANZAMIENTOS],
-            [FIELD_DIRECCION_CONVOCATORIAS]: selectedLanzamientoForEnrollment[FIELD_DIRECCION_LANZAMIENTOS],
-            [FIELD_HORARIO_FORMULA_CONVOCATORIAS]: conciseHorarios,
-            [FIELD_ORIENTACION_CONVOCATORIAS]: selectedLanzamientoForEnrollment[FIELD_ORIENTACION_LANZAMIENTOS],
-            [FIELD_HORAS_ACREDITADAS_CONVOCATORIAS]: selectedLanzamientoForEnrollment[FIELD_HORAS_ACREDITADAS_LANZAMIENTOS],
-            [FIELD_CUPOS_DISPONIBLES_CONVOCATORIAS]: selectedLanzamientoForEnrollment[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS],
+            [FIELD_NOMBRE_PPS_CONVOCATORIAS]: selectedLanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS],
+            [FIELD_FECHA_INICIO_CONVOCATORIAS]: selectedLanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS],
+            [FIELD_FECHA_FIN_CONVOCATORIAS]: selectedLanzamiento[FIELD_FECHA_FIN_LANZAMIENTOS],
+            [FIELD_DIRECCION_CONVOCATORIAS]: selectedLanzamiento[FIELD_DIRECCION_LANZAMIENTOS],
+            [FIELD_HORARIO_FORMULA_CONVOCATORIAS]: Array.isArray(formData.horarios) && formData.horarios.length > 0 ? formData.horarios.join('; ') : selectedLanzamiento[FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS] || 'No especificado',
+            [FIELD_ORIENTACION_CONVOCATORIAS]: selectedLanzamiento[FIELD_ORIENTACION_LANZAMIENTOS],
+            [FIELD_HORAS_ACREDITADAS_CONVOCATORIAS]: selectedLanzamiento[FIELD_HORAS_ACREDITADAS_LANZAMIENTOS],
+            [FIELD_CUPOS_DISPONIBLES_CONVOCATORIAS]: selectedLanzamiento[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS],
             [FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS]: 'Inscripto',
-            [FIELD_TERMINO_CURSAR_CONVOCATORIAS]: formData.terminoDeCursar ? 'Sí' : 'No',
-            [FIELD_CURSANDO_ELECTIVAS_CONVOCATORIAS]: formData.terminoDeCursar === false ? (formData.cursandoElectivas ? 'Sí' : 'No') : undefined,
-            [FIELD_FINALES_ADEUDA_CONVOCATORIAS]: formData.finalesAdeudados || undefined,
-            [FIELD_OTRA_SITUACION_CONVOCATORIAS]: formData.otraSituacionAcademica,
-            [FIELD_DNI_CONVOCATORIAS]: studentDetails[FIELD_DNI_ESTUDIANTES],
+            [FIELD_LEGAJO_CONVOCATORIAS]: studentDetails[FIELD_LEGAJO_ESTUDIANTES] ? parseInt(studentDetails[FIELD_LEGAJO_ESTUDIANTES], 10) : undefined,
+            [FIELD_DNI_CONVOCATORIAS]: studentDetails[FIELD_DNI_ESTUDIANTES] ? Number(studentDetails[FIELD_DNI_ESTUDIANTES]) : undefined,
             [FIELD_CORREO_CONVOCATORIAS]: studentDetails[FIELD_CORREO_ESTUDIANTES],
             [FIELD_FECHA_NACIMIENTO_CONVOCATORIAS]: studentDetails[FIELD_FECHA_NACIMIENTO_ESTUDIANTES],
             [FIELD_TELEFONO_CONVOCATORIAS]: studentDetails[FIELD_TELEFONO_ESTUDIANTES],
-            [FIELD_LEGAJO_CONVOCATORIAS]: user.legajo ? parseInt(user.legajo, 10) : undefined,
-          };
+            [FIELD_TERMINO_CURSAR_CONVOCATORIAS]: formData.terminoDeCursar ? 'Sí' : 'No',
+            [FIELD_CURSANDO_ELECTIVAS_CONVOCATORIAS]: formData.cursandoElectivas ? 'Sí' : 'No',
+            [FIELD_FINALES_ADEUDA_CONVOCATORIAS]: formData.finalesAdeudados || null,
+            [FIELD_OTRA_SITUACION_CONVOCATORIAS]: formData.otraSituacionAcademica,
+        };
+        return createAirtableRecord<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS, newRecord);
+    },
+    onSuccess: () => {
+        closeEnrollmentForm();
+        showModal('¡Inscripción Exitosa!', 'Tu postulación ha sido enviada correctamente.');
+        queryClient.invalidateQueries({ queryKey: ['convocatorias', user.legajo] });
+    },
+    onError: (error) => showModal('Error en la Inscripción', `No se pudo completar tu inscripción. Error: ${error.message}`),
+    onSettled: () => setEnrollingId(null),
+  });
 
-          const { record, error } = await createAirtableRecord(AIRTABLE_TABLE_NAME_CONVOCATORIAS, enrollmentData);
-          if (error || !record) throw new Error(typeof error?.error === 'string' ? error.error : error?.error.message || 'La inscripción no se pudo completar.');
+  // --- Combined Loading and Error States ---
+  const isLoading = studentQuery.isLoading || practicasQuery.isLoading || convocatoriasQuery.isLoading || lanzamientosQuery.isLoading;
+  const initialLoadCompleted = studentQuery.isSuccess || studentQuery.isError || practicasQuery.isSuccess || practicasQuery.isError;
+  const error = studentQuery.error?.message || practicasQuery.error?.message || solicitudesQuery.error?.message || convocatoriasQuery.error?.message || lanzamientosQuery.error?.message || null;
+  const isSubmitting = updateOrientationMutation.isPending || updateNotaMutation.isPending || confirmInformeMutation.isPending || enrollmentMutation.isPending;
 
-          setMyEnrollments(prev => [...prev, { ...record.fields as Convocatoria, id: record.id }]);
-          closeEnrollmentForm();
-          showModal('¡Inscripción Exitosa!', 'Tu postulación ha sido enviada correctamente. Recibirás novedades por correo.');
-
-      } catch (e: any) {
-          showModal('Error en la Inscripción', e.message);
-      } finally {
-          setIsSubmitting(false);
-          setEnrollingId(null);
-      }
-  }, [studentAirtableId, studentDetails, user.legajo, showModal, closeEnrollmentForm, setEnrollingId]);
-
+  // --- Context Value ---
   const value: DataContextType = {
-    practicas,
-    solicitudes,
-    lanzamientos,
-    myEnrollments,
+    practicas: practicasQuery.data || [],
+    solicitudes: solicitudesQuery.data || [],
+    lanzamientos: visibleLanzamientos,
+    myEnrollments: convocatoriasQuery.data || [],
     informeTasks,
     criterios,
     selectedOrientacion,
@@ -379,18 +339,18 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
     studentNameForPanel,
     studentDetails,
     userGender,
-    fetchStudentData,
-    handleOrientacionChange,
-    handleNotaChange,
-    handleConfirmarInforme,
-    handleEnrollmentSubmit,
+    
+    refetchStudentData: () => queryClient.invalidateQueries({ queryKey: ['student', user.legajo] }),
+    handleOrientacionChange: (orientacion) => updateOrientationMutation.mutate(orientacion),
+    handleNotaChange: (practicaId, nota, convocatoriaId) => updateNotaMutation.mutate({ practicaId, nota, convocatoriaId }),
+    handleConfirmarInforme: (convocatoriaId) => confirmInformeMutation.mutate(convocatoriaId),
+    handleEnrollmentSubmit: async (formData, selectedLanzamiento) => {
+        setEnrollingId(selectedLanzamiento.id);
+        enrollmentMutation.mutate({ formData, selectedLanzamiento });
+    },
   };
 
-  return (
-    <DataContext.Provider value={value}>
-      {children}
-    </DataContext.Provider>
-  );
+  return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };
 
 export const useData = (): DataContextType => {

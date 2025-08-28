@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { fetchAllAirtableData, updateAirtableRecord, updateAirtableRecords } from '../services/airtableService';
-import type { InformeCorreccionPPS, InformeCorreccionStudent, ConvocatoriaFields, PracticaFields, EstudianteFields, LanzamientoPPSFields, FlatCorreccionStudent } from '../types';
+import type { InformeCorreccionPPS, InformeCorreccionStudent, ConvocatoriaFields, PracticaFields, EstudianteFields, LanzamientoPPSFields, FlatCorreccionStudent, AirtableRecord, LanzamientoPPS } from '../types';
 import {
   AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
   AIRTABLE_TABLE_NAME_CONVOCATORIAS,
@@ -18,13 +18,19 @@ import {
   FIELD_NOMBRE_PPS_LANZAMIENTOS,
   FIELD_INFORME_LANZAMIENTOS,
   FIELD_FECHA_FIN_LANZAMIENTOS,
+  FIELD_LEGAJO_ESTUDIANTES,
+  FIELD_ESPECIALIDAD_PRACTICAS,
+  FIELD_NOMBRE_PPS_CONVOCATORIAS,
+  FIELD_FECHA_INICIO_CONVOCATORIAS,
+  FIELD_FECHA_INICIO_LANZAMIENTOS,
 } from '../constants';
 import Loader from './Loader';
 import EmptyState from './EmptyState';
 import Toast from './Toast';
 import InformeCorreccionCard from './InformeCorreccionCard';
 import CorreccionRapidaView from './CorreccionRapidaView';
-import { normalizeStringForComparison, addBusinessDays } from '../utils/formatters';
+import { normalizeStringForComparison, addBusinessDays, parseToUTCDate } from '../utils/formatters';
+import { useAuth } from '../contexts/AuthContext';
 
 type LoadingState = 'initial' | 'loading' | 'loaded' | 'error';
 type Manager = 'Selva Estrella' | 'Franco Pedraza' | 'Cynthia Rossi';
@@ -37,6 +43,7 @@ const managerConfig: Record<Manager, { orientations: string[], label: string }> 
 };
 
 const CorreccionPanel: React.FC = () => {
+  const { isJefeMode, authenticatedUser } = useAuth();
   const [loadingState, setLoadingState] = useState<LoadingState>('initial');
   const [error, setError] = useState<string | null>(null);
   const [allPpsGroups, setAllPpsGroups] = useState<Map<string, InformeCorreccionPPS>>(new Map());
@@ -59,11 +66,12 @@ const CorreccionPanel: React.FC = () => {
           FIELD_NOMBRE_PPS_LANZAMIENTOS,
           FIELD_ORIENTACION_LANZAMIENTOS,
           FIELD_INFORME_LANZAMIENTOS,
-          FIELD_FECHA_FIN_LANZAMIENTOS
+          FIELD_FECHA_FIN_LANZAMIENTOS,
+          FIELD_FECHA_INICIO_LANZAMIENTOS,
         ]),
-        fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS, [], `{${FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS}} = "Seleccionado"`),
+        fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS), // Fetch all convocatorias without filters
         fetchAllAirtableData<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS),
-        fetchAllAirtableData<EstudianteFields>(AIRTABLE_TABLE_NAME_ESTUDIANTES, [FIELD_NOMBRE_ESTUDIANTES])
+        fetchAllAirtableData<EstudianteFields>(AIRTABLE_TABLE_NAME_ESTUDIANTES, [FIELD_NOMBRE_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES])
       ]);
 
       if (lanzamientosRes.error || convocatoriasRes.error || practicasRes.error || estudiantesRes.error) {
@@ -73,41 +81,92 @@ const CorreccionPanel: React.FC = () => {
       const estudiantesMap = new Map(estudiantesRes.records.map(r => [r.id, r.fields]));
       const practicasMap = new Map();
       practicasRes.records.forEach(p => {
-        const studentName = (p.fields[FIELD_NOMBRE_BUSQUEDA_PRACTICAS] || [])[0];
+        const studentLegajo = (p.fields[FIELD_NOMBRE_BUSQUEDA_PRACTICAS] || [])[0];
         const ppsName = (p.fields[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS] || [])[0];
-        if (studentName && ppsName) {
-          const key = `${normalizeStringForComparison(studentName)}-${normalizeStringForComparison(ppsName)}`;
+        if (studentLegajo && ppsName) {
+          const key = `${normalizeStringForComparison(studentLegajo)}-${normalizeStringForComparison(ppsName)}`;
           practicasMap.set(key, { id: p.id, fields: p.fields });
         }
       });
 
       const ppsGroups = new Map<string, InformeCorreccionPPS>();
 
-      for (const conv of convocatoriasRes.records) {
-        const lanzamientoId = (conv.fields[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])[0];
-        const studentId = (conv.fields[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] || [])[0];
+      // Filter on client side for robustness against case/whitespace issues in Airtable
+      const validConvocatorias = convocatoriasRes.records.filter(conv => {
+        const estado = normalizeStringForComparison(conv.fields[FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS]);
+        return estado !== 'inscripto' && estado !== 'no seleccionado';
+      });
+      
+      const allLanzamientos = lanzamientosRes.records;
+      const lanzamientosToUpdate = new Map<string, { id: string; fields: Partial<LanzamientoPPSFields> }>();
 
-        if (!lanzamientoId || !studentId) continue;
+      for (const convRecord of validConvocatorias) {
+        const studentId = (convRecord.fields[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] || [])[0];
+        if (!studentId) continue;
         
-        const lanzamiento = lanzamientosRes.records.find(l => l.id === lanzamientoId);
         const student = estudiantesMap.get(studentId);
-        
-        if (!lanzamiento || !student) continue;
+        if (!student) continue;
 
-        const ppsName = lanzamiento.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'N/A';
-        const studentName = student[FIELD_NOMBRE_ESTUDIANTES] || 'N/A';
+        let lanzamiento: AirtableRecord<LanzamientoPPSFields> | undefined;
+        const linkedLanzamientoId = (convRecord.fields[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])[0];
+
+        if (linkedLanzamientoId) {
+            lanzamiento = allLanzamientos.find(l => l.id === linkedLanzamientoId);
+        }
+
+        // Fallback if no linked record or if linked record not found
+        if (!lanzamiento) {
+            const convPpsNameRaw = convRecord.fields[FIELD_NOMBRE_PPS_CONVOCATORIAS];
+            const convStartDate = parseToUTCDate(convRecord.fields[FIELD_FECHA_INICIO_CONVOCATORIAS]);
+
+            const ppsNameToMatch = Array.isArray(convPpsNameRaw) ? convPpsNameRaw[0] : convPpsNameRaw;
+
+            if (ppsNameToMatch && convStartDate) {
+                lanzamiento = allLanzamientos.find(l => {
+                    const launchStartDate = parseToUTCDate(l.fields[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+                    const launchName = l.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS];
+                    
+                    return (
+                        normalizeStringForComparison(launchName) === normalizeStringForComparison(ppsNameToMatch) &&
+                        launchStartDate?.getTime() === convStartDate.getTime()
+                    );
+                });
+            }
+        }
         
-        const practicaKey = `${normalizeStringForComparison(studentName)}-${normalizeStringForComparison(ppsName)}`;
+        if (!lanzamiento) continue; // If still no lanzamiento, skip this convocatoria.
+        
+        const ppsName = lanzamiento.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'N/A';
+        const studentLegajo = student[FIELD_LEGAJO_ESTUDIANTES];
+        
+        const practicaKey = `${normalizeStringForComparison(studentLegajo)}-${normalizeStringForComparison(ppsName)}`;
         const practica = practicasMap.get(practicaKey);
 
-        if (!practica) continue;
+        // If there's no matching practica record, this student should not appear in the correction panel.
+        if (!practica) {
+            continue;
+        }
+        
+        // If a PPS appears in the correction panel but has no report link, flag it for update.
+        const informeLink = lanzamiento.fields[FIELD_INFORME_LANZAMIENTOS];
+        if (!informeLink) {
+            if (!lanzamientosToUpdate.has(lanzamiento.id)) {
+                lanzamientosToUpdate.set(lanzamiento.id, {
+                    id: lanzamiento.id,
+                    fields: { [FIELD_INFORME_LANZAMIENTOS]: 'poner link de informe' }
+                });
+            }
+        }
+        
+        const lanzamientoId = lanzamiento.id;
+        const studentName = student[FIELD_NOMBRE_ESTUDIANTES] || 'N/A';
 
         if (!ppsGroups.has(lanzamientoId)) {
           ppsGroups.set(lanzamientoId, {
             lanzamientoId: lanzamientoId,
             ppsName: ppsName,
             orientacion: lanzamiento.fields[FIELD_ORIENTACION_LANZAMIENTOS] || 'N/A',
-            informeLink: lanzamiento.fields[FIELD_INFORME_LANZAMIENTOS],
+            informeLink: informeLink,
             fechaFinalizacion: lanzamiento.fields[FIELD_FECHA_FIN_LANZAMIENTOS],
             students: []
           });
@@ -116,16 +175,57 @@ const CorreccionPanel: React.FC = () => {
         const studentData: InformeCorreccionStudent = {
           studentId: studentId,
           studentName: studentName,
-          convocatoriaId: conv.id,
-          practicaId: practica.id,
-          informeSubido: !!conv.fields[FIELD_INFORME_SUBIDO_CONVOCATORIAS],
-          nota: practica.fields[FIELD_NOTA_PRACTICAS] || 'Sin calificar'
+          convocatoriaId: convRecord.id,
+          practicaId: practica?.id,
+          informeSubido: !!convRecord.fields[FIELD_INFORME_SUBIDO_CONVOCATORIAS],
+          nota: practica?.fields?.[FIELD_NOTA_PRACTICAS] || 'Sin calificar'
         };
         
         ppsGroups.get(lanzamientoId)!.students.push(studentData);
       }
       
-      setAllPpsGroups(ppsGroups);
+      // After processing, fire-and-forget the updates to Airtable
+      if (lanzamientosToUpdate.size > 0) {
+        const recordsToUpdate = Array.from(lanzamientosToUpdate.values());
+        updateAirtableRecords(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, recordsToUpdate)
+            .then(({ error }) => {
+                if (!error) {
+                    setToastInfo({
+                        message: `${recordsToUpdate.length} PPS sin link de informe fueron marcadas para completar.`,
+                        type: 'success'
+                    });
+                } else {
+                     console.error("Failed to flag Lanzamientos for missing report links:", error);
+                }
+            });
+      }
+
+      // Filter out any PPS groups that have no students left after filtering.
+      const finalPpsGroups = new Map<string, InformeCorreccionPPS>();
+      for (const [key, group] of ppsGroups.entries()) {
+          if (group.students.length > 0) {
+              finalPpsGroups.set(key, group);
+          }
+      }
+
+      // Fallback logic: If a Lanzamiento is missing an orientation,
+      // try to infer it from the students' linked Practica records.
+      for (const group of finalPpsGroups.values()) {
+        if (!group.orientacion || group.orientacion.trim() === '' || group.orientacion === 'N/A') {
+          for (const student of group.students) {
+            if (student.practicaId) {
+              const practicaRecord = practicasRes.records.find(p => p.id === student.practicaId);
+              const practicaEspecialidad = practicaRecord?.fields[FIELD_ESPECIALIDAD_PRACTICAS];
+              if (practicaEspecialidad && practicaEspecialidad.trim() !== '') {
+                group.orientacion = practicaEspecialidad;
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      setAllPpsGroups(finalPpsGroups);
       setLoadingState('loaded');
 
     } catch (e: any) {
@@ -138,31 +238,75 @@ const CorreccionPanel: React.FC = () => {
     fetchData();
   }, [fetchData]);
 
-  const handleNotaChange = useCallback(async (practicaId: string, newNota: string) => {
+  const handleNotaChange = useCallback(async (practicaId: string, newNota: string, convocatoriaId?: string) => {
     setUpdatingNotaId(practicaId);
-    
-    const valueToSend = newNota === 'Sin calificar' ? null : newNota;
 
-    const { error } = await updateAirtableRecord(AIRTABLE_TABLE_NAME_PRACTICAS, practicaId, {
-      [FIELD_NOTA_PRACTICAS]: valueToSend
-    });
+    if (newNota === 'No Entregado' && convocatoriaId) {
+      // Step 1: Update the Convocatoria record to uncheck 'Informe Subido'
+      const { error: convError } = await updateAirtableRecord(
+        AIRTABLE_TABLE_NAME_CONVOCATORIAS,
+        convocatoriaId,
+        { [FIELD_INFORME_SUBIDO_CONVOCATORIAS]: false }
+      );
 
-    if (error) {
-      setToastInfo({ message: 'Error al guardar la nota.', type: 'error' });
-    } else {
-      setToastInfo({ message: 'Nota guardada exitosamente.', type: 'success' });
-      setAllPpsGroups(prev => {
-        const newGroups = new Map(prev);
-        for (const pps of newGroups.values()) {
-          const student = pps.students.find(s => s.practicaId === practicaId);
-          if (student) {
-            student.nota = newNota;
-            break;
+      if (convError) {
+        setToastInfo({ message: 'Error al actualizar el estado del informe.', type: 'error' });
+        setUpdatingNotaId(null);
+        return;
+      }
+      
+      // Step 2: Update the Practica record with the 'No Entregado' grade
+      const { error: practicasError } = await updateAirtableRecord(
+        AIRTABLE_TABLE_NAME_PRACTICAS,
+        practicaId,
+        { [FIELD_NOTA_PRACTICAS]: 'No Entregado' }
+      );
+
+      if (practicasError) {
+        setToastInfo({ message: 'Error al actualizar la nota.', type: 'error' });
+      } else {
+        setToastInfo({ message: 'El informe fue marcado como "No Entregado".', type: 'success' });
+        // Update local state for immediate UI feedback
+        setAllPpsGroups(prev => {
+          const newGroups = new Map(prev);
+          for (const pps of newGroups.values()) {
+            const student = pps.students.find(s => s.practicaId === practicaId);
+            if (student) {
+              student.nota = 'No Entregado';
+              student.informeSubido = false; // This is the key part for the UI
+              break;
+            }
           }
-        }
-        return newGroups;
-      });
+          return newGroups;
+        });
+      }
+    } else {
+      // Handle regular grading
+      const valueToSend = newNota === 'Sin calificar' ? null : newNota;
+      const { error } = await updateAirtableRecord(
+        AIRTABLE_TABLE_NAME_PRACTICAS,
+        practicaId,
+        { [FIELD_NOTA_PRACTICAS]: valueToSend }
+      );
+
+      if (error) {
+        setToastInfo({ message: 'Error al guardar la nota.', type: 'error' });
+      } else {
+        setToastInfo({ message: 'Nota guardada exitosamente.', type: 'success' });
+        setAllPpsGroups(prev => {
+          const newGroups = new Map(prev);
+          for (const pps of newGroups.values()) {
+            const student = pps.students.find(s => s.practicaId === practicaId);
+            if (student) {
+              student.nota = newNota;
+              break;
+            }
+          }
+          return newGroups;
+        });
+      }
     }
+
     setUpdatingNotaId(null);
   }, []);
   
@@ -216,7 +360,7 @@ const CorreccionPanel: React.FC = () => {
               const ppsGroup = newGroups.get(lanzamientoId);
               if (ppsGroup) {
                   ppsGroup.students.forEach(student => {
-                      if (selectedPracticaIds.includes(student.practicaId)) {
+                      if (student.practicaId && selectedPracticaIds.includes(student.practicaId)) {
                           student.nota = newNota;
                       }
                   });
@@ -234,15 +378,23 @@ const CorreccionPanel: React.FC = () => {
   }, [selectedStudents]);
 
   const managerData = useMemo(() => {
-    const managerOrientations = new Set(managerConfig[activeManager].orientations.map(normalizeStringForComparison));
-    let filteredGroups = Array.from(allPpsGroups.values())
-      .filter(group => managerOrientations.has(normalizeStringForComparison(group.orientacion)));
+    const managerOrientations = isJefeMode
+      ? new Set((authenticatedUser?.orientaciones || []).map(normalizeStringForComparison))
+      : new Set(managerConfig[activeManager].orientations.map(normalizeStringForComparison));
+
+    let filteredGroups = Array.from(allPpsGroups.values()).filter(group => {
+        const groupOrientations = (group.orientacion || '').split(',').map(o => normalizeStringForComparison(o.trim()));
+        // Check if any of the group's orientations match any of the manager's orientations
+        return groupOrientations.some(o => managerOrientations.has(o));
+    });
 
     const flatList: FlatCorreccionStudent[] = [];
     for (const group of filteredGroups) {
       for (const student of group.students) {
-        if (student.informeSubido && student.nota === 'Sin calificar') {
-            const deadline = group.fechaFinalizacion ? addBusinessDays(new Date(group.fechaFinalizacion), 30) : undefined;
+        // A student appears in the quick correction list if they have submitted their report, need a grade, and have a practice record.
+        if (student.informeSubido && (student.nota === 'Sin calificar' || student.nota === 'Entregado (sin corregir)') && student.practicaId) {
+            const finalizacionDate = group.fechaFinalizacion ? parseToUTCDate(group.fechaFinalizacion) : undefined;
+            const deadline = finalizacionDate ? addBusinessDays(finalizacionDate, 30) : undefined;
             flatList.push({ 
                 ...student, 
                 ppsName: group.ppsName, 
@@ -277,14 +429,14 @@ const CorreccionPanel: React.FC = () => {
     }
 
     const pendientes = ppsFilteredGroups.filter(group => 
-      group.students.some(s => !s.nota || s.nota === 'Sin calificar')
+      group.students.some(s => !s.nota || s.nota === 'Sin calificar' || s.nota === 'Entregado (sin corregir)')
     );
     const finalizados = ppsFilteredGroups.filter(group => 
-      group.students.every(s => s.nota && s.nota !== 'Sin calificar')
+      group.students.every(s => s.nota && s.nota !== 'Sin calificar' && s.nota !== 'Entregado (sin corregir)')
     );
     
     return { pendientes, finalizados, flatList: searchFilteredFlatList, totalSinCorregir };
-  }, [activeManager, allPpsGroups, searchTerm]);
+  }, [activeManager, allPpsGroups, searchTerm, isJefeMode, authenticatedUser]);
 
   const renderContent = () => {
     if (loadingState === 'loading' || loadingState === 'initial') return <Loader />;
@@ -300,7 +452,7 @@ const CorreccionPanel: React.FC = () => {
     return (
       <div className="space-y-8">
         {noContentForManager ? (
-           <EmptyState icon="person_search_off" title="Sin Resultados" message={`No se encontraron Prácticas de ${managerConfig[activeManager].orientations.join(' o ')} que coincidan con la búsqueda.`} />
+           <EmptyState icon="person_search_off" title="Sin Resultados" message={`No se encontraron Prácticas de ${isJefeMode ? authenticatedUser?.orientaciones?.join(' & ') : managerConfig[activeManager].orientations.join(' o ')} que coincidan con la búsqueda.`} />
         ) : (
           <>
             <CollapsibleSection title="Pendientes de Corrección" count={managerData.pendientes.length} defaultOpen>
@@ -371,23 +523,25 @@ const CorreccionPanel: React.FC = () => {
     <div className="animate-fade-in-up space-y-6">
       {toastInfo && <Toast message={toastInfo.message} type={toastInfo.type} onClose={() => setToastInfo(null)} />}
       
-      <div className="border-b border-slate-200">
-        <nav className="-mb-px flex space-x-4" aria-label="Managers">
-          {(Object.keys(managerConfig) as Manager[]).map(manager => (
-            <button
-              key={manager}
-              onClick={() => setActiveManager(manager)}
-              className={`whitespace-nowrap py-3 px-1 border-b-2 text-sm font-medium transition-colors duration-200 ${
-                activeManager === manager
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-              }`}
-            >
-              {managerConfig[manager].label}
-            </button>
-          ))}
-        </nav>
-      </div>
+      {!isJefeMode && (
+        <div className="border-b border-slate-200">
+            <nav className="-mb-px flex space-x-4" aria-label="Managers">
+            {(Object.keys(managerConfig) as Manager[]).map(manager => (
+                <button
+                key={manager}
+                onClick={() => setActiveManager(manager)}
+                className={`whitespace-nowrap py-3 px-1 border-b-2 text-sm font-medium transition-colors duration-200 ${
+                    activeManager === manager
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                }`}
+                >
+                {managerConfig[manager].label}
+                </button>
+            ))}
+            </nav>
+        </div>
+      )}
 
        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
            <div className="p-1 bg-slate-100 rounded-lg flex items-center ring-1 ring-slate-200/50">

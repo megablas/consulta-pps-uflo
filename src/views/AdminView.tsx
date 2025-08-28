@@ -9,7 +9,8 @@ import Card from '../components/Card';
 import ConvocatoriaManager from '../components/ConvocatoriaManager';
 import CorreccionPanel from '../components/CorreccionPanel';
 import type { TabId } from '../types';
-
+import ConvocatoriaStatusManager from '../components/ConvocatoriaStatusManager';
+import RepitentesPanel from '../components/RepitentesPanel';
 
 interface StudentTab {
     id: string; // legajo
@@ -21,7 +22,7 @@ const StudentDashboard: React.FC = () => {
     const [activeTab, setActiveTab] = useState<TabId>('convocatorias');
     // The Dashboard for a student in the admin view is self-contained.
     // Its tab state doesn't need to be shared with other components like the footer.
-    return <Dashboard activeTab={activeTab} onTabChange={setActiveTab} />;
+    return <Dashboard activeTab={activeTab} onTabChange={setActiveTab} showExportButton />;
 };
 
 const AdminView: React.FC = () => {
@@ -29,7 +30,7 @@ const AdminView: React.FC = () => {
     const [activeTabId, setActiveTabId] = useState('correccion');
     const { showModal } = useModal();
 
-    const handleStudentSelect = useCallback((student: { legajo: string, nombre: string }) => {
+    const openStudentPanel = useCallback((student: { legajo: string, nombre: string }) => {
         if (studentTabs.some(s => s.legajo === student.legajo)) {
             setActiveTabId(student.legajo);
             return;
@@ -68,11 +69,29 @@ const AdminView: React.FC = () => {
             content: <ConvocatoriaManager />
         },
         {
+            id: 'repitentes',
+            label: 'Repitentes de PPS',
+            icon: 'history_edu',
+            isClosable: false,
+            content: <RepitentesPanel />
+        },
+        {
+            id: 'status-manager',
+            label: 'Control de Convocatorias',
+            icon: 'toggle_on',
+            isClosable: false,
+            content: <ConvocatoriaStatusManager />
+        },
+        {
             id: 'search',
             label: 'Buscar Estudiante',
             icon: 'person_search',
             isClosable: false,
-            content: <div className="p-4"><AdminSearch onStudentSelect={handleStudentSelect} /></div>
+            content: (
+                <div className="p-4">
+                    <AdminSearch onStudentSelect={openStudentPanel} />
+                </div>
+            )
         },
         {
             id: 'insurance',

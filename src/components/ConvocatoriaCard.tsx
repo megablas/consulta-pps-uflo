@@ -16,6 +16,7 @@ interface ConvocatoriaCardProps {
   enrollmentStatus: string | null;
   isEnrolling: boolean;
   isVerSeleccionadosLoading: boolean;
+  isCompleted: boolean;
 }
 
 // Tipos para mejor tipado
@@ -35,7 +36,8 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({
   onVerSeleccionados, 
   enrollmentStatus, 
   isEnrolling, 
-  isVerSeleccionadosLoading 
+  isVerSeleccionadosLoading,
+  isCompleted
 }) => {
   const { userGender } = useData();
 
@@ -163,6 +165,23 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({
     </button>
   );
 
+  const CompletedButton: React.FC = () => (
+    <div className="relative group/tooltip">
+      <button
+        disabled
+        className="w-full sm:w-72 font-bold text-sm py-2.5 px-5 rounded-lg transition-all duration-300 ease-in-out shadow-inner flex items-center justify-center gap-2.5 whitespace-nowrap bg-slate-200 text-slate-500 cursor-not-allowed"
+        aria-label="Ya has completado esta práctica anteriormente."
+      >
+        <span className="material-icons !text-lg">history</span>
+        <span>Ya Cursada</span>
+      </button>
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-3 py-1.5 bg-slate-800 text-white text-xs rounded-md opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none" role="tooltip">
+        Ya has completado esta práctica anteriormente.
+        <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-slate-800"></div>
+      </div>
+    </div>
+  );
+
   const VerSeleccionadosButton: React.FC = () => (
     <button
       onClick={() => onVerSeleccionados(lanzamiento)}
@@ -199,14 +218,21 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({
   );
 
   const ActionButton: React.FC = () => {
-    if (convocatoriaState === 'abierta' && enrollmentState === 'none') {
+    if (isCompleted) {
+      return <CompletedButton />;
+    }
+  
+    // Si el usuario no está inscripto y la convocatoria está abierta, puede postularse.
+    if (enrollmentState === 'none' && convocatoriaState === 'abierta') {
       return <InscribirButton />;
     }
-    
+  
+    // Si la convocatoria está cerrada, todos pueden ver los resultados.
     if (convocatoriaState === 'cerrada') {
       return <VerSeleccionadosButton />;
     }
-    
+  
+    // Para todos los demás casos (ya inscripto, no seleccionado, etc.), se muestra el estado actual.
     return <StatusDisplay />;
   };
 

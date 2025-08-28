@@ -6,7 +6,7 @@ import { formatDate } from '../utils/formatters';
 
 interface CorreccionRapidaViewProps {
   students: FlatCorreccionStudent[];
-  onNotaChange: (practicaId: string, newNota: string) => Promise<void>;
+  onNotaChange: (practicaId: string, newNota: string, convocatoriaId?: string) => Promise<void>;
   updatingNotaId: string | null;
   searchTerm: string;
 }
@@ -60,8 +60,8 @@ const CorreccionRapidaView: React.FC<CorreccionRapidaViewProps> = ({ students, o
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' }>({ key: 'correctionDeadline', direction: 'ascending' });
   const [justUpdatedPracticaId, setJustUpdatedPracticaId] = useState<string | null>(null);
 
-  const handleNotaChange = async (practicaId: string, e: React.ChangeEvent<HTMLSelectElement>) => {
-    await onNotaChange(practicaId, e.target.value);
+  const handleNotaChange = async (practicaId: string, newNota: string, convocatoriaId: string) => {
+    await onNotaChange(practicaId, newNota, convocatoriaId);
     setJustUpdatedPracticaId(practicaId);
     setTimeout(() => setJustUpdatedPracticaId(null), 1500); 
   };
@@ -105,7 +105,7 @@ const CorreccionRapidaView: React.FC<CorreccionRapidaViewProps> = ({ students, o
   }, [students, sortConfig]);
 
   const getDeadlineVisuals = (deadlineString?: string) => {
-    if (!deadlineString) return { text: 'N/A', className: 'text-slate-500' };
+    if (!deadlineString) return { text: 'Sin fecha de fin', className: 'text-slate-500 italic' };
     
     const deadline = new Date(deadlineString);
     const today = new Date();
@@ -149,7 +149,7 @@ const CorreccionRapidaView: React.FC<CorreccionRapidaViewProps> = ({ students, o
             {sortedStudents.map(student => {
               const deadlineVisuals = getDeadlineVisuals(student.correctionDeadline);
               return (
-                <tr key={student.practicaId} className={`transition-colors duration-1000 ${justUpdatedPracticaId === student.practicaId ? 'bg-green-100' : 'hover:bg-slate-50/50'}`}>
+                <tr key={student.convocatoriaId} className={`transition-colors duration-1000 ${justUpdatedPracticaId === student.practicaId ? 'bg-green-100' : 'hover:bg-slate-50/50'}`}>
                   <td className="p-3 font-medium text-slate-800">
                     <HighlightedText text={student.studentName} highlight={searchTerm} />
                   </td>
@@ -160,13 +160,20 @@ const CorreccionRapidaView: React.FC<CorreccionRapidaViewProps> = ({ students, o
                       {deadlineVisuals.text}
                   </td>
                   <td className="p-3">
-                    <NotaSelector
-                      value={student.nota || 'Sin calificar'}
-                      onChange={(e) => handleNotaChange(student.practicaId, e)}
-                      disabled={!student.informeSubido}
-                      isSaving={updatingNotaId === student.practicaId}
-                      ariaLabel={`Nota para ${student.studentName} en ${student.ppsName}`}
-                    />
+                    <div className="flex items-center gap-2">
+                      <NotaSelector
+                        value={student.nota || 'Sin calificar'}
+                        onChange={(e) => student.practicaId && handleNotaChange(student.practicaId, e.target.value, student.convocatoriaId)}
+                        disabled={!student.practicaId}
+                        isSaving={updatingNotaId === student.practicaId}
+                        ariaLabel={`Nota para ${student.studentName} en ${student.ppsName}`}
+                      />
+                      {justUpdatedPracticaId === student.practicaId && (
+                        <span className="text-xs font-bold text-emerald-600 animate-fade-in-up" style={{ animationDuration: '300ms' }}>
+                            Guardado ✓
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="p-3 text-center">
                     {student.informeLink && (

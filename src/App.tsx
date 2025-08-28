@@ -8,9 +8,10 @@ import { DataProvider } from './contexts/DataContext';
 import { ModalProvider } from './contexts/ModalContext';
 import AppModals from './components/AppModals';
 import AdminView from './views/AdminView';
+import JefeView from './views/JefeView';
 
 const App: React.FC = () => {
-  const { authenticatedUser, isAuthLoading, isSuperUserMode } = useAuth();
+  const { authenticatedUser, isAuthLoading, isSuperUserMode, isJefeMode } = useAuth();
 
   if (isAuthLoading) {
     return (
@@ -32,7 +33,12 @@ const App: React.FC = () => {
           user={authenticatedUser}
         >
           <Layout>
-            {isSuperUserMode ? <AdminView /> : <StudentView />}
+            {isSuperUserMode 
+              ? <AdminView /> 
+              : isJefeMode
+                ? <JefeView />
+                : <StudentView />
+            }
           </Layout>
           <AppModals />
         </DataProvider>

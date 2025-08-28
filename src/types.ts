@@ -16,7 +16,7 @@ export interface SolicitudPPSFields {
 
 export interface PracticaFields {
   [key:string]: any; // Allow other fields
-  'Nombre busqueda'?: string[]; // Lookup field, can be array
+  'Legajo Busqueda'?: (string|number)[]; // Lookup field, can be array of strings or numbers
   'Nombre (de Institución)'?: string[]; // Lookup field
   'Horas Realizadas'?: number;
   'Fecha de Inicio'?: string; // Date string
@@ -34,7 +34,7 @@ export interface EstudianteFields {
   'Apellido (Separado)'?: string;
   'Género'?: 'Varon' | 'Mujer' | 'Otro';
   'Orientación Elegida'?: string;
-  'DNI'?: string;
+  'DNI'?: number;
   'Fecha de Nacimiento'?: string; // Date string
   'Correo'?: string;
   'Teléfono'?: string;
@@ -46,6 +46,8 @@ export interface AuthUserFields {
   'Nombre'?: string;
   'PasswordHash'?: string;
   'Salt'?: string;
+  'Role'?: 'Jefe' | 'SuperUser';
+  'Orientaciones'?: string; // Comma-separated list
 }
 
 export interface LanzamientoPPSFields {
@@ -62,11 +64,16 @@ export interface LanzamientoPPSFields {
   'Plazo Inscripción (días)'?: number;
   'Plantilla Seguro'?: { url: string }[];
   'Informe'?: string; // Link to report submission
+  'Estado de Gestión'?: string;
+  'Notas de Gestión'?: string;
+  'Fecha de Relanzamiento'?: string; // Date string for confirmed relaunches
+  'Teléfono (from Instituciones)'?: string[]; // Lookup from Instituciones table
 }
 
 export interface InstitucionFields {
   [key: string]: any;
   'Nombre'?: string;
+  'Teléfono'?: string;
 }
 
 export interface ConvocatoriaFields {
@@ -82,13 +89,13 @@ export interface ConvocatoriaFields {
   'Horas Acreditadas'?: number;
   'Cupos disponibles'?: number;
   'Estado de Convocatoria'?: string; // e.g. 'Abierta', 'Cerrada'
-  'Estado'?: string; // e.g. 'No seleccionado', 'Seleccionado', 'Inscripto'
+  'Estado'?: string; // e.g., 'No seleccionado', 'Seleccionado', 'Inscripto'
   'Orientación'?: string;
   '¿Terminó de cursar?'?: string;
   'Cursando Materias Electivas'?: string;
   'Finales que adeuda'?: string;
   'Otra situación académica'?: string;
-  'DNI'?: string;
+  'DNI'?: number;
   'Correo'?: string;
   'Fecha de Nacimiento'?: string;
   'Teléfono'?: string;
@@ -185,7 +192,7 @@ export interface InformeCorreccionStudent {
   studentId: string;
   studentName: string;
   convocatoriaId: string;
-  practicaId: string;
+  practicaId?: string;
   informeSubido: boolean;
   nota: string;
 }
