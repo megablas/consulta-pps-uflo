@@ -39,4 +39,4 @@ const InformesList: React.FC<InformesListProps> = ({ tasks, onConfirmar }) => {
   );
 };
 
-export default InformesList;
+export default React.memo(InformesList);

@@ -10,9 +10,10 @@ interface CheckboxProps {
   disabled?: boolean;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   error?: boolean;
+  'aria-describedby'?: string;
 }
 
-const Checkbox: React.FC<CheckboxProps> = ({ id, name, checked, onChange, label, value, disabled = false, onBlur, error = false }) => {
+const Checkbox: React.FC<CheckboxProps> = ({ id, name, checked, onChange, label, value, disabled = false, onBlur, error = false, 'aria-describedby': ariaDescribedby }) => {
   return (
     <label htmlFor={id} className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 ${checked ? 'bg-blue-50 border-blue-500 shadow-sm' : 'bg-white border-slate-300 hover:border-blue-400'} ${disabled ? 'cursor-not-allowed bg-slate-100 border-slate-200' : ''} ${error ? 'border-red-400 bg-red-50' : ''}`}>
       <input
@@ -25,6 +26,7 @@ const Checkbox: React.FC<CheckboxProps> = ({ id, name, checked, onChange, label,
         disabled={disabled}
         onBlur={onBlur}
         aria-invalid={error}
+        aria-describedby={ariaDescribedby}
         className="h-4 w-4 rounded text-blue-600 border-slate-400 focus:ring-2 focus:ring-blue-500/50"
       />
       <span className={`ml-3 text-sm font-medium ${checked ? 'text-blue-900' : 'text-slate-700'} ${disabled ? 'text-slate-500' : ''}`}>{label}</span>

@@ -93,4 +93,4 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myE
     );
 };
 
-export default ConvocatoriasList;
+export default React.memo(ConvocatoriasList);
