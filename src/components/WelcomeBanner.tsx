@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { EstudianteFields } from '../types';
 import {
   FIELD_LEGAJO_ESTUDIANTES,
@@ -54,6 +54,19 @@ const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
   studentDetails,
   isLoading
 }) => {
+  const [greeting, setGreeting] = useState('');
+
+  useEffect(() => {
+    const hour = new Date().getHours();
+    if (hour < 12 && hour >= 5) {
+      setGreeting('Buenos días');
+    } else if (hour < 20 && hour >= 12) {
+      setGreeting('Buenas tardes');
+    } else {
+      setGreeting('Buenas noches');
+    }
+  }, []);
+
   if (isLoading) {
     return <WelcomeBannerSkeleton />;
   }
@@ -98,14 +111,14 @@ const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
       {/* Contenido */}
       <div className="relative z-10">
         <h1 className="text-4xl md:text-5xl font-black text-slate-800 tracking-tight">
-          ¡Hola,{' '}
+          {greeting},{' '}
           <span className="text-blue-600">
             {studentName?.split(' ')[0] || 'Estudiante'}
           </span>
-          !
+          .
         </h1>
         <p className="mt-2 text-md text-slate-600 max-w-2xl">
-          Este es tu centro de mando. Seguimos tu progreso y te acercamos nuevas
+          Bienvenido a tu panel de mando. Aquí seguimos tu progreso y te acercamos nuevas
           oportunidades.
         </p>
 

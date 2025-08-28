@@ -4,7 +4,8 @@ import { generateSalt, hashPassword, verifyPassword } from '../utils/auth';
 import { 
     AIRTABLE_TABLE_NAME_AUTH_USERS, FIELD_LEGAJO_AUTH, FIELD_PASSWORD_HASH_AUTH, FIELD_SALT_AUTH, FIELD_NOMBRE_AUTH,
     AIRTABLE_TABLE_NAME_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES, FIELD_NOMBRE_ESTUDIANTES, 
-    FIELD_DNI_ESTUDIANTES, FIELD_FECHA_NACIMIENTO_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES
+    FIELD_DNI_ESTUDIANTES, FIELD_FECHA_NACIMIENTO_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES,
+    FIELD_ROLE_AUTH, FIELD_ORIENTACIONES_AUTH
 } from '../constants';
 import type { AuthUserFields, EstudianteFields } from '../types';
 import MiPanelLogo from './MiPanelLogo';
@@ -52,6 +53,7 @@ const Auth: React.FC = () => {
   const [legajoMessage, setLegajoMessage] = useState<string | null>(null);
   
   const [foundStudent, setFoundStudent] = useState<{ id: string; fields: EstudianteFields } | null>(null);
+  const [foundAuthUser, setFoundAuthUser] = useState<{ id: string; fields: AuthUserFields } | null>(null);
   const [missingFields, setMissingFields] = useState<string[]>([]);
   const [newData, setNewData] = useState<Partial<EstudianteFields>>({});
 
@@ -60,22 +62,40 @@ const Auth: React.FC = () => {
 
     setLegajoCheckState('loading');
     setFoundStudent(null);
+    setFoundAuthUser(null);
     setMissingFields([]);
     setNewData({});
     setLegajoMessage(null);
     setError(null);
 
     try {
+        // Check Auth Users table first
         const { records: existingUser, error: existingUserError } = await fetchAirtableData<AuthUserFields>(
-            AIRTABLE_TABLE_NAME_AUTH_USERS, [FIELD_LEGAJO_AUTH], `{${FIELD_LEGAJO_AUTH}} = '${legajoToVerify}'`, 1
+            AIRTABLE_TABLE_NAME_AUTH_USERS,
+            [FIELD_LEGAJO_AUTH, FIELD_PASSWORD_HASH_AUTH, FIELD_NOMBRE_AUTH],
+            `{${FIELD_LEGAJO_AUTH}} = '${legajoToVerify}'`,
+            1
         );
+
         if (existingUserError) console.warn("No se pudo consultar 'Auth Users':", existingUserError.error);
+        
         if (existingUser.length > 0) {
-            setLegajoMessage('Ya existe una cuenta para este legajo.');
-            setLegajoCheckState('error');
-            return;
+            const userAuthRecord = existingUser[0];
+            // If user exists and has a password, they can't register again.
+            if (userAuthRecord.fields[FIELD_PASSWORD_HASH_AUTH]) {
+                setLegajoMessage('Ya existe una cuenta para este legajo.');
+                setLegajoCheckState('error');
+                return;
+            } else {
+                // User exists but has no password (pre-provisioned account)
+                setFoundAuthUser({ id: userAuthRecord.id, fields: userAuthRecord.fields });
+                setLegajoMessage(`¡Hola, ${userAuthRecord.fields[FIELD_NOMBRE_AUTH]}! Completa tu contraseña para activar tu cuenta.`);
+                setLegajoCheckState('success');
+                return; // Stop here, no need to check Estudiantes table
+            }
         }
 
+        // If no user in Auth, check Estudiantes table for a new registration
         const { records: studentRecords, error: studentError } = await fetchAirtableData<EstudianteFields>(
             AIRTABLE_TABLE_NAME_ESTUDIANTES,
             [FIELD_NOMBRE_ESTUDIANTES, FIELD_DNI_ESTUDIANTES, FIELD_FECHA_NACIMIENTO_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES],
@@ -114,6 +134,7 @@ const Auth: React.FC = () => {
         setLegajoCheckState('idle');
         setLegajoMessage(null);
         setFoundStudent(null);
+        setFoundAuthUser(null);
         return;
     }
     const handler = setTimeout(() => {
@@ -122,6 +143,7 @@ const Auth: React.FC = () => {
       } else {
         setLegajoCheckState('idle');
         setFoundStudent(null);
+        setFoundAuthUser(null);
         setLegajoMessage(null);
       }
     }, 700);
@@ -130,7 +152,19 @@ const Auth: React.FC = () => {
 
   const handleNewDataChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setNewData(prev => ({ ...prev, [name]: value || null }));
+    if (name === FIELD_DNI_ESTUDIANTES) {
+      // The DNI field in Airtable expects a Number. We process the input to only allow digits.
+      const numericString = value.replace(/\D/g, '');
+      if (numericString === '') {
+        // Handle case where input is cleared
+        setNewData(prev => ({ ...prev, [name]: null }));
+      } else {
+        // Store as a number
+        setNewData(prev => ({ ...prev, [name]: parseInt(numericString, 10) }));
+      }
+    } else {
+      setNewData(prev => ({ ...prev, [name]: value || null }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -139,7 +173,7 @@ const Auth: React.FC = () => {
     const passwordTrimmed = password.trim();
 
     if (legajoTrimmed === 'admin' && passwordTrimmed === 'superadmin') {
-      login({ legajo: 'admin', nombre: 'Super Usuario', isSuperUser: true });
+      login({ legajo: 'admin', nombre: 'Super Usuario', role: 'SuperUser' });
       return;
     }
 
@@ -154,15 +188,23 @@ const Auth: React.FC = () => {
     if (mode === 'login') {
         try {
             const { records, error: fetchError } = await fetchAirtableData<AuthUserFields>(
-                AIRTABLE_TABLE_NAME_AUTH_USERS, [FIELD_PASSWORD_HASH_AUTH, FIELD_SALT_AUTH, FIELD_NOMBRE_AUTH], `{${FIELD_LEGAJO_AUTH}} = '${legajoTrimmed}'`, 1
+                AIRTABLE_TABLE_NAME_AUTH_USERS, [FIELD_PASSWORD_HASH_AUTH, FIELD_SALT_AUTH, FIELD_NOMBRE_AUTH, FIELD_ROLE_AUTH, FIELD_ORIENTACIONES_AUTH], `{${FIELD_LEGAJO_AUTH}} = '${legajoTrimmed}'`, 1
             );
             if (fetchError) throw new Error('Error al conectar con el servidor.');
             if (records.length === 0) throw new Error('Legajo o contraseña incorrectos.');
             
             const user = records[0].fields;
+            if (!user[FIELD_SALT_AUTH] || !user[FIELD_PASSWORD_HASH_AUTH]) {
+                throw new Error('Esta cuenta no tiene una contraseña configurada. Por favor, regístrate para crear una.');
+            }
             const isValid = await verifyPassword(passwordTrimmed, user[FIELD_SALT_AUTH]!, user[FIELD_PASSWORD_HASH_AUTH]!);
             if (isValid) {
-                login({ legajo: legajoTrimmed, nombre: user[FIELD_NOMBRE_AUTH]! });
+                login({ 
+                  legajo: legajoTrimmed, 
+                  nombre: user[FIELD_NOMBRE_AUTH]!,
+                  role: user[FIELD_ROLE_AUTH],
+                  orientaciones: user[FIELD_ORIENTACIONES_AUTH]?.split(',').map(o => o.trim())
+                });
             } else {
                 throw new Error('Legajo o contraseña incorrectos.');
             }
@@ -171,9 +213,9 @@ const Auth: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    } else {
+    } else { // Register mode
         try {
-            if (legajoCheckState !== 'success' || !foundStudent) {
+            if (legajoCheckState !== 'success' || (!foundStudent && !foundAuthUser)) {
                 throw new Error('Debes verificar un legajo válido antes de registrarte.');
             }
             if (passwordTrimmed !== confirmPassword.trim()) {
@@ -183,24 +225,41 @@ const Auth: React.FC = () => {
                 throw new Error('Por favor, completa toda la información requerida.');
             }
 
-            if (Object.keys(newData).length > 0) {
-                const { error: updateError } = await updateAirtableRecord(
-                    AIRTABLE_TABLE_NAME_ESTUDIANTES, foundStudent.id, newData
-                );
-                if (updateError) throw new Error(`No se pudo actualizar tu información: ${typeof updateError.error === 'string' ? updateError.error : updateError.error.message}`);
-            }
-
             const salt = generateSalt();
             const passwordHash = await hashPassword(passwordTrimmed, salt);
-            const { record, error: createError } = await createAirtableRecord<AuthUserFields>(AIRTABLE_TABLE_NAME_AUTH_USERS, {
-                [FIELD_LEGAJO_AUTH]: legajoTrimmed,
-                [FIELD_NOMBRE_AUTH]: foundStudent.fields[FIELD_NOMBRE_ESTUDIANTES],
-                [FIELD_PASSWORD_HASH_AUTH]: passwordHash,
-                [FIELD_SALT_AUTH]: salt
-            });
-            if (createError || !record) throw new Error(typeof createError?.error === 'string' ? createError.error : createError?.error.message || 'No se pudo crear la cuenta.');
+            
+            let userName = '';
 
-            login({ legajo: legajoTrimmed, nombre: foundStudent.fields[FIELD_NOMBRE_ESTUDIANTES]! });
+            if (foundAuthUser) { // Update pre-provisioned user
+                const { error: updateError } = await updateAirtableRecord(
+                    AIRTABLE_TABLE_NAME_AUTH_USERS,
+                    foundAuthUser.id,
+                    {
+                        [FIELD_PASSWORD_HASH_AUTH]: passwordHash,
+                        [FIELD_SALT_AUTH]: salt
+                    }
+                );
+                if (updateError) throw new Error(`No se pudo activar la cuenta: ${typeof updateError.error === 'string' ? updateError.error : updateError.error.message}`);
+                userName = foundAuthUser.fields[FIELD_NOMBRE_AUTH]!;
+            } else if (foundStudent) { // Create new user from Estudiantes
+                if (Object.keys(newData).length > 0) {
+                    const { error: updateError } = await updateAirtableRecord(
+                        AIRTABLE_TABLE_NAME_ESTUDIANTES, foundStudent.id, newData
+                    );
+                    if (updateError) throw new Error(`No se pudo actualizar tu información: ${typeof updateError.error === 'string' ? updateError.error : updateError.error.message}`);
+                }
+
+                const { record, error: createError } = await createAirtableRecord<AuthUserFields>(AIRTABLE_TABLE_NAME_AUTH_USERS, {
+                    [FIELD_LEGAJO_AUTH]: legajoTrimmed,
+                    [FIELD_NOMBRE_AUTH]: foundStudent.fields[FIELD_NOMBRE_ESTUDIANTES],
+                    [FIELD_PASSWORD_HASH_AUTH]: passwordHash,
+                    [FIELD_SALT_AUTH]: salt
+                });
+                if (createError || !record) throw new Error(typeof createError?.error === 'string' ? createError.error : createError?.error.message || 'No se pudo crear la cuenta.');
+                userName = foundStudent.fields[FIELD_NOMBRE_ESTUDIANTES]!;
+            }
+
+            login({ legajo: legajoTrimmed, nombre: userName });
             showModal('¡Éxito!', 'Tu cuenta ha sido creada y has iniciado sesión automáticamente.');
 
         } catch(err: any) {
@@ -215,6 +274,7 @@ const Auth: React.FC = () => {
     setMode(newMode);
     setError(null);
     setFoundStudent(null);
+    setFoundAuthUser(null);
     setMissingFields([]);
     setNewData({});
     setPassword('');
@@ -280,7 +340,7 @@ const Auth: React.FC = () => {
             {mode === 'register' && legajoCheckState === 'success' && foundStudent && (
               <div className="space-y-4 animate-fade-in-up">
                 {missingFields.length > 0 && <p className="text-sm font-semibold text-slate-700 border-t pt-4 mt-4">Completa tus datos para continuar:</p>}
-                {missingFields.includes(FIELD_DNI_ESTUDIANTES) && <AuthInput name={FIELD_DNI_ESTUDIANTES} type="text" placeholder="DNI (sin puntos)" icon="badge" value={newData[FIELD_DNI_ESTUDIANTES] || ''} onChange={handleNewDataChange} disabled={isLoading} />}
+                {missingFields.includes(FIELD_DNI_ESTUDIANTES) && <AuthInput name={FIELD_DNI_ESTUDIANTES} type="text" placeholder="DNI (sin puntos)" icon="badge" value={newData[FIELD_DNI_ESTUDIANTES] || ''} onChange={handleNewDataChange} disabled={isLoading} inputMode="numeric" pattern="[0-9]*" />}
                 {missingFields.includes(FIELD_FECHA_NACIMIENTO_ESTUDIANTES) && <AuthInput name={FIELD_FECHA_NACIMIENTO_ESTUDIANTES} type="date" placeholder="Fecha de Nacimiento" icon="cake" value={newData[FIELD_FECHA_NACIMIENTO_ESTUDIANTES] || ''} onChange={handleNewDataChange} disabled={isLoading} />}
                 {missingFields.includes(FIELD_CORREO_ESTUDIANTES) && <AuthInput name={FIELD_CORREO_ESTUDIANTES} type="email" placeholder="Correo" icon="email" value={newData[FIELD_CORREO_ESTUDIANTES] || ''} onChange={handleNewDataChange} disabled={isLoading} />}
                 {missingFields.includes(FIELD_TELEFONO_ESTUDIANTES) && <AuthInput name={FIELD_TELEFONO_ESTUDIANTES} type="tel" placeholder="Teléfono (con cód. de área)" icon="phone" value={newData[FIELD_TELEFONO_ESTUDIANTES] || ''} onChange={handleNewDataChange} disabled={isLoading} />}

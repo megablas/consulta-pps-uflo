@@ -25,7 +25,8 @@ export const FIELD_CORREO_ESTUDIANTES = 'Correo';
 export const FIELD_TELEFONO_ESTUDIANTES = 'Teléfono';
 
 // --- Fields for 'Prácticas' table ---
-export const FIELD_NOMBRE_BUSQUEDA_PRACTICAS = 'Nombre busqueda'; // Lookup from Estudiantes
+export const FIELD_NOMBRE_BUSQUEDA_PRACTICAS = 'Legajo Busqueda'; // Lookup from Estudiantes (should contain the Legajo value as text)
+export const FIELD_ESTUDIANTE_LINK_PRACTICAS = 'Estudiante Inscripto'; // Link to Estudiantes table record
 export const FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS = 'Nombre (de Institución)'; // Lookup from Institucion
 export const FIELD_HORAS_PRACTICAS = 'Horas Realizadas';
 export const FIELD_FECHA_INICIO_PRACTICAS = 'Fecha de Inicio';
@@ -46,11 +47,13 @@ export const FIELD_LEGAJO_AUTH = 'Legajo';
 export const FIELD_NOMBRE_AUTH = 'Nombre';
 export const FIELD_PASSWORD_HASH_AUTH = 'PasswordHash';
 export const FIELD_SALT_AUTH = 'Salt';
+export const FIELD_ROLE_AUTH = 'Role';
+export const FIELD_ORIENTACIONES_AUTH = 'Orientaciones';
 
 // --- Fields for 'Lanzamientos de PPS' table ---
 export const FIELD_NOMBRE_PPS_LANZAMIENTOS = 'Nombre PPS';
-export const FIELD_FECHA_INICIO_LANZAMIENTOS = 'Fecha de Inicio';
-export const FIELD_FECHA_FIN_LANZAMIENTOS = 'Fecha de Finalización';
+export const FIELD_FECHA_INICIO_LANZAMIENTOS = 'Fecha Inicio';
+export const FIELD_FECHA_FIN_LANZAMIENTOS = 'Fecha Finalización';
 export const FIELD_DIRECCION_LANZAMIENTOS = 'Dirección';
 export const FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS = 'Horario Seleccionado';
 export const FIELD_ORIENTACION_LANZAMIENTOS = 'Orientación';
@@ -60,17 +63,22 @@ export const FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS = 'Estado de Convocatoria';
 export const FIELD_DURACION_INSCRIPCION_DIAS_LANZAMIENTOS = 'Plazo Inscripción (días)';
 export const FIELD_PLANTILLA_SEGURO_LANZAMIENTOS = 'Plantilla Seguro';
 export const FIELD_INFORME_LANZAMIENTOS = 'Informe';
+export const FIELD_ESTADO_GESTION_LANZAMIENTOS = 'Estado de Gestión';
+export const FIELD_NOTAS_GESTION_LANZAMIENTOS = 'Notas de Gestión';
+export const FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS = 'Fecha de Relanzamiento';
+export const FIELD_TELEFONO_INSTITUCION_LANZAMIENTOS = 'Teléfono (from Instituciones)';
 
 
 // --- Fields for 'Instituciones' table ---
 export const FIELD_NOMBRE_INSTITUCIONES = 'Nombre';
+export const FIELD_TELEFONO_INSTITUCIONES = 'Teléfono';
 
 // --- Fields for 'Convocatorias' table ---
 export const FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS = 'Lanzamiento Vinculado';
 export const FIELD_NOMBRE_PPS_CONVOCATORIAS = 'Nombre PPS'; // Lookup from Lanzamientos
 export const FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS = 'Estudiante Inscripto';
-export const FIELD_FECHA_INICIO_CONVOCATORIAS = 'Fecha de Inicio';
-export const FIELD_FECHA_FIN_CONVOCATORIAS = 'Fecha de Finalización';
+export const FIELD_FECHA_INICIO_CONVOCATORIAS = 'Fecha Inicio';
+export const FIELD_FECHA_FIN_CONVOCATORIAS = 'Fecha Finalización';
 export const FIELD_DIRECCION_CONVOCATORIAS = 'Dirección';
 export const FIELD_HORARIO_FORMULA_CONVOCATORIAS = 'Horario';
 export const FIELD_HORAS_ACREDITADAS_CONVOCATORIAS = 'Horas Acreditadas';
@@ -101,5 +109,5 @@ export const ALERT_INFORMES_TEXT = 'Las fechas de entrega de los informes pueden
 
 
 // --- Misc ---
-export const EMAIL_SEGUROS = 'sergio.rivera@uflouniversidad.edu.ar';
+export const EMAIL_SEGUROS = 'mesadeayuda.patagonia@uflouniversidad.edu.ar';
 export const TEMPLATE_PPS_NAME = 'Colegio Virgen de Luján';

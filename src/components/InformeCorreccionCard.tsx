@@ -2,13 +2,13 @@ import React, { useMemo, useState } from 'react';
 import type { InformeCorreccionPPS, InformeCorreccionStudent } from '../types';
 import NotaSelector from './NotaSelector';
 import Checkbox from './Checkbox';
-import { addBusinessDays, formatDate } from '../utils/formatters';
+import { addBusinessDays, formatDate, parseToUTCDate } from '../utils/formatters';
 
-const NOTA_OPTIONS = ['Sin calificar', 'Desaprobado', '4', '5', '6', '7', '8', '9', '10'];
+const NOTA_OPTIONS = ['Sin calificar', 'Entregado (sin corregir)', 'No Entregado', 'Desaprobado', '4', '5', '6', '7', '8', '9', '10'];
 
 interface InformeCorreccionCardProps {
   ppsGroup: InformeCorreccionPPS;
-  onNotaChange: (practicaId: string, newNota: string) => Promise<void>;
+  onNotaChange: (practicaId: string, newNota: string, convocatoriaId?: string) => Promise<void>;
   updatingNotaId: string | null;
   // Batch update props
   selectedStudents: Set<string>;
@@ -56,18 +56,41 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
   const [justUpdatedPracticaId, setJustUpdatedPracticaId] = useState<string | null>(null);
 
   const stats = useMemo(() => {
+    const qualifiableStudents = students.filter(s => !!s.practicaId);
     const totalStudents = students.length;
-    const corregidos = students.filter(s => s.nota && s.nota !== 'Sin calificar').length;
-    const isAllSelected = students.length > 0 && students.every(s => selectedStudents.has(s.practicaId));
-    return { totalStudents, corregidos, isAllSelected };
+    const corregidos = students.filter(s => s.nota && s.nota !== 'Sin calificar' && s.nota !== 'Entregado (sin corregir)').length;
+    const isAllSelected = qualifiableStudents.length > 0 && qualifiableStudents.every(s => s.practicaId && selectedStudents.has(s.practicaId));
+    return { totalStudents, corregidos, isAllSelected, qualifiableStudents };
   }, [students, selectedStudents]);
 
   const correctionDeadlineInfo = useMemo(() => {
-    if (!fechaFinalizacion) return null;
-    const needsCorrection = students.some(s => s.informeSubido && (!s.nota || s.nota === 'Sin calificar'));
-    if (!needsCorrection) return null;
+    // The correction deadline is relevant for any PPS group where at least one student is pending a grade.
+    // We display it based on the end date, regardless of individual report submission status,
+    // as it provides a clear timeline for the person correcting.
+    const isPending = students.some(s => !s.nota || s.nota === 'Sin calificar' || s.nota === 'Entregado (sin corregir)');
+    if (!isPending) return null;
 
-    const deadline = addBusinessDays(new Date(fechaFinalizacion), 30);
+    if (!fechaFinalizacion) {
+        return {
+            text: 'Límite no calculable (sin fecha de fin)',
+            className: 'bg-slate-100 text-slate-600',
+            icon: 'help_outline',
+            date: null
+        };
+    }
+    
+    const finalizacionDate = parseToUTCDate(fechaFinalizacion);
+
+    if (!finalizacionDate) {
+        return {
+            text: 'Límite no calculable (fecha inválida)',
+            className: 'bg-slate-100 text-slate-600',
+            icon: 'help_outline',
+            date: null
+        };
+    }
+
+    const deadline = addBusinessDays(finalizacionDate, 30);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const diffDays = Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 3600 * 24));
@@ -78,19 +101,19 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
     } else if (diffDays <= 7) {
       className = 'bg-amber-100 text-amber-700';
     }
-    return { date: deadline, className };
+    return { date: deadline, className, icon: 'alarm', text: null };
   }, [fechaFinalizacion, students]);
 
 
-  const handleNotaChange = async (practicaId: string, e: React.ChangeEvent<HTMLSelectElement>) => {
-    await onNotaChange(practicaId, e.target.value);
+  const handleNotaChange = async (practicaId: string, newNota: string, convocatoriaId: string) => {
+    await onNotaChange(practicaId, newNota, convocatoriaId);
     setJustUpdatedPracticaId(practicaId);
     setTimeout(() => setJustUpdatedPracticaId(null), 1500); 
   };
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     const isChecked = e.target.checked;
-    const allPracticaIds = students.map(s => s.practicaId);
+    const allPracticaIds = stats.qualifiableStudents.map(s => s.practicaId).filter((id): id is string => !!id);
     onSelectAll(allPracticaIds, isChecked);
   };
   
@@ -108,8 +131,13 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
           <p className="text-sm text-slate-500">{orientacion}</p>
           {correctionDeadlineInfo && (
             <p className={`text-xs font-semibold px-2 py-1 rounded-md inline-flex items-center gap-1 mt-2 ${correctionDeadlineInfo.className}`}>
-                <span className="material-icons !text-sm">alarm</span>
-                <span>Límite de corrección: {formatDate(correctionDeadlineInfo.date.toISOString())}</span>
+                <span className="material-icons !text-sm">{correctionDeadlineInfo.icon}</span>
+                <span>
+                    {correctionDeadlineInfo.date
+                        ? `Límite de corrección: ${formatDate(correctionDeadlineInfo.date.toISOString())}`
+                        : correctionDeadlineInfo.text
+                    }
+                </span>
             </p>
           )}
         </div>
@@ -149,7 +177,7 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
                       className="text-sm rounded-lg border border-slate-300/80 p-2 bg-white shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus-ring-blue-500/20"
                       aria-label="Seleccionar nota para el lote"
                   >
-                      {NOTA_OPTIONS.filter(o => o !== 'Sin calificar').map(option => (
+                      {NOTA_OPTIONS.filter(o => o !== 'Sin calificar' && o !== 'No Entregado' && o !== 'Entregado (sin corregir)').map(option => (
                           <option key={option} value={option}>{option}</option>
                       ))}
                   </select>
@@ -175,53 +203,71 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
             <thead className="bg-slate-50/70">
               <tr>
                 <th className="p-3 w-12 text-center">
-                    <input
-                        type="checkbox"
+                   <Checkbox
+                        id={`select-all-${ppsGroup.lanzamientoId}`}
+                        name="selectAll"
                         checked={stats.isAllSelected}
                         onChange={handleSelectAll}
-                        className="h-4 w-4 rounded text-blue-600 border-slate-400 focus:ring-2 focus:ring-blue-500/50"
-                        aria-label="Seleccionar todos los alumnos"
+                        label=""
+                        disabled={stats.qualifiableStudents.length === 0}
                     />
                 </th>
                 <th className="p-3 text-left font-semibold text-slate-500">Alumno</th>
-                <th className="p-3 text-center font-semibold text-slate-500">Entrega</th>
-                <th className="p-3 text-left font-semibold text-slate-500">Nota</th>
+                <th className="p-3 text-left font-semibold text-slate-500 w-56">Nota</th>
+                <th className="p-3 text-center font-semibold text-slate-500">Informe Subido</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200/60">
-              {students.map(student => (
-                <tr key={student.practicaId} className={`transition-colors duration-1000 ${selectedStudents.has(student.practicaId) ? 'bg-blue-50/70' : ''} ${justUpdatedPracticaId === student.practicaId ? 'bg-green-100' : 'hover:bg-slate-50/50'}`}>
-                  <td className="p-3 text-center">
-                      <input
-                          type="checkbox"
-                          checked={selectedStudents.has(student.practicaId)}
-                          onChange={() => onSelectionChange(student.practicaId)}
-                          className="h-4 w-4 rounded text-blue-600 border-slate-400 focus:ring-2 focus:ring-blue-500/50"
-                          aria-label={`Seleccionar a ${student.studentName}`}
-                      />
-                  </td>
-                  <td className="p-3 font-medium text-slate-800">
-                    <HighlightedName text={student.studentName} highlight={searchTerm} />
-                  </td>
-                  <td className="p-3 text-center">
-                    <span 
-                      className={`material-icons !text-xl ${student.informeSubido ? 'text-green-500' : 'text-slate-300'}`}
-                      title={student.informeSubido ? 'Informe entregado' : 'Informe pendiente'}
-                    >
-                      {student.informeSubido ? 'check_circle' : 'circle'}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <NotaSelector
-                      value={student.nota || 'Sin calificar'}
-                      onChange={(e) => handleNotaChange(student.practicaId, e)}
-                      disabled={!student.informeSubido}
-                      isSaving={updatingNotaId === student.practicaId}
-                      ariaLabel={`Nota para ${student.studentName}`}
-                    />
-                  </td>
-                </tr>
-              ))}
+              {students.map(student => {
+                const isSelected = student.practicaId ? selectedStudents.has(student.practicaId) : false;
+                return (
+                  <tr key={student.studentId} className={`transition-colors duration-1000 ${justUpdatedPracticaId === student.practicaId ? 'bg-green-100' : (isSelected ? 'bg-blue-50/50' : 'hover:bg-slate-50/50')}`}>
+                    <td className="p-3 text-center">
+                       {student.practicaId && (
+                           <Checkbox
+                                id={`select-${student.practicaId}`}
+                                name="selectStudent"
+                                checked={isSelected}
+                                onChange={() => onSelectionChange(student.practicaId!)}
+                                label=""
+                           />
+                       )}
+                    </td>
+                    <td className="p-3 font-medium text-slate-800">
+                      <HighlightedName text={student.studentName} highlight={searchTerm} />
+                    </td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        <NotaSelector
+                          value={student.nota || 'Sin calificar'}
+                          onChange={(e) => student.practicaId && handleNotaChange(student.practicaId, e.target.value, student.convocatoriaId)}
+                          disabled={!student.practicaId}
+                          isSaving={updatingNotaId === student.practicaId}
+                          ariaLabel={`Nota para ${student.studentName}`}
+                        />
+                         {justUpdatedPracticaId === student.practicaId && (
+                            <span className="text-xs font-bold text-emerald-600 animate-fade-in-up" style={{ animationDuration: '300ms' }}>
+                                Guardado ✓
+                            </span>
+                         )}
+                      </div>
+                    </td>
+                    <td className="p-3 text-center">
+                      {student.informeSubido ? (
+                        <span className="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-800 text-xs font-semibold px-2.5 py-1 rounded-full" title="Informe subido por el alumno">
+                          <span className="material-icons !text-sm">check</span>
+                          <span>Sí</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 bg-rose-100 text-rose-800 text-xs font-semibold px-2.5 py-1 rounded-full" title="Informe no subido o marcado como 'No Entregado'">
+                           <span className="material-icons !text-sm">close</span>
+                           <span>No</span>
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
