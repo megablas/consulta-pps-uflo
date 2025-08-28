@@ -259,4 +259,4 @@ const CriteriosPanel: React.FC = () => {
   );
 };
 
-export default CriteriosPanel;
+export default React.memo(CriteriosPanel);

@@ -5,11 +5,13 @@ import {
   Convocatoria, EstudianteFields, PracticaFields, SolicitudPPSFields, 
   LanzamientoPPSFields, ConvocatoriaFields, ALL_ORIENTACIONES, InformeTask, AirtableRecord, AirtableErrorResponse
 } from '../types';
-import { HORAS_OBJETIVO_TOTAL, HORAS_OBJETIVO_ORIENTACION, ROTACION_OBJETIVO_ORIENTACIONES, AIRTABLE_TABLE_NAME_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES, FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES, AIRTABLE_TABLE_NAME_PRACTICAS, FIELD_HORAS_PRACTICAS, FIELD_NOTA_PRACTICAS, FIELD_ESPECIALIDAD_PRACTICAS, AIRTABLE_TABLE_NAME_PPS, FIELD_LEGAJO_PPS, FIELD_ULTIMA_ACTUALIZACION_PPS, AIRTABLE_TABLE_NAME_CONVOCATORIAS, FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_NOMBRE_PPS_CONVOCATORIAS, FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS, FIELD_FECHA_INICIO_LANZAMIENTOS, FIELD_NOMBRE_PPS_LANZAMIENTOS, FIELD_FECHA_FIN_LANZAMIENTOS, FIELD_DIRECCION_LANZAMIENTOS, FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS, FIELD_ORIENTACION_LANZAMIENTOS, FIELD_HORAS_ACREDITADAS_LANZAMIENTOS, FIELD_DNI_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_FECHA_NACIMIENTO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES, FIELD_TERMINO_CURSAR_CONVOCATORIAS, FIELD_CURSANDO_ELECTIVAS_CONVOCATORIAS, FIELD_FINALES_ADEUDA_CONVOCATORIAS, FIELD_OTRA_SITUACION_CONVOCATORIAS, FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS as FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS, FIELD_DNI_CONVOCATORIAS, FIELD_CORREO_CONVOCATORIAS, FIELD_FECHA_NACIMIENTO_CONVOCATORIAS, FIELD_TELEFONO_CONVOCATORIAS, FIELD_LEGAJO_CONVOCATORIAS, FIELD_FECHA_INICIO_CONVOCATORIAS, FIELD_FECHA_FIN_CONVOCATORIAS, FIELD_DIRECCION_CONVOCATORIAS, FIELD_HORARIO_FORMULA_CONVOCATORIAS, FIELD_ORIENTACION_CONVOCATORIAS, FIELD_NOMBRE_ESTUDIANTES, FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS, FIELD_FECHA_INICIO_PRACTICAS, FIELD_FECHA_FIN_PRACTICAS, FIELD_ESTADO_PRACTICA, FIELD_GENERO_ESTUDIANTES, FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS, FIELD_HORAS_ACREDITADAS_CONVOCATORIAS, FIELD_CUPOS_DISPONIBLES_CONVOCATORIAS, FIELD_INFORME_LANZAMIENTOS, FIELD_INFORME_SUBIDO_CONVOCATORIAS, FIELD_NOMBRE_BUSQUEDA_PRACTICAS } from '../constants';
+// FIX: Added missing constant import for FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS.
+import { FIELD_LEGAJO_ESTUDIANTES, FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES, AIRTABLE_TABLE_NAME_PRACTICAS, FIELD_NOTA_PRACTICAS, AIRTABLE_TABLE_NAME_PPS, FIELD_LEGAJO_PPS, FIELD_ULTIMA_ACTUALIZACION_PPS, AIRTABLE_TABLE_NAME_CONVOCATORIAS, FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_NOMBRE_PPS_CONVOCATORIAS, FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS, FIELD_FECHA_INICIO_LANZAMIENTOS, FIELD_NOMBRE_PPS_LANZAMIENTOS, FIELD_FECHA_FIN_LANZAMIENTOS, FIELD_DIRECCION_LANZAMIENTOS, FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS, FIELD_ORIENTACION_LANZAMIENTOS, FIELD_HORAS_ACREDITADAS_LANZAMIENTOS, FIELD_DNI_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_FECHA_NACIMIENTO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES, FIELD_TERMINO_CURSAR_CONVOCATORIAS, FIELD_CURSANDO_ELECTIVAS_CONVOCATORIAS, FIELD_FINALES_ADEUDA_CONVOCATORIAS, FIELD_OTRA_SITUACION_CONVOCATORIAS, FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS as FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS, FIELD_DNI_CONVOCATORIAS, FIELD_CORREO_CONVOCATORIAS, FIELD_FECHA_NACIMIENTO_CONVOCATORIAS, FIELD_TELEFONO_CONVOCATORIAS, FIELD_LEGAJO_CONVOCATORIAS, FIELD_FECHA_INICIO_CONVOCATORIAS, FIELD_FECHA_FIN_CONVOCATORIAS, FIELD_DIRECCION_CONVOCATORIAS, FIELD_HORARIO_FORMULA_CONVOCATORIAS, FIELD_ORIENTACION_CONVOCATORIAS, FIELD_NOMBRE_ESTUDIANTES, FIELD_FECHA_INICIO_PRACTICAS, FIELD_GENERO_ESTUDIANTES, FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS, FIELD_HORAS_ACREDITADAS_CONVOCATORIAS, FIELD_CUPOS_DISPONIBLES_CONVOCATORIAS, FIELD_INFORME_LANZAMIENTOS, FIELD_INFORME_SUBIDO_CONVOCATORIAS, FIELD_NOMBRE_BUSQUEDA_PRACTICAS, AIRTABLE_TABLE_NAME_ESTUDIANTES, FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS } from '../constants';
 import { fetchAirtableData, updateAirtableRecord, createAirtableRecord, fetchAllAirtableData } from '../services/airtableService';
 import { normalizeStringForComparison, parseToUTCDate } from '../utils/formatters';
 import type { AuthUser } from './AuthContext';
 import { useModal } from './ModalContext';
+import { calculateCriterios, initialCriterios } from '../utils/criteriaCalculations';
 
 // --- Type Definitions ---
 type UserGender = 'masculino' | 'femenino' | 'neutro';
@@ -38,19 +40,6 @@ interface DataContextType {
   handleConfirmarInforme: (convocatoriaId: string) => void;
   handleEnrollmentSubmit: (formData: any, selectedLanzamiento: LanzamientoPPS) => Promise<void>;
 }
-
-// --- Initial States ---
-const initialCriterios: CriteriosCalculados = {
-    horasTotales: 0,
-    horasFaltantes250: HORAS_OBJETIVO_TOTAL,
-    cumpleHorasTotales: false,
-    horasOrientacionElegida: 0,
-    horasFaltantesOrientacion: HORAS_OBJETIVO_ORIENTACION,
-    cumpleHorasOrientacion: false,
-    orientacionesCursadasCount: 0,
-    orientacionesUnicas: [],
-    cumpleRotacion: false,
-};
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
@@ -123,7 +112,8 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
   // --- Derived State and Data Processing ---
   const studentDetails = useMemo(() => studentQuery.data?.fields ?? null, [studentQuery.data]);
 
-  const selectedOrientacion = useMemo(() => (studentDetails?.[FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES] as Orientacion) || "", [studentDetails]);
+  // FIX: Explicitly set the return type of useMemo for `selectedOrientacion` to match the `DataContextType` interface.
+  const selectedOrientacion = useMemo<Orientacion | "">(() => (studentDetails?.[FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES] as Orientacion) || "", [studentDetails]);
   
   const studentNameForPanel = useMemo(() => studentDetails?.[FIELD_NOMBRE_ESTUDIANTES] || user.nombre, [studentDetails, user.nombre]);
   
@@ -166,33 +156,7 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
 
   const criterios = useMemo((): CriteriosCalculados => {
     const allPracticas = practicasQuery.data || [];
-    if (allPracticas.length === 0) return initialCriterios;
-
-    const horasTotales = allPracticas.reduce((acc, p) => acc + (p[FIELD_HORAS_PRACTICAS] || 0), 0);
-    const cumpleHorasTotales = horasTotales >= HORAS_OBJETIVO_TOTAL;
-
-    const orientacionesUnicas = [...new Set(allPracticas.map(p => p[FIELD_ESPECIALIDAD_PRACTICAS]).filter(Boolean))] as string[];
-    const cumpleRotacion = orientacionesUnicas.length >= ROTACION_OBJETIVO_ORIENTACIONES;
-    
-    let horasOrientacionElegida = 0;
-    if (selectedOrientacion) {
-      horasOrientacionElegida = allPracticas
-        .filter(p => normalizeStringForComparison(p[FIELD_ESPECIALIDAD_PRACTICAS]) === normalizeStringForComparison(selectedOrientacion))
-        .reduce((acc, p) => acc + (p[FIELD_HORAS_PRACTICAS] || 0), 0);
-    }
-    const cumpleHorasOrientacion = horasOrientacionElegida >= HORAS_OBJETIVO_ORIENTACION;
-
-    return {
-      horasTotales,
-      cumpleHorasTotales,
-      horasOrientacionElegida,
-      cumpleHorasOrientacion,
-      orientacionesCursadasCount: orientacionesUnicas.length,
-      orientacionesUnicas,
-      cumpleRotacion,
-      horasFaltantes250: Math.max(0, HORAS_OBJETIVO_TOTAL - horasTotales),
-      horasFaltantesOrientacion: Math.max(0, HORAS_OBJETIVO_ORIENTACION - horasOrientacionElegida),
-    };
+    return calculateCriterios(allPracticas, selectedOrientacion);
   }, [practicasQuery.data, selectedOrientacion]);
 
   const informeTasks = useMemo((): InformeTask[] => {
@@ -321,8 +285,30 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
   const error = studentQuery.error?.message || practicasQuery.error?.message || solicitudesQuery.error?.message || convocatoriasQuery.error?.message || lanzamientosQuery.error?.message || null;
   const isSubmitting = updateOrientationMutation.isPending || updateNotaMutation.isPending || confirmInformeMutation.isPending || enrollmentMutation.isPending;
 
-  // --- Context Value ---
-  const value: DataContextType = {
+  // --- Memoized Callbacks for Performance ---
+  const refetchStudentData = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['student', user.legajo] });
+  }, [queryClient, user.legajo]);
+
+  const handleOrientacionChange = useCallback((orientacion: Orientacion | "") => {
+    updateOrientationMutation.mutate(orientacion);
+  }, [updateOrientationMutation]);
+
+  const handleNotaChange = useCallback((practicaId: string, nota: string, convocatoriaId?: string) => {
+    updateNotaMutation.mutate({ practicaId, nota, convocatoriaId });
+  }, [updateNotaMutation]);
+
+  const handleConfirmarInforme = useCallback((convocatoriaId: string) => {
+    confirmInformeMutation.mutate(convocatoriaId);
+  }, [confirmInformeMutation]);
+
+  const handleEnrollmentSubmit = useCallback(async (formData: any, selectedLanzamiento: LanzamientoPPS) => {
+    setEnrollingId(selectedLanzamiento.id);
+    enrollmentMutation.mutate({ formData, selectedLanzamiento });
+  }, [enrollmentMutation, setEnrollingId]);
+
+  // --- Memoized Context Value ---
+  const value = useMemo(() => ({
     practicas: practicasQuery.data || [],
     solicitudes: solicitudesQuery.data || [],
     lanzamientos: visibleLanzamientos,
@@ -339,16 +325,35 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
     studentNameForPanel,
     studentDetails,
     userGender,
-    
-    refetchStudentData: () => queryClient.invalidateQueries({ queryKey: ['student', user.legajo] }),
-    handleOrientacionChange: (orientacion) => updateOrientationMutation.mutate(orientacion),
-    handleNotaChange: (practicaId, nota, convocatoriaId) => updateNotaMutation.mutate({ practicaId, nota, convocatoriaId }),
-    handleConfirmarInforme: (convocatoriaId) => confirmInformeMutation.mutate(convocatoriaId),
-    handleEnrollmentSubmit: async (formData, selectedLanzamiento) => {
-        setEnrollingId(selectedLanzamiento.id);
-        enrollmentMutation.mutate({ formData, selectedLanzamiento });
-    },
-  };
+    refetchStudentData,
+    handleOrientacionChange,
+    handleNotaChange,
+    handleConfirmarInforme,
+    handleEnrollmentSubmit,
+  }), [
+    practicasQuery.data,
+    solicitudesQuery.data,
+    visibleLanzamientos,
+    convocatoriasQuery.data,
+    informeTasks,
+    criterios,
+    selectedOrientacion,
+    studentAirtableId,
+    isLoading,
+    isSubmitting,
+    error,
+    showSaveConfirmation,
+    initialLoadCompleted,
+    studentNameForPanel,
+    studentDetails,
+    userGender,
+    refetchStudentData,
+    handleOrientacionChange,
+    handleNotaChange,
+    handleConfirmarInforme,
+    handleEnrollmentSubmit,
+  ]);
+
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };

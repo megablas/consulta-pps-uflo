@@ -23,6 +23,7 @@ import {
   FIELD_NOMBRE_PPS_CONVOCATORIAS,
   FIELD_FECHA_INICIO_CONVOCATORIAS,
   FIELD_FECHA_INICIO_LANZAMIENTOS,
+  FIELD_FECHA_INICIO_PRACTICAS,
 } from '../constants';
 import Loader from './Loader';
 import EmptyState from './EmptyState';
@@ -79,14 +80,16 @@ const CorreccionPanel: React.FC = () => {
       }
 
       const estudiantesMap = new Map(estudiantesRes.records.map(r => [r.id, r.fields]));
-      const practicasMap = new Map();
+      
+      const practicasMap = new Map<string, { id: string; fields: PracticaFields }>();
       practicasRes.records.forEach(p => {
-        const studentLegajo = (p.fields[FIELD_NOMBRE_BUSQUEDA_PRACTICAS] || [])[0];
-        const ppsName = (p.fields[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS] || [])[0];
-        if (studentLegajo && ppsName) {
-          const key = `${normalizeStringForComparison(studentLegajo)}-${normalizeStringForComparison(ppsName)}`;
-          practicasMap.set(key, { id: p.id, fields: p.fields });
-        }
+          const studentLegajoValue = (p.fields[FIELD_NOMBRE_BUSQUEDA_PRACTICAS] || [])[0];
+          const ppsName = (p.fields[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS] || [])[0];
+          const ppsStartDate = p.fields[FIELD_FECHA_INICIO_PRACTICAS];
+          if (studentLegajoValue && ppsName && ppsStartDate) {
+              const key = `${normalizeStringForComparison(String(studentLegajoValue))}-${normalizeStringForComparison(ppsName)}-${ppsStartDate}`;
+              practicasMap.set(key, { id: p.id, fields: p.fields });
+          }
       });
 
       const ppsGroups = new Map<string, InformeCorreccionPPS>();
@@ -138,8 +141,11 @@ const CorreccionPanel: React.FC = () => {
         
         const ppsName = lanzamiento.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'N/A';
         const studentLegajo = student[FIELD_LEGAJO_ESTUDIANTES];
+        const ppsStartDate = lanzamiento.fields[FIELD_FECHA_INICIO_LANZAMIENTOS];
         
-        const practicaKey = `${normalizeStringForComparison(studentLegajo)}-${normalizeStringForComparison(ppsName)}`;
+        if (!studentLegajo || !ppsStartDate) continue;
+
+        const practicaKey = `${normalizeStringForComparison(studentLegajo)}-${normalizeStringForComparison(ppsName)}-${ppsStartDate}`;
         const practica = practicasMap.get(practicaKey);
 
         // If there's no matching practica record, this student should not appear in the correction panel.

@@ -40,6 +40,19 @@
         min-height: 100vh;
         width: 100%;
       }
+      
+      /* -- Accessibility Utility -- */
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border-width: 0;
+      }
 
       /* -- Custom Animations -- */
       @keyframes fadeInUp {
@@ -167,7 +180,11 @@
     "react": "https://aistudiocdn.com/react@^19.1.1",
     "xlsx": "https://aistudiocdn.com/xlsx@^0.18.5",
     "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.0.2",
-    "@tanstack/react-query-devtools": "https://aistudiocdn.com/@tanstack/react-query-devtools@^5.85.5"
+    "@tanstack/react-query-devtools": "https://aistudiocdn.com/@tanstack/react-query-devtools@^5.85.5",
+    "@jest/globals": "https://aistudiocdn.com/@jest/globals@^30.1.1",
+    "@testing-library/react": "https://aistudiocdn.com/@testing-library/react@^16.3.0",
+    "@testing-library/jest-dom": "https://aistudiocdn.com/@testing-library/jest-dom@^6.8.0",
+    "jest": "https://aistudiocdn.com/jest@^30.1.1"
   }
 }
 </script>

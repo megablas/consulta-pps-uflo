@@ -321,6 +321,7 @@ const Auth: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Legajo */}
             <div className="animate-fade-in-up" style={{ animationDelay: '700ms' }}>
+              <label htmlFor="legajo" className="sr-only">Número de Legajo</label>
               <div className="relative">
                 <AuthInput id="legajo" type="text" value={legajo} onChange={(e) => setLegajo(e.target.value)} placeholder="Número de Legajo" icon="badge" disabled={isLoading} autoComplete="username"/>
                 { mode === 'register' && (
@@ -349,6 +350,7 @@ const Auth: React.FC = () => {
 
             {/* Password */}
             <div className="relative animate-fade-in-up" style={{ animationDelay: '800ms' }}>
+              <label htmlFor="password" className="sr-only">Contraseña</label>
               <AuthInput id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Contraseña" icon="lock" disabled={isLoading || (mode === 'register' && legajoCheckState !== 'success')} autoComplete={mode === 'login' ? 'current-password' : 'new-password'}/>
               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center px-4 text-slate-500 hover:text-slate-700" aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
                 <span className="material-icons !text-xl">{showPassword ? 'visibility_off' : 'visibility'}</span>
@@ -357,11 +359,14 @@ const Auth: React.FC = () => {
 
             {mode === 'register' && (
               <div className="relative animate-fade-in-up" style={{ animationDelay: '900ms' }}>
+                <label htmlFor="confirmPassword" className="sr-only">Confirmar Contraseña</label>
                 <AuthInput id="confirmPassword" type={showPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirmar Contraseña" icon="lock_person" disabled={isLoading || (mode === 'register' && legajoCheckState !== 'success')} autoComplete="new-password"/>
               </div>
             )}
 
-            {error && <p className="text-red-600 text-sm text-center pt-2">{error}</p>}
+            <div aria-live="assertive">
+              {error && <p className="text-red-600 text-sm text-center pt-2">{error}</p>}
+            </div>
 
             <div className="pt-4 animate-fade-in-up" style={{ animationDelay: '1000ms' }}>
               <button type="submit" disabled={isLoading || (mode === 'register' && legajoCheckState !== 'success')} className="w-full bg-blue-600 text-white font-bold text-base py-3 px-6 rounded-lg transition-all duration-200 ease-in-out shadow-md hover:bg-blue-700 hover:-translate-y-0.5 active:scale-95 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-y-0 flex items-center justify-center gap-3">
