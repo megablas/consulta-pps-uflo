@@ -84,8 +84,6 @@ const Dashboard: React.FC<DashboardProps> = ({ activeTab, onTabChange, showExpor
     studentNameForPanel
   } = useData();
   const { isSuperUserMode } = useAuth();
-  
-  const [initialTabSet, setInitialTabSet] = useState(false);
 
   // Memoización del estado de carga
   const loadingState = useMemo((): LoadingState => {
@@ -154,19 +152,6 @@ const Dashboard: React.FC<DashboardProps> = ({ activeTab, onTabChange, showExpor
       refetchStudentData();
     }
   }, [refetchStudentData, initialLoadCompleted]);
-
-  // Set initial tab once after load
-  useEffect(() => {
-    if (initialLoadCompleted && !initialTabSet) {
-      const tabsWithContent = studentDataTabs.filter(tab => (tab.badge ?? 0) > 0);
-      const firstTabWithContent = tabsWithContent.length > 0 ? tabsWithContent[0].id : null;
-
-      if (firstTabWithContent) {
-        onTabChange(firstTabWithContent as TabId);
-      }
-      setInitialTabSet(true);
-    }
-  }, [initialLoadCompleted, initialTabSet, studentDataTabs, onTabChange]);
 
 
   // Renderizado condicional basado en el estado
