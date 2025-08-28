@@ -128,28 +128,47 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
     const allLanzamientos = lanzamientosQuery.data || [];
     return allLanzamientos.filter(l => {
         const ppsName = l[FIELD_NOMBRE_PPS_LANZAMIENTOS];
-        if (!(typeof ppsName === 'string' && ppsName.trim())) return false;
+        if (!(typeof ppsName === 'string' && ppsName.trim())) {
+            return false;
+        }
+
+        if (isCorrector) {
+            return true;
+        }
 
         const status = normalizeStringForComparison(l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]);
-        if (isCorrector) return true;
-        if (status === 'oculto') return false;
-        if (status === 'abierta' || status === 'abierto') return true;
         
-        const endDateString = l[FIELD_FECHA_FIN_LANZAMIENTOS];
+        // HIDING RULE: 'Oculto' is ALWAYS hidden for students. This is the most important rule.
+        if (status === 'oculto') {
+            return false;
+        }
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+
+        // SHOWING RULES: If any of these are true, the PPS will be shown.
         
-        if (endDateString) {
-          const endDate = parseToUTCDate(endDateString);
-          if (endDate && endDate.getTime() >= today.getTime()) return true;
+        // Rule 1: 'Abierta' is always visible.
+        if (status === 'abierta' || status === 'abierto') {
+            return true;
         }
         
-        const startDate = parseToUTCDate(l[FIELD_FECHA_INICIO_LANZAMIENTOS]);
-        if (status === 'cerrado' && startDate) {
-          const diffDays = Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-          return diffDays <= 2;
+        // Rule 2: Any PPS with a future end date is visible.
+        const endDate = parseToUTCDate(l[FIELD_FECHA_FIN_LANZAMIENTOS]);
+        if (endDate && endDate.getTime() >= today.getTime()) {
+            return true;
         }
         
+        // Rule 3: Grace period for 'Cerrado' PPS. Show for 7 days AFTER the END date for result checking.
+        if (status === 'cerrado' && endDate) {
+            const gracePeriodEndDate = new Date(endDate.getTime());
+            gracePeriodEndDate.setDate(gracePeriodEndDate.getDate() + 7); // Add 7 days
+            if (today <= gracePeriodEndDate) {
+                return true;
+            }
+        }
+        
+        // DEFAULT: If no showing rule was met, hide the PPS.
         return false;
     });
   }, [lanzamientosQuery.data, isCorrector]);
