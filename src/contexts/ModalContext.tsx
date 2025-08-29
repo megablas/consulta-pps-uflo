@@ -3,8 +3,6 @@ import { LanzamientoPPS, GroupedSeleccionados, ConvocatoriaFields, EstudianteFie
 import { fetchAirtableData } from '../services/airtableService';
 import {
   AIRTABLE_TABLE_NAME_CONVOCATORIAS,
-  FIELD_NOMBRE_PPS_CONVOCATORIAS,
-  FIELD_FECHA_INICIO_CONVOCATORIAS,
   FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS as FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS,
   FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS,
   FIELD_HORARIO_FORMULA_CONVOCATORIAS,
@@ -12,6 +10,10 @@ import {
   FIELD_NOMBRE_ESTUDIANTES,
   FIELD_LEGAJO_ESTUDIANTES,
   FIELD_NOMBRE_PPS_LANZAMIENTOS,
+  FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
+  FIELD_NOMBRE_PPS_CONVOCATORIAS,
+  FIELD_FECHA_INICIO_CONVOCATORIAS,
+  // FIX: Added missing constant import.
   FIELD_FECHA_INICIO_LANZAMIENTOS,
 } from '../constants';
 
@@ -75,37 +77,36 @@ export const ModalProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const handleVerSeleccionados = useCallback(async (lanzamiento: LanzamientoPPS) => {
     setLoadingSeleccionadosId(lanzamiento.id);
-    setConvocatoriaForModal(lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'Convocatoria');
+    const ppsNameForModal = lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'Convocatoria';
+    setConvocatoriaForModal(ppsNameForModal);
 
     try {
-      const ppsNameRaw = lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS];
-      const ppsStartDate = lanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS];
+        const ppsName = (lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS] || '').replace(/'/g, "\\'");
+        const ppsStartDate = lanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS];
 
-      const errorMessages: string[] = [];
-      if (typeof ppsNameRaw !== 'string' || !ppsNameRaw.trim()) {
-          errorMessages.push(`- El nombre de la PPS es inválido. Valor recibido: ${JSON.stringify(ppsNameRaw)} (tipo: ${typeof ppsNameRaw})`);
-      }
-      if (typeof ppsStartDate !== 'string' || !ppsStartDate.trim()) {
-          errorMessages.push(`- La fecha de inicio es inválida. Valor recibido: ${JSON.stringify(ppsStartDate)} (tipo: ${typeof ppsStartDate})`);
-      }
-  
-      if (errorMessages.length > 0) {
-          const fullErrorMessage = `La convocatoria seleccionada tiene datos incorrectos que impiden continuar. Por favor, revisa la información en Airtable.\n\nDetalles:\n${errorMessages.join('\n')}\n\nDatos completos de la convocatoria recibida:\n${JSON.stringify(lanzamiento, null, 2)}`;
-          showModal('Error de Datos de la Convocatoria', fullErrorMessage);
-          setLoadingSeleccionadosId(null);
-          return;
-      }
+        if (!ppsName || !ppsStartDate) {
+            throw new Error("Datos de la convocatoria incompletos para buscar seleccionados.");
+        }
+        
+        // Airtable requires dates in YYYY-MM-DD format for formula functions
+        const formattedDate = new Date(ppsStartDate).toISOString().split('T')[0];
 
-      const ppsName = ppsNameRaw.replace(/'/g, "\\'");
+        // This formula uses lookup fields for a reliable match and robust status checking.
+        // 1. It matches the PPS name (lookup from Lanzamiento)
+        // 2. It matches the start date (lookup from Lanzamiento)
+        // 3. It performs a case-insensitive search for "seleccionado" in the status field,
+        // 4. ...while explicitly excluding records with "no" to avoid "No Seleccionado".
+        const formula = `AND(
+            {${FIELD_NOMBRE_PPS_CONVOCATORIAS}} = '${ppsName}',
+            IS_SAME({${FIELD_FECHA_INICIO_CONVOCATORIAS}}, DATETIME_PARSE('${formattedDate}', 'YYYY-MM-DD'), 'day'),
+            SEARCH("seleccionado", LOWER({${FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS}})),
+            NOT(SEARCH("no", LOWER({${FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS}})))
+        )`;
 
       const { records: convocatoriaRecords, error: convocatoriaError } = await fetchAirtableData<ConvocatoriaFields>(
         AIRTABLE_TABLE_NAME_CONVOCATORIAS,
-        [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, FIELD_HORARIO_FORMULA_CONVOCATORIAS],
-        `AND(
-          {${FIELD_NOMBRE_PPS_CONVOCATORIAS}} = '${ppsName}',
-          IS_SAME({${FIELD_FECHA_INICIO_CONVOCATORIAS}}, '${ppsStartDate}', 'day'),
-          {${FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS}} = 'Seleccionado'
-        )`
+        [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, FIELD_HORARIO_FORMULA_CONVOCATORIAS, FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS],
+        formula
       );
 
       if (convocatoriaError) throw new Error("No se pudo obtener la información de la convocatoria.");
@@ -129,11 +130,11 @@ export const ModalProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
 
       const uniqueStudentIds = [...new Set(studentIds)];
-      const formula = `OR(${uniqueStudentIds.map(id => `RECORD_ID()='${id}'`).join(',')})`;
+      const studentFormula = `OR(${uniqueStudentIds.map(id => `RECORD_ID()='${id}'`).join(',')})`;
       const { records: studentRecords, error: studentError } = await fetchAirtableData<EstudianteFields>(
         AIRTABLE_TABLE_NAME_ESTUDIANTES,
         [FIELD_NOMBRE_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES],
-        formula
+        studentFormula
       );
 
       if (studentError) throw new Error("No se pudo cargar la lista de estudiantes seleccionados.");
