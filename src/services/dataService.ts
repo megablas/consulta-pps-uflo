@@ -74,7 +74,14 @@ export const getDashboardData = async (legajo: string, role?: 'Jefe' | 'SuperUse
     lanzamientosRes
   ] = await Promise.all([
     fetchAllAirtableData<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS, [], `SEARCH('${legajo}', ARRAYJOIN({${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}}))`),
-    isCorrector ? Promise.resolve({ records: [], error: null }) : fetchAllAirtableData<SolicitudPPSFields>(AIRTABLE_TABLE_NAME_PPS, [], `SEARCH('${legajo}', {${FIELD_LEGAJO_PPS}})`, [{ field: FIELD_ULTIMA_ACTUALIZACION_PPS, direction: 'desc' }]),
+    isCorrector || !studentAirtableId
+      ? Promise.resolve({ records: [], error: null })
+      : fetchAllAirtableData<SolicitudPPSFields>(
+          AIRTABLE_TABLE_NAME_PPS, 
+          [], 
+          `SEARCH('${legajo}', ARRAYJOIN({${FIELD_LEGAJO_PPS}}))`, 
+          [{ field: FIELD_ULTIMA_ACTUALIZACION_PPS, direction: 'desc' }]
+        ),
     fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS, [], convocatoriasFormula),
     fetchAllAirtableData<LanzamientoPPSFields>(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, [], undefined, [{ field: FIELD_FECHA_INICIO_LANZAMIENTOS, direction: 'desc' }])
   ]);
