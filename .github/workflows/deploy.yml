@@ -23,12 +23,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          # NO usamos la caché para forzar una instalación limpia y evitar errores de integridad.
 
       - name: Install dependencies
-        # 'npm ci' es la forma recomendada y más segura para instalaciones en servidores.
-        # Lee el archivo package-lock.json para asegurar que se instalan las versiones exactas.
-        run: npm ci
+        run: npm install
 
       - name: Build project
         run: npm run build
