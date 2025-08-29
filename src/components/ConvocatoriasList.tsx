@@ -1,4 +1,5 @@
 import React from 'react';
+import { useMutation } from '@tanstack/react-query';
 import type { Convocatoria, LanzamientoPPS } from '../types';
 import ConvocatoriaCard from './ConvocatoriaCard';
 import { 
@@ -7,12 +8,14 @@ import {
     FIELD_NOMBRE_PPS_LANZAMIENTOS,
     FIELD_ORIENTACION_LANZAMIENTOS,
     FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS,
-    FIELD_ESPECIALIDAD_PRACTICAS
+    FIELD_ESPECIALIDAD_PRACTICAS,
+    FIELD_LANZAMIENTO_VINCULADO_PRACTICAS
 } from '../constants';
 import EmptyState from './EmptyState';
 import { useData } from '../contexts/DataContext';
 import { useModal } from '../contexts/ModalContext';
 import { normalizeStringForComparison } from '../utils/formatters';
+import { fetchSeleccionados } from '../services/dataService';
 
 interface ConvocatoriasListProps {
   lanzamientos: LanzamientoPPS[];
@@ -21,12 +24,18 @@ interface ConvocatoriasListProps {
 
 const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myEnrollments }) => {
     const { studentAirtableId, practicas } = useData();
-    const { 
-      enrollingId,
-      loadingSeleccionadosId,
-      handleInscribir,
-      handleVerSeleccionados,
-    } = useModal();
+    const { enrollingId, openEnrollmentForm, openSeleccionadosModal, showModal } = useModal();
+    
+    const seleccionadosMutation = useMutation({
+        mutationFn: (lanzamiento: LanzamientoPPS) => fetchSeleccionados(lanzamiento.id),
+        onSuccess: (data, variables) => {
+            const title = variables[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'Convocatoria';
+            openSeleccionadosModal(data, title);
+        },
+        onError: (error) => {
+            showModal('Error', error.message);
+        },
+    });
 
     if (lanzamientos.length === 0) {
         return (
@@ -57,9 +66,15 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myE
             
                 const enrollmentStatus = enrollment ? enrollment[FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS] : null;
                 const isEnrolling = enrollingId === lanzamiento.id;
-                const isVerSeleccionadosLoading = loadingSeleccionadosId === lanzamiento.id;
                 
                 const isCompleted = practicas.some(practica => {
+                    // New, preferred method: check for a direct link
+                    const linkedLanzamientoId = (practica[FIELD_LANZAMIENTO_VINCULADO_PRACTICAS] as string[] | undefined)?.[0];
+                    if (linkedLanzamientoId) {
+                        return linkedLanzamientoId === lanzamiento.id;
+                    }
+
+                    // Fallback to old method for existing data
                     const practicaInstitucionRaw = practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
                     const practicaInstitucion = Array.isArray(practicaInstitucionRaw) ? practicaInstitucionRaw[0] : practicaInstitucionRaw;
                     const practicaOrientacion = practica[FIELD_ESPECIALIDAD_PRACTICAS];
@@ -81,9 +96,9 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myE
                       lanzamiento={lanzamiento}
                       enrollmentStatus={enrollmentStatus}
                       isEnrolling={isEnrolling}
-                      isVerSeleccionadosLoading={isVerSeleccionadosLoading}
-                      onInscribir={handleInscribir}
-                      onVerSeleccionados={handleVerSeleccionados}
+                      isVerSeleccionadosLoading={seleccionadosMutation.isPending && seleccionadosMutation.variables?.id === lanzamiento.id}
+                      onInscribir={openEnrollmentForm}
+                      onVerSeleccionados={(l) => seleccionadosMutation.mutate(l)}
                       isCompleted={isCompleted}
                   />
                 );

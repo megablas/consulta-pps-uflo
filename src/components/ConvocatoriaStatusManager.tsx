@@ -17,6 +17,23 @@ import { getEspecialidadClasses, formatDate, getStatusVisuals } from '../utils/f
 type LoadingState = 'initial' | 'loading' | 'loaded' | 'error';
 const STATUS_OPTIONS = ['Abierta', 'Cerrado', 'Oculto'];
 
+const sanitizeAirtableStatus = (statusFromAirtable?: string): string => {
+  if (!statusFromAirtable) {
+    return 'Cerrado';
+  }
+  // Remove quotes, trim whitespace, and handle "Abierto" vs "Abierta"
+  const cleaned = statusFromAirtable.replace(/"/g, '').trim();
+  if (cleaned.toLowerCase() === 'abierto') {
+    return 'Abierta';
+  }
+  // Check if it's one of the valid options
+  if (STATUS_OPTIONS.includes(cleaned as 'Abierta' | 'Cerrado' | 'Oculto')) {
+    return cleaned;
+  }
+  // If it's something else unexpected, default to Cerrado
+  return 'Cerrado';
+};
+
 interface StatusCardProps {
   pps: LanzamientoPPS;
   onStatusChange: (id: string, newStatus: string) => Promise<boolean>;
@@ -24,7 +41,7 @@ interface StatusCardProps {
 }
 
 const StatusCard: React.FC<StatusCardProps> = React.memo(({ pps, onStatusChange, isUpdating }) => {
-  const [status, setStatus] = useState(pps[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS] || 'Cerrado');
+  const [status, setStatus] = useState(sanitizeAirtableStatus(pps[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]));
   const [justSaved, setJustSaved] = useState(false);
   const especialidadVisuals = getEspecialidadClasses(pps[FIELD_ORIENTACION_LANZAMIENTOS]);
 
@@ -159,7 +176,7 @@ const ConvocatoriaStatusManager: React.FC = () => {
         const ocultas: LanzamientoPPS[] = [];
 
         lanzamientos.forEach(pps => {
-            const status = pps[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS];
+            const status = sanitizeAirtableStatus(pps[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]);
             if (status === 'Abierta') abiertas.push(pps);
             else if (status === 'Oculto') ocultas.push(pps);
             else cerradas.push(pps); // Default to Cerrado

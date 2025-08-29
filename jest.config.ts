@@ -15,6 +15,11 @@ const config: Config = {
     // Manejar alias de módulos (esto se configurará automáticamente pronto)
     '^@/(.*)$': '<rootDir>/src/$1',
   },
+
+  // Agregado para que Jest sepa cómo transformar archivos TypeScript
+  transform: {
+    '^.+\\.(ts|tsx)$': 'ts-jest',
+  },
 };
 
 export default config;
