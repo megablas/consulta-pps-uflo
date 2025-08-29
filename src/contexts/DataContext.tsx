@@ -126,6 +126,8 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
 
   const visibleLanzamientos = useMemo(() => {
     const allLanzamientos = lanzamientosQuery.data || [];
+    const myEnrollments = convocatoriasQuery.data || [];
+    
     return allLanzamientos.filter(l => {
         const ppsName = l[FIELD_NOMBRE_PPS_LANZAMIENTOS];
         if (!(typeof ppsName === 'string' && ppsName.trim())) {
@@ -138,31 +140,40 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
 
         const status = normalizeStringForComparison(l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]);
         
-        // HIDING RULE: 'Oculto' is ALWAYS hidden for students. This is the most important rule.
         if (status === 'oculto') {
             return false;
+        }
+        
+        // --- SHOWING RULES ---
+        // If any of these are true, the PPS will be shown.
+
+        // Rule 1: If the student is enrolled, always show it.
+        const isEnrolled = myEnrollments.some(e => 
+            (e[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || []).includes(l.id)
+        );
+        if (isEnrolled) {
+            return true;
         }
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-
-        // SHOWING RULES: If any of these are true, the PPS will be shown.
         
-        // Rule 1: 'Abierta' is always visible.
+        // Rule 2: 'Abierta' is always visible to everyone.
         if (status === 'abierta' || status === 'abierto') {
             return true;
         }
         
-        // Rule 2: Any PPS with a future end date is visible.
         const endDate = parseToUTCDate(l[FIELD_FECHA_FIN_LANZAMIENTOS]);
+        
+        // Rule 3: Any PPS with a future end date is visible to everyone.
         if (endDate && endDate.getTime() >= today.getTime()) {
             return true;
         }
         
-        // Rule 3: Grace period for 'Cerrado' PPS. Show for 7 days AFTER the END date for result checking.
+        // Rule 4: Grace period for 'Cerrado' PPS for public view.
         if (status === 'cerrado' && endDate) {
             const gracePeriodEndDate = new Date(endDate.getTime());
-            gracePeriodEndDate.setDate(gracePeriodEndDate.getDate() + 7); // Add 7 days
+            gracePeriodEndDate.setDate(gracePeriodEndDate.getDate() + 7);
             if (today <= gracePeriodEndDate) {
                 return true;
             }
@@ -171,7 +182,7 @@ export const DataProvider: React.FC<{ children: ReactNode, user: AuthUser }> = (
         // DEFAULT: If no showing rule was met, hide the PPS.
         return false;
     });
-  }, [lanzamientosQuery.data, isCorrector]);
+  }, [lanzamientosQuery.data, convocatoriasQuery.data, isCorrector]);
 
   const criterios = useMemo((): CriteriosCalculados => {
     const allPracticas = practicasQuery.data || [];
