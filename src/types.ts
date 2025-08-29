@@ -215,3 +215,6 @@ export interface FlatCorreccionStudent extends InformeCorreccionStudent {
 
 // Tab identifier for the student dashboard
 export type TabId = 'convocatorias' | 'informes' | 'solicitudes' | 'practicas';
+
+// Gender identifier for personalization
+export type UserGender = 'masculino' | 'femenino' | 'neutro';

@@ -78,7 +78,6 @@ const Dashboard: React.FC<DashboardProps> = ({ activeTab, onTabChange, showExpor
     isLoading,
     error,
     initialLoadCompleted,
-    // FIX: Changed `fetchStudentData` to `refetchStudentData` to match the context provider.
     refetchStudentData,
     studentDetails,
     studentNameForPanel

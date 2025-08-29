@@ -34,6 +34,8 @@ export const FIELD_FECHA_FIN_PRACTICAS = 'Fecha de Finalización';
 export const FIELD_ESTADO_PRACTICA = 'Estado';
 export const FIELD_ESPECIALIDAD_PRACTICAS = 'Especialidad';
 export const FIELD_NOTA_PRACTICAS = 'Nota';
+export const FIELD_LANZAMIENTO_VINCULADO_PRACTICAS = 'Lanzamiento Vinculado';
+
 
 // --- Fields for 'Solicitud de PPS' table ---
 export const FIELD_LEGAJO_PPS = 'Legajo'; // Link to Estudiantes

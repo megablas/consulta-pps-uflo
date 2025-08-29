@@ -24,6 +24,8 @@ import {
   FIELD_FECHA_INICIO_CONVOCATORIAS,
   FIELD_FECHA_INICIO_LANZAMIENTOS,
   FIELD_FECHA_INICIO_PRACTICAS,
+  FIELD_LANZAMIENTO_VINCULADO_PRACTICAS,
+  FIELD_ESTUDIANTE_LINK_PRACTICAS,
 } from '../constants';
 import Loader from './Loader';
 import EmptyState from './EmptyState';
@@ -71,7 +73,15 @@ const CorreccionPanel: React.FC = () => {
           FIELD_FECHA_INICIO_LANZAMIENTOS,
         ]),
         fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS), // Fetch all convocatorias without filters
-        fetchAllAirtableData<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS),
+        fetchAllAirtableData<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS, [
+            FIELD_NOMBRE_BUSQUEDA_PRACTICAS,
+            FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS,
+            FIELD_FECHA_INICIO_PRACTICAS,
+            FIELD_NOTA_PRACTICAS,
+            FIELD_LANZAMIENTO_VINCULADO_PRACTICAS,
+            FIELD_ESTUDIANTE_LINK_PRACTICAS,
+            FIELD_ESPECIALIDAD_PRACTICAS
+        ]),
         fetchAllAirtableData<EstudianteFields>(AIRTABLE_TABLE_NAME_ESTUDIANTES, [FIELD_NOMBRE_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES])
       ]);
 
@@ -81,17 +91,8 @@ const CorreccionPanel: React.FC = () => {
 
       const estudiantesMap = new Map(estudiantesRes.records.map(r => [r.id, r.fields]));
       
-      const practicasMap = new Map<string, { id: string; fields: PracticaFields }>();
-      practicasRes.records.forEach(p => {
-          const studentLegajoValue = (p.fields[FIELD_NOMBRE_BUSQUEDA_PRACTICAS] || [])[0];
-          const ppsName = (p.fields[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS] || [])[0];
-          const ppsStartDate = p.fields[FIELD_FECHA_INICIO_PRACTICAS];
-          if (studentLegajoValue && ppsName && ppsStartDate) {
-              const key = `${normalizeStringForComparison(String(studentLegajoValue))}-${normalizeStringForComparison(ppsName)}-${ppsStartDate}`;
-              practicasMap.set(key, { id: p.id, fields: p.fields });
-          }
-      });
-
+      const allPracticas = practicasRes.records.map(r => ({ ...r, fields: r.fields as PracticaFields }));
+      
       const ppsGroups = new Map<string, InformeCorreccionPPS>();
 
       // Filter on client side for robustness against case/whitespace issues in Airtable
@@ -116,42 +117,51 @@ const CorreccionPanel: React.FC = () => {
         if (linkedLanzamientoId) {
             lanzamiento = allLanzamientos.find(l => l.id === linkedLanzamientoId);
         }
-
-        // Fallback if no linked record or if linked record not found
-        if (!lanzamiento) {
+        
+        if (!lanzamiento) { // Fallback if no linked record or if linked record not found
             const convPpsNameRaw = convRecord.fields[FIELD_NOMBRE_PPS_CONVOCATORIAS];
             const convStartDate = parseToUTCDate(convRecord.fields[FIELD_FECHA_INICIO_CONVOCATORIAS]);
-
             const ppsNameToMatch = Array.isArray(convPpsNameRaw) ? convPpsNameRaw[0] : convPpsNameRaw;
 
             if (ppsNameToMatch && convStartDate) {
-                lanzamiento = allLanzamientos.find(l => {
-                    const launchStartDate = parseToUTCDate(l.fields[FIELD_FECHA_INICIO_LANZAMIENTOS]);
-                    const launchName = l.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS];
-                    
-                    return (
-                        normalizeStringForComparison(launchName) === normalizeStringForComparison(ppsNameToMatch) &&
-                        launchStartDate?.getTime() === convStartDate.getTime()
-                    );
-                });
+                lanzamiento = allLanzamientos.find(l => 
+                    normalizeStringForComparison(l.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS]) === normalizeStringForComparison(ppsNameToMatch) &&
+                    parseToUTCDate(l.fields[FIELD_FECHA_INICIO_LANZAMIENTOS])?.getTime() === convStartDate.getTime()
+                );
             }
         }
         
         if (!lanzamiento) continue; // If still no lanzamiento, skip this convocatoria.
-        
-        const ppsName = lanzamiento.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'N/A';
-        const studentLegajo = student[FIELD_LEGAJO_ESTUDIANTES];
-        const ppsStartDate = lanzamiento.fields[FIELD_FECHA_INICIO_LANZAMIENTOS];
-        
-        if (!studentLegajo || !ppsStartDate) continue;
+        const lanzamientoId = lanzamiento.id;
 
-        const practicaKey = `${normalizeStringForComparison(studentLegajo)}-${normalizeStringForComparison(ppsName)}-${ppsStartDate}`;
-        const practica = practicasMap.get(practicaKey);
+        // New, robust method: find by linked record
+        let practica = allPracticas.find(p => 
+            (p.fields[FIELD_LANZAMIENTO_VINCULADO_PRACTICAS] as string[] | undefined)?.[0] === lanzamientoId &&
+            (p.fields[FIELD_ESTUDIANTE_LINK_PRACTICAS] as string[] | undefined)?.[0] === studentId
+        );
 
-        // If there's no matching practica record, this student should not appear in the correction panel.
+        // Fallback to old method
         if (!practica) {
-            continue;
+            const studentLegajo = student[FIELD_LEGAJO_ESTUDIANTES];
+            const ppsName = lanzamiento.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS];
+            const ppsStartDate = lanzamiento.fields[FIELD_FECHA_INICIO_LANZAMIENTOS];
+            
+            if(studentLegajo && ppsName && ppsStartDate) {
+                practica = allPracticas.find(p => {
+                    const legajoArray = p.fields[FIELD_NOMBRE_BUSQUEDA_PRACTICAS] as (string | number)[] | undefined;
+                    const legajoValue = legajoArray ? legajoArray[0] : null;
+
+                    const instRaw = p.fields[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS] as string[] | undefined;
+                    const instName = instRaw ? instRaw[0] : null;
+
+                    return String(legajoValue) === studentLegajo &&
+                           normalizeStringForComparison(instName) === normalizeStringForComparison(ppsName) &&
+                           p.fields[FIELD_FECHA_INICIO_PRACTICAS] === ppsStartDate;
+                });
+            }
         }
+        
+        if (!practica) continue;
         
         // If a PPS appears in the correction panel but has no report link, flag it for update.
         const informeLink = lanzamiento.fields[FIELD_INFORME_LANZAMIENTOS];
@@ -164,7 +174,7 @@ const CorreccionPanel: React.FC = () => {
             }
         }
         
-        const lanzamientoId = lanzamiento.id;
+        const ppsName = lanzamiento.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'N/A';
         const studentName = student[FIELD_NOMBRE_ESTUDIANTES] || 'N/A';
 
         if (!ppsGroups.has(lanzamientoId)) {

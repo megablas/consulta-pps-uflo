@@ -134,7 +134,7 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                 FIELD_FECHA_FIN_CONVOCATORIAS, FIELD_DIRECCION_CONVOCATORIAS, FIELD_HORARIO_FORMULA_CONVOCATORIAS,
                 FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS, FIELD_ORIENTACION_CONVOCATORIAS, FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
             ],
-            `AND({${FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS}} != '', {${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}} = 'Seleccionado')`,
+            `AND({${FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS}} != '', LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = 'seleccionado')`,
             200, [{ field: FIELD_FECHA_INICIO_CONVOCATORIAS, direction: 'desc' }]
         );
 
@@ -414,7 +414,7 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                     ) : (
                         <>
                             <span>Ir a Revisión</span>
-                            <span className="material-icons">arrow_forward</span>
+                            <span className="material-icons !text-base">arrow_forward</span>
                         </>
                     )}
                 </button>
@@ -422,173 +422,74 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
         </div>
     );
 
-    const renderReviewStep = () => {
-      const groupedStudents = studentsForReview.reduce((acc, student) => {
-          const key = `${student.institucion}::${student.tutor}`;
-          if (!acc[key]) {
-              acc[key] = {
-                  institucion: student.institucion,
-                  tutor: student.tutor,
-                  orientacion: student.orientacion,
-                  students: [],
-              };
-          }
-          acc[key].students.push(student);
-          return acc;
-      }, {} as Record<string, { institucion: string; tutor: string; orientacion: string; students: StudentForReview[] }>);
-
-      const handleCopyToClipboard = (students: StudentForReview[]) => {
-          const tsv = students.map(s => [
-              s.apellido, s.nombre, s.dni, s.legajo, 'Estudiante', s.lugar, s.duracion
-          ].join('\t')).join('\n');
-
-          navigator.clipboard.writeText(tsv).then(() => {
-              setToastInfo({ message: 'Datos de la tabla copiados.', type: 'success' });
-          }).catch(err => {
-              console.error('Failed to copy data: ', err);
-              setToastInfo({ message: 'Error al copiar los datos.', type: 'error' });
-          });
-      };
-
-      const handleDownloadBlankInsurance = async (institutionName: string) => {
-          if (!blankTemplateUrl) {
-              showModal('Plantilla no Encontrada', `No se encontró una plantilla de seguro. Por favor, asegúrese de que esté subida al registro '${TEMPLATE_PPS_NAME}' en Airtable.`);
-              return;
-          }
-          
-          try {
-              setToastInfo({ message: `Iniciando descarga de plantilla para '${institutionName}'...`, type: 'success' });
-              const response = await fetch(blankTemplateUrl);
-              if (!response.ok) {
-                  throw new Error(`Error del servidor: ${response.statusText}`);
-              }
-              const blob = await response.blob();
-      
-              const safeFileName = institutionName.replace(/[\\/?*[\]]/g, "").substring(0, 100);
-              const fileName = `Seguro - ${safeFileName}.xlsx`;
-      
-              const link = document.createElement('a');
-              link.href = URL.createObjectURL(blob);
-              link.download = fileName;
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-              
-          } catch (e: any) {
-              console.error('Error downloading insurance template:', e);
-              showModal('Error de Descarga', e.message || 'No se pudo descargar la plantilla del seguro. Verifique la consola para más detalles.');
-          }
-      };
-      
-        const handleSendEmail = (group: { institucion: string; students: StudentForReview[] }) => {
-            if (group.students.length === 0) return;
-
-            const mailToSubject = `Reporte de Seguro - ${group.institucion}`;
-            const mailToBody = `Buenos días,\n\nAdjunto el seguro de la PPS.\n\nSaludos.`;
-            const mailtoLink = `mailto:${EMAIL_SEGUROS}?subject=${encodeURIComponent(mailToSubject)}&body=${encodeURIComponent(mailToBody)}`;
-            
-            window.location.href = mailtoLink;
-        };
-
-
-      return (
-          <>
-              <div className="flex justify-between items-start mb-6">
-                  <div>
-                      <h3 className="text-xl font-bold text-slate-800">Paso 2: Generar Documentación</h3>
-                      <p className="text-slate-600 max-w-2xl mt-1">Para cada grupo, descargue la plantilla del seguro y copie los datos de los alumnos para pegarlos en el archivo.</p>
-                  </div>
-                  <button onClick={() => setStep('selection')} className="bg-white hover:bg-slate-100 text-slate-700 font-bold py-2 px-4 rounded-lg text-sm border border-slate-300 transition-colors flex items-center gap-2">
-                      <span className="material-icons">arrow_back</span>
-                      <span>Volver</span>
-                  </button>
-              </div>
-
-              {studentsForReview.length === 0 ? (
-                   <EmptyState icon="group_off" title="Sin Estudiantes para Revisar" message="No se encontraron estudiantes en las convocatorias seleccionadas." />
-              ) : (
-                <div className="space-y-8">
-                  {Object.values(groupedStudents).map((group, index) => (
-                      <Card key={index} className="animate-fade-in-up" style={{animationDelay: `${index * 100}ms`}}>
-                          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-5">
-                              <div className="space-y-1">
-                                <p className="text-sm font-semibold text-slate-500">Institución: <span className="font-bold text-slate-800">{group.institucion}</span></p>
-                                <p className="text-sm font-semibold text-slate-500">Tutor/a: <span className="font-bold text-slate-800">{group.tutor}</span></p>
-                                <p className="text-sm font-semibold text-slate-500">Orientación: <span className="font-bold text-slate-800">{group.orientacion}</span></p>
-                              </div>
-                              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 self-start sm:self-center">
-                                  <button onClick={() => handleDownloadBlankInsurance(group.institucion)} disabled={!blankTemplateUrl} className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-md hover:bg-green-700 flex items-center gap-2 justify-center disabled:bg-green-300 disabled:cursor-not-allowed">
-                                      <span className="material-icons !text-base">download</span>
-                                      <span>Descargar Seguro</span>
-                                  </button>
-                                  <button onClick={() => handleCopyToClipboard(group.students)} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-md hover:bg-blue-700 flex items-center gap-2 justify-center">
-                                      <span className="material-icons !text-base">content_copy</span>
-                                      <span>Copiar Datos</span>
-                                  </button>
-                                  <button onClick={() => handleSendEmail(group)} className="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-md hover:bg-purple-700 flex items-center gap-2 justify-center">
-                                      <span className="material-icons !text-base">email</span>
-                                      <span>Enviar Mail</span>
-                                  </button>
-                              </div>
-                          </div>
-                          
-                          <div className="overflow-x-auto border-t border-slate-200 pt-4">
-                              <table className="w-full min-w-[1200px] text-sm text-left border-collapse">
-                                  <thead className="text-xs text-slate-500 uppercase">
-                                      <tr className="border-b-2 border-slate-200">
-                                          <th className="p-3">Apellido</th>
-                                          <th className="p-3">Nombre</th>
-                                          <th className="p-3">DNI</th>
-                                          <th className="p-3">Legajo</th>
-                                          <th className="p-3">Cargo</th>
-                                          <th className="p-3">Lugar (Nombre-Dirección)</th>
-                                          <th className="p-3">Duración (Período, Días y Horario)</th>
-                                      </tr>
-                                  </thead>
-                                  <tbody className="text-slate-800">
-                                      {group.students.map(student => (
-                                          <tr key={student.studentId} className="border-b border-slate-200/60 hover:bg-slate-50/50 last:border-b-0">
-                                              <td className="p-3 font-medium">{student.apellido}</td>
-                                              <td className="p-3 font-medium">{student.nombre}</td>
-                                              <td className="p-3">{student.dni}</td>
-                                              <td className="p-3">{student.legajo}</td>
-                                              <td className="p-3">Estudiante</td>
-                                              <td className="p-3">{student.lugar}</td>
-                                              <td className="p-3">{student.duracion}</td>
-                                          </tr>
-                                      ))}
-                                  </tbody>
-                              </table>
-                          </div>
-                      </Card>
-                  ))}
+    const renderReviewStep = () => (
+        <div className="space-y-6">
+            <div className="flex items-center gap-4">
+                <button onClick={() => setStep('selection')} className="text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-full p-2 transition-colors">
+                    <span className="material-icons">arrow_back</span>
+                </button>
+                <div>
+                    <h3 className="text-xl font-bold text-slate-800">Paso 2: Revisar y Generar Reportes</h3>
+                    <p className="text-slate-600 max-w-xl mt-1">Verifica los datos de los estudiantes y genera los archivos necesarios.</p>
                 </div>
-              )}
-              
-              <div className="mt-8 pt-6 border-t border-slate-200 flex flex-col sm:flex-row justify-end items-center gap-4">
-                  <button 
-                      onClick={handleGenerateSelectionExcel} 
-                      disabled={isLoading || studentsForReview.length === 0} 
-                      className="w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg text-sm transition-colors shadow-md disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-slate-800">
-                       <span className="material-icons">list_alt</span>
-                       <span>Generar Lista de Alumnos</span>
-                  </button>
-              </div>
-          </>
-      );
-    }
-
-    return (
-        <div className="animate-fade-in-up">
-            {toastInfo && <Toast message={toastInfo.message} type={toastInfo.type} onClose={() => setToastInfo(null)} />}
-            
-            <div className="mb-6">
-                 <h2 className="text-2xl font-bold text-slate-800">Generador de Reportes para Seguro</h2>
             </div>
-            
-            {step === 'selection' ? renderSelectionStep() : renderReviewStep()}
+
+            {isLoading && <Loader />}
+
+            {!isLoading && studentsForReview.length === 0 && (
+                <EmptyState icon="person_off" title="Sin Estudiantes" message="No hay estudiantes para revisar en las convocatorias seleccionadas." />
+            )}
+
+            {!isLoading && studentsForReview.length > 0 && (
+                <>
+                    <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/60 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                         <p className="text-sm font-semibold text-slate-700">{studentsForReview.length} estudiante(s) listos para generar.</p>
+                         <div className="flex flex-col sm:flex-row gap-3">
+                             <button onClick={handleGenerateSelectionExcel} className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-md disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-green-700">
+                                 <span className="material-icons !text-base">download</span>
+                                 <span>Lista para Instituciones</span>
+                             </button>
+                         </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full min-w-[1000px] border-collapse text-sm">
+                            <thead>
+                                <tr className="border-b-2 border-slate-200">
+                                    <th className="p-3 text-left font-semibold text-slate-500">Alumno</th>
+                                    <th className="p-3 text-left font-semibold text-slate-500">Institución</th>
+                                    <th className="p-3 text-left font-semibold text-slate-500">Período</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-200/60">
+                                {studentsForReview.map(student => (
+                                    <tr key={student.studentId} className="hover:bg-slate-50/50">
+                                        <td className="p-3">
+                                            <p className="font-semibold text-slate-800">{student.nombre} {student.apellido}</p>
+                                            <p className="text-xs text-slate-500">Legajo: {student.legajo}</p>
+                                        </td>
+                                        <td className="p-3 text-slate-600">{student.institucion}</td>
+                                        <td className="p-3 text-slate-600">{student.periodo}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </>
+            )}
         </div>
     );
-};
 
+    // FIX: Add a return statement to the component to render the correct step.
+    return (
+        <Card 
+            icon="shield" 
+            title="Generador de Seguros y Reportes" 
+            description="Genera los reportes necesarios para dar de alta los seguros de los alumnos y para notificar a las instituciones."
+        >
+            {toastInfo && <Toast message={toastInfo.message} type={toastInfo.type} onClose={() => setToastInfo(null)} />}
+            {step === 'selection' ? renderSelectionStep() : renderReviewStep()}
+        </Card>
+    );
+};
+// FIX: Add a default export to make the component importable.
 export default SeguroGenerator;

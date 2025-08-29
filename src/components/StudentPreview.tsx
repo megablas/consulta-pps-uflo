@@ -12,7 +12,6 @@ interface StudentPreviewProps {
 }
 
 const StudentPreview: React.FC<StudentPreviewProps> = ({ student, onClose, onOpenPanel }) => {
-  // FIX: Changed `fetchStudentData` to `refetchStudentData` to match the context provider.
   const { practicas, criterios, isLoading, error, selectedOrientacion, refetchStudentData } = useData();
   const { showModal } = useModal();
 
