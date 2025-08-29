@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Orientacion, LanzamientoPPS, 
-  ConvocatoriaFields, AirtableRecord, AirtableErrorResponse
+  ConvocatoriaFields, AirtableRecord, AirtableErrorResponse, CriteriosCalculados
 } from '../types';
 import { 
   FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES, AIRTABLE_TABLE_NAME_PRACTICAS, FIELD_NOTA_PRACTICAS, 

@@ -6,7 +6,8 @@ import { formatDate } from '../utils/formatters';
 
 interface CorreccionRapidaViewProps {
   students: FlatCorreccionStudent[];
-  onNotaChange: (practicaId: string, newNota: string, convocatoriaId?: string) => Promise<void>;
+  // FIX: Change prop signature to accept the full student object to resolve type mismatch with parent.
+  onNotaChange: (student: FlatCorreccionStudent, newNota: string) => Promise<void>;
   updatingNotaId: string | null;
   searchTerm: string;
 }
@@ -60,9 +61,10 @@ const CorreccionRapidaView: React.FC<CorreccionRapidaViewProps> = ({ students, o
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' }>({ key: 'correctionDeadline', direction: 'ascending' });
   const [justUpdatedPracticaId, setJustUpdatedPracticaId] = useState<string | null>(null);
 
-  const handleNotaChange = async (practicaId: string, newNota: string, convocatoriaId: string) => {
-    await onNotaChange(practicaId, newNota, convocatoriaId);
-    setJustUpdatedPracticaId(practicaId);
+  // FIX: Update handler to pass the full student object to the onNotaChange prop.
+  const handleNotaChange = async (student: FlatCorreccionStudent, newNota: string) => {
+    await onNotaChange(student, newNota);
+    setJustUpdatedPracticaId(student.practicaId || null);
     setTimeout(() => setJustUpdatedPracticaId(null), 1500); 
   };
   
@@ -148,6 +150,7 @@ const CorreccionRapidaView: React.FC<CorreccionRapidaViewProps> = ({ students, o
           <tbody className="divide-y divide-slate-200/60">
             {sortedStudents.map(student => {
               const deadlineVisuals = getDeadlineVisuals(student.correctionDeadline);
+              const isSaving = updatingNotaId === student.practicaId || (!student.practicaId && updatingNotaId === `creating-${student.studentId}`);
               return (
                 <tr key={student.convocatoriaId} className={`transition-colors duration-1000 ${justUpdatedPracticaId === student.practicaId ? 'bg-green-100' : 'hover:bg-slate-50/50'}`}>
                   <td className="p-3 font-medium text-slate-800">
@@ -161,11 +164,11 @@ const CorreccionRapidaView: React.FC<CorreccionRapidaViewProps> = ({ students, o
                   </td>
                   <td className="p-3">
                     <div className="flex items-center gap-2">
+                      {/* FIX: Update NotaSelector call to pass the full student object and remove disabled prop logic. */}
                       <NotaSelector
                         value={student.nota || 'Sin calificar'}
-                        onChange={(e) => student.practicaId && handleNotaChange(student.practicaId, e.target.value, student.convocatoriaId)}
-                        disabled={!student.practicaId}
-                        isSaving={updatingNotaId === student.practicaId}
+                        onChange={(e) => handleNotaChange(student, e.target.value)}
+                        isSaving={isSaving}
                         ariaLabel={`Nota para ${student.studentName} en ${student.ppsName}`}
                       />
                       {justUpdatedPracticaId === student.practicaId && (

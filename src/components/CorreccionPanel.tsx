@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { fetchAllAirtableData, updateAirtableRecord, updateAirtableRecords } from '../services/airtableService';
-import type { InformeCorreccionPPS, InformeCorreccionStudent, ConvocatoriaFields, PracticaFields, EstudianteFields, LanzamientoPPSFields, FlatCorreccionStudent, AirtableRecord, LanzamientoPPS } from '../types';
+import { fetchAllAirtableData, updateAirtableRecord, updateAirtableRecords, createAirtableRecord } from '../services/airtableService';
+import type { InformeCorreccionPPS, InformeCorreccionStudent, ConvocatoriaFields, PracticaFields, EstudianteFields, LanzamientoPPSFields, FlatCorreccionStudent, AirtableRecord } from '../types';
 import {
   AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
   AIRTABLE_TABLE_NAME_CONVOCATORIAS,
@@ -26,6 +26,9 @@ import {
   FIELD_FECHA_INICIO_PRACTICAS,
   FIELD_LANZAMIENTO_VINCULADO_PRACTICAS,
   FIELD_ESTUDIANTE_LINK_PRACTICAS,
+  FIELD_FECHA_FIN_CONVOCATORIAS,
+  FIELD_FECHA_FIN_PRACTICAS,
+  FIELD_HORAS_ACREDITADAS_LANZAMIENTOS,
 } from '../constants';
 import Loader from './Loader';
 import EmptyState from './EmptyState';
@@ -71,8 +74,9 @@ const CorreccionPanel: React.FC = () => {
           FIELD_INFORME_LANZAMIENTOS,
           FIELD_FECHA_FIN_LANZAMIENTOS,
           FIELD_FECHA_INICIO_LANZAMIENTOS,
+          FIELD_HORAS_ACREDITADAS_LANZAMIENTOS,
         ]),
-        fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS), // Fetch all convocatorias without filters
+        fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS),
         fetchAllAirtableData<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS, [
             FIELD_NOMBRE_BUSQUEDA_PRACTICAS,
             FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS,
@@ -80,7 +84,8 @@ const CorreccionPanel: React.FC = () => {
             FIELD_NOTA_PRACTICAS,
             FIELD_LANZAMIENTO_VINCULADO_PRACTICAS,
             FIELD_ESTUDIANTE_LINK_PRACTICAS,
-            FIELD_ESPECIALIDAD_PRACTICAS
+            FIELD_ESPECIALIDAD_PRACTICAS,
+            FIELD_FECHA_FIN_PRACTICAS
         ]),
         fetchAllAirtableData<EstudianteFields>(AIRTABLE_TABLE_NAME_ESTUDIANTES, [FIELD_NOMBRE_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES])
       ]);
@@ -89,156 +94,144 @@ const CorreccionPanel: React.FC = () => {
         throw new Error('Error al cargar los datos necesarios para la corrección.');
       }
 
-      const estudiantesMap = new Map(estudiantesRes.records.map(r => [r.id, r.fields]));
+      const estudiantesMapById = new Map(estudiantesRes.records.map(r => [r.id, r.fields]));
+      const legajoToStudentIdMap = new Map<string, string>();
+      estudiantesRes.records.forEach(r => {
+        if (r.fields[FIELD_LEGAJO_ESTUDIANTES]) {
+          legajoToStudentIdMap.set(String(r.fields[FIELD_LEGAJO_ESTUDIANTES]), r.id);
+        }
+      });
       
-      const allPracticas = practicasRes.records.map(r => ({ ...r, fields: r.fields as PracticaFields }));
+      const allPracticas = practicasRes.records.map(r => ({ ...r, id: r.id, fields: r.fields as PracticaFields }));
+      const allLanzamientos = lanzamientosRes.records;
       
-      const ppsGroups = new Map<string, InformeCorreccionPPS>();
+      const practicasMap = new Map<string, AirtableRecord<PracticaFields>>();
 
-      // Filter on client side for robustness against case/whitespace issues in Airtable
+      // Pass 1: Prioritize perfectly linked practices and those with grades
+      for (const practicaRecord of allPracticas) {
+          const studentId = (practicaRecord.fields[FIELD_ESTUDIANTE_LINK_PRACTICAS] as string[] | undefined)?.[0];
+          const lanzamientoId = (practicaRecord.fields[FIELD_LANZAMIENTO_VINCULADO_PRACTICAS] as string[] | undefined)?.[0];
+          
+          if (studentId && lanzamientoId) {
+              const key = `${studentId}-${lanzamientoId}`;
+              const existing = practicasMap.get(key);
+              if (!existing || (practicaRecord.fields[FIELD_NOTA_PRACTICAS] && !existing.fields[FIELD_NOTA_PRACTICAS])) {
+                  practicasMap.set(key, practicaRecord);
+              }
+          }
+      }
+      
+      // Pass 2: Attempt to map unlinked practices using fallback logic
+      for (const practicaRecord of allPracticas) {
+          const linkedStudentId = (practicaRecord.fields[FIELD_ESTUDIANTE_LINK_PRACTICAS] as string[] | undefined)?.[0];
+          const linkedLanzamientoId = (practicaRecord.fields[FIELD_LANZAMIENTO_VINCULADO_PRACTICAS] as string[] | undefined)?.[0];
+          if (linkedStudentId && linkedLanzamientoId && practicasMap.has(`${linkedStudentId}-${linkedLanzamientoId}`)) {
+              continue; 
+          }
+
+          const legajoArray = practicaRecord.fields[FIELD_NOMBRE_BUSQUEDA_PRACTICAS] as (string | number)[] | undefined;
+          const legajo = legajoArray ? String(legajoArray[0]) : null;
+          if (!legajo) continue;
+          
+          const studentId = legajoToStudentIdMap.get(legajo);
+          if (!studentId) continue;
+
+          const instRaw = practicaRecord.fields[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS] as string[] | undefined;
+          const instName = instRaw ? instRaw[0] : null;
+          if (!instName) continue;
+
+          const practicaStartDate = parseToUTCDate(practicaRecord.fields[FIELD_FECHA_INICIO_PRACTICAS]);
+          if (!practicaStartDate) continue;
+
+          const normalizedInstName = normalizeStringForComparison(instName);
+
+          const matchingLanzamiento = allLanzamientos.find(l => {
+              const lanzamientoName = l.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS];
+              if (!lanzamientoName || normalizeStringForComparison(lanzamientoName) !== normalizedInstName) return false;
+
+              const lanzamientoStartDate = parseToUTCDate(l.fields[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+              if (!lanzamientoStartDate) return false;
+              
+              const timeDiff = Math.abs(practicaStartDate.getTime() - lanzamientoStartDate.getTime());
+              const daysDiff = timeDiff / (1000 * 3600 * 24);
+              return daysDiff <= 31;
+          });
+          
+          if (matchingLanzamiento) {
+              const key = `${studentId}-${matchingLanzamiento.id}`;
+              const existing = practicasMap.get(key);
+               if (!existing || (practicaRecord.fields[FIELD_NOTA_PRACTICAS] && !existing.fields[FIELD_NOTA_PRACTICAS])) {
+                   practicasMap.set(key, practicaRecord);
+               }
+          }
+      }
+
+      const ppsGroups = new Map<string, InformeCorreccionPPS>();
       const validConvocatorias = convocatoriasRes.records.filter(conv => {
         const estado = normalizeStringForComparison(conv.fields[FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS]);
         return estado !== 'inscripto' && estado !== 'no seleccionado';
       });
-      
-      const allLanzamientos = lanzamientosRes.records;
-      const lanzamientosToUpdate = new Map<string, { id: string; fields: Partial<LanzamientoPPSFields> }>();
 
       for (const convRecord of validConvocatorias) {
         const studentId = (convRecord.fields[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] || [])[0];
-        if (!studentId) continue;
-        
-        const student = estudiantesMap.get(studentId);
-        if (!student) continue;
+        const student = studentId ? estudiantesMapById.get(studentId) : null;
+        if (!studentId || !student) continue;
 
         let lanzamiento: AirtableRecord<LanzamientoPPSFields> | undefined;
         const linkedLanzamientoId = (convRecord.fields[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])[0];
-
         if (linkedLanzamientoId) {
             lanzamiento = allLanzamientos.find(l => l.id === linkedLanzamientoId);
-        }
-        
-        if (!lanzamiento) { // Fallback if no linked record or if linked record not found
+        } else {
             const convPpsNameRaw = convRecord.fields[FIELD_NOMBRE_PPS_CONVOCATORIAS];
             const convStartDate = parseToUTCDate(convRecord.fields[FIELD_FECHA_INICIO_CONVOCATORIAS]);
             const ppsNameToMatch = Array.isArray(convPpsNameRaw) ? convPpsNameRaw[0] : convPpsNameRaw;
 
             if (ppsNameToMatch && convStartDate) {
-                lanzamiento = allLanzamientos.find(l => 
-                    normalizeStringForComparison(l.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS]) === normalizeStringForComparison(ppsNameToMatch) &&
-                    parseToUTCDate(l.fields[FIELD_FECHA_INICIO_LANZAMIENTOS])?.getTime() === convStartDate.getTime()
-                );
-            }
-        }
-        
-        if (!lanzamiento) continue; // If still no lanzamiento, skip this convocatoria.
-        const lanzamientoId = lanzamiento.id;
-
-        // New, robust method: find by linked record
-        let practica = allPracticas.find(p => 
-            (p.fields[FIELD_LANZAMIENTO_VINCULADO_PRACTICAS] as string[] | undefined)?.[0] === lanzamientoId &&
-            (p.fields[FIELD_ESTUDIANTE_LINK_PRACTICAS] as string[] | undefined)?.[0] === studentId
-        );
-
-        // Fallback to old method
-        if (!practica) {
-            const studentLegajo = student[FIELD_LEGAJO_ESTUDIANTES];
-            const ppsName = lanzamiento.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS];
-            const ppsStartDate = lanzamiento.fields[FIELD_FECHA_INICIO_LANZAMIENTOS];
-            
-            if(studentLegajo && ppsName && ppsStartDate) {
-                practica = allPracticas.find(p => {
-                    const legajoArray = p.fields[FIELD_NOMBRE_BUSQUEDA_PRACTICAS] as (string | number)[] | undefined;
-                    const legajoValue = legajoArray ? legajoArray[0] : null;
-
-                    const instRaw = p.fields[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS] as string[] | undefined;
-                    const instName = instRaw ? instRaw[0] : null;
-
-                    return String(legajoValue) === studentLegajo &&
-                           normalizeStringForComparison(instName) === normalizeStringForComparison(ppsName) &&
-                           p.fields[FIELD_FECHA_INICIO_PRACTICAS] === ppsStartDate;
+                lanzamiento = allLanzamientos.find(l => {
+                    const lanzamientoStartDate = parseToUTCDate(l.fields[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+                    if (!lanzamientoStartDate) return false;
+                    const timeDiff = Math.abs(lanzamientoStartDate.getTime() - convStartDate.getTime());
+                    const daysDiff = timeDiff / (1000 * 3600 * 24);
+                    return normalizeStringForComparison(l.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS]) === normalizeStringForComparison(ppsNameToMatch) && daysDiff <= 31;
                 });
             }
         }
-        
-        if (!practica) continue;
-        
-        // If a PPS appears in the correction panel but has no report link, flag it for update.
-        const informeLink = lanzamiento.fields[FIELD_INFORME_LANZAMIENTOS];
-        if (!informeLink) {
-            if (!lanzamientosToUpdate.has(lanzamiento.id)) {
-                lanzamientosToUpdate.set(lanzamiento.id, {
-                    id: lanzamiento.id,
-                    fields: { [FIELD_INFORME_LANZAMIENTOS]: 'poner link de informe' }
-                });
-            }
-        }
-        
-        const ppsName = lanzamiento.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'N/A';
-        const studentName = student[FIELD_NOMBRE_ESTUDIANTES] || 'N/A';
+        if (!lanzamiento) continue;
 
-        if (!ppsGroups.has(lanzamientoId)) {
-          ppsGroups.set(lanzamientoId, {
-            lanzamientoId: lanzamientoId,
-            ppsName: ppsName,
+        const practica = practicasMap.get(`${studentId}-${lanzamiento.id}`);
+
+        if (!ppsGroups.has(lanzamiento.id)) {
+          ppsGroups.set(lanzamiento.id, {
+            lanzamientoId: lanzamiento.id,
+            ppsName: lanzamiento.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'N/A',
             orientacion: lanzamiento.fields[FIELD_ORIENTACION_LANZAMIENTOS] || 'N/A',
-            informeLink: informeLink,
+            informeLink: lanzamiento.fields[FIELD_INFORME_LANZAMIENTOS],
             fechaFinalizacion: lanzamiento.fields[FIELD_FECHA_FIN_LANZAMIENTOS],
             students: []
           });
         }
 
-        const studentData: InformeCorreccionStudent = {
+        const informeSubido = !!convRecord.fields[FIELD_INFORME_SUBIDO_CONVOCATORIAS];
+        const notaActual = practica?.fields?.[FIELD_NOTA_PRACTICAS];
+        ppsGroups.get(lanzamiento.id)!.students.push({
           studentId: studentId,
-          studentName: studentName,
+          studentName: student[FIELD_NOMBRE_ESTUDIANTES] || 'N/A',
           convocatoriaId: convRecord.id,
           practicaId: practica?.id,
-          informeSubido: !!convRecord.fields[FIELD_INFORME_SUBIDO_CONVOCATORIAS],
-          nota: practica?.fields?.[FIELD_NOTA_PRACTICAS] || 'Sin calificar'
-        };
-        
-        ppsGroups.get(lanzamientoId)!.students.push(studentData);
+          informeSubido: informeSubido,
+          nota: notaActual || (informeSubido ? 'Entregado (sin corregir)' : 'Sin calificar'),
+          lanzamientoId: lanzamiento.id,
+          orientacion: lanzamiento.fields[FIELD_ORIENTACION_LANZAMIENTOS],
+          fechaInicio: convRecord.fields[FIELD_FECHA_INICIO_CONVOCATORIAS],
+          fechaFinalizacionPPS: convRecord.fields[FIELD_FECHA_FIN_CONVOCATORIAS]
+        });
       }
       
-      // After processing, fire-and-forget the updates to Airtable
-      if (lanzamientosToUpdate.size > 0) {
-        const recordsToUpdate = Array.from(lanzamientosToUpdate.values());
-        updateAirtableRecords(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, recordsToUpdate)
-            .then(({ error }) => {
-                if (!error) {
-                    setToastInfo({
-                        message: `${recordsToUpdate.length} PPS sin link de informe fueron marcadas para completar.`,
-                        type: 'success'
-                    });
-                } else {
-                     console.error("Failed to flag Lanzamientos for missing report links:", error);
-                }
-            });
-      }
-
-      // Filter out any PPS groups that have no students left after filtering.
       const finalPpsGroups = new Map<string, InformeCorreccionPPS>();
       for (const [key, group] of ppsGroups.entries()) {
           if (group.students.length > 0) {
               finalPpsGroups.set(key, group);
           }
-      }
-
-      // Fallback logic: If a Lanzamiento is missing an orientation,
-      // try to infer it from the students' linked Practica records.
-      for (const group of finalPpsGroups.values()) {
-        if (!group.orientacion || group.orientacion.trim() === '' || group.orientacion === 'N/A') {
-          for (const student of group.students) {
-            if (student.practicaId) {
-              const practicaRecord = practicasRes.records.find(p => p.id === student.practicaId);
-              const practicaEspecialidad = practicaRecord?.fields[FIELD_ESPECIALIDAD_PRACTICAS];
-              if (practicaEspecialidad && practicaEspecialidad.trim() !== '') {
-                group.orientacion = practicaEspecialidad;
-                break;
-              }
-            }
-          }
-        }
       }
 
       setAllPpsGroups(finalPpsGroups);
@@ -254,77 +247,73 @@ const CorreccionPanel: React.FC = () => {
     fetchData();
   }, [fetchData]);
 
-  const handleNotaChange = useCallback(async (practicaId: string, newNota: string, convocatoriaId?: string) => {
-    setUpdatingNotaId(practicaId);
+  const handleNotaChange = useCallback(async (student: InformeCorreccionStudent, newNota: string) => {
+    let currentPracticaId = student.practicaId;
 
-    if (newNota === 'No Entregado' && convocatoriaId) {
-      // Step 1: Update the Convocatoria record to uncheck 'Informe Subido'
-      const { error: convError } = await updateAirtableRecord(
-        AIRTABLE_TABLE_NAME_CONVOCATORIAS,
-        convocatoriaId,
-        { [FIELD_INFORME_SUBIDO_CONVOCATORIAS]: false }
-      );
+    if (!currentPracticaId) {
+        setUpdatingNotaId(`creating-${student.studentId}`);
+        
+        const newPracticaFields: Partial<PracticaFields> = {
+            [FIELD_ESTUDIANTE_LINK_PRACTICAS]: [student.studentId],
+            [FIELD_LANZAMIENTO_VINCULADO_PRACTICAS]: [student.lanzamientoId],
+            [FIELD_ESPECIALIDAD_PRACTICAS]: student.orientacion,
+            [FIELD_FECHA_INICIO_PRACTICAS]: student.fechaInicio,
+            [FIELD_FECHA_FIN_PRACTICAS]: student.fechaFinalizacionPPS,
+        };
+        
+        const { record: newPracticaRecord, error: createError } = await createAirtableRecord<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS, newPracticaFields);
 
-      if (convError) {
-        setToastInfo({ message: 'Error al actualizar el estado del informe.', type: 'error' });
-        setUpdatingNotaId(null);
-        return;
-      }
-      
-      // Step 2: Update the Practica record with the 'No Entregado' grade
-      const { error: practicasError } = await updateAirtableRecord(
-        AIRTABLE_TABLE_NAME_PRACTICAS,
-        practicaId,
-        { [FIELD_NOTA_PRACTICAS]: 'No Entregado' }
-      );
+        if (createError || !newPracticaRecord) {
+            setToastInfo({ message: 'Error: No se pudo crear el registro de práctica para calificar.', type: 'error' });
+            setUpdatingNotaId(null);
+            return;
+        }
+        currentPracticaId = newPracticaRecord.id;
 
-      if (practicasError) {
-        setToastInfo({ message: 'Error al actualizar la nota.', type: 'error' });
-      } else {
-        setToastInfo({ message: 'El informe fue marcado como "No Entregado".', type: 'success' });
-        // Update local state for immediate UI feedback
         setAllPpsGroups(prev => {
-          const newGroups = new Map(prev);
-          for (const pps of newGroups.values()) {
-            const student = pps.students.find(s => s.practicaId === practicaId);
-            if (student) {
-              student.nota = 'No Entregado';
-              student.informeSubido = false; // This is the key part for the UI
-              break;
+            const newGroups = new Map(prev);
+            const ppsGroup = newGroups.get(student.lanzamientoId);
+            if (ppsGroup) {
+                const studentToUpdate = ppsGroup.students.find(s => s.studentId === student.studentId);
+                if (studentToUpdate) {
+                    studentToUpdate.practicaId = newPracticaRecord.id;
+                }
             }
-          }
-          return newGroups;
+            return newGroups;
         });
-      }
-    } else {
-      // Handle regular grading
-      const valueToSend = newNota === 'Sin calificar' ? null : newNota;
-      const { error } = await updateAirtableRecord(
-        AIRTABLE_TABLE_NAME_PRACTICAS,
-        practicaId,
-        { [FIELD_NOTA_PRACTICAS]: valueToSend }
-      );
+    }
 
-      if (error) {
+    setUpdatingNotaId(currentPracticaId);
+
+    if (newNota === 'No Entregado' && student.convocatoriaId) {
+        await updateAirtableRecord(AIRTABLE_TABLE_NAME_CONVOCATORIAS, student.convocatoriaId, { [FIELD_INFORME_SUBIDO_CONVOCATORIAS]: false });
+    }
+    
+    const valueToSend = newNota === 'Sin calificar' ? null : newNota;
+    const { error } = await updateAirtableRecord(AIRTABLE_TABLE_NAME_PRACTICAS, currentPracticaId, { [FIELD_NOTA_PRACTICAS]: valueToSend });
+
+    if (error) {
         setToastInfo({ message: 'Error al guardar la nota.', type: 'error' });
-      } else {
+    } else {
         setToastInfo({ message: 'Nota guardada exitosamente.', type: 'success' });
         setAllPpsGroups(prev => {
-          const newGroups = new Map(prev);
-          for (const pps of newGroups.values()) {
-            const student = pps.students.find(s => s.practicaId === practicaId);
-            if (student) {
-              student.nota = newNota;
-              break;
+            const newGroups = new Map(prev);
+            const ppsGroup = newGroups.get(student.lanzamientoId);
+            if (ppsGroup) {
+                const studentToUpdate = ppsGroup.students.find(s => s.studentId === student.studentId);
+                if (studentToUpdate) {
+                    studentToUpdate.nota = newNota;
+                    if (newNota === 'No Entregado') {
+                        studentToUpdate.informeSubido = false;
+                    }
+                }
             }
-          }
-          return newGroups;
+            return newGroups;
         });
-      }
     }
 
     setUpdatingNotaId(null);
-  }, []);
+}, [allPpsGroups]);
   
   const handleSelectionChange = useCallback((lanzamientoId: string, practicaId: string) => {
       setSelectedStudents(prev => {
@@ -400,15 +389,13 @@ const CorreccionPanel: React.FC = () => {
 
     let filteredGroups = Array.from(allPpsGroups.values()).filter(group => {
         const groupOrientations = (group.orientacion || '').split(',').map(o => normalizeStringForComparison(o.trim()));
-        // Check if any of the group's orientations match any of the manager's orientations
         return groupOrientations.some(o => managerOrientations.has(o));
     });
 
     const flatList: FlatCorreccionStudent[] = [];
     for (const group of filteredGroups) {
       for (const student of group.students) {
-        // A student appears in the quick correction list if they have submitted their report, need a grade, and have a practice record.
-        if (student.informeSubido && (student.nota === 'Sin calificar' || student.nota === 'Entregado (sin corregir)') && student.practicaId) {
+        if (student.informeSubido && (student.nota === 'Sin calificar' || student.nota === 'Entregado (sin corregir)')) {
             const finalizacionDate = group.fechaFinalizacion ? parseToUTCDate(group.fechaFinalizacion) : undefined;
             const deadline = finalizacionDate ? addBusinessDays(finalizacionDate, 30) : undefined;
             flatList.push({ 
