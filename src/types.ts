@@ -195,6 +195,11 @@ export interface InformeCorreccionStudent {
   practicaId?: string;
   informeSubido: boolean;
   nota: string;
+  // FIX: Add missing properties to align with usage in CorreccionPanel.tsx
+  lanzamientoId: string;
+  orientacion?: string;
+  fechaInicio?: string;
+  fechaFinalizacionPPS?: string;
 }
 
 export interface InformeCorreccionPPS {

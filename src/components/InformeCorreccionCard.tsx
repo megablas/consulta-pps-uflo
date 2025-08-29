@@ -8,7 +8,8 @@ const NOTA_OPTIONS = ['Sin calificar', 'Entregado (sin corregir)', 'No Entregado
 
 interface InformeCorreccionCardProps {
   ppsGroup: InformeCorreccionPPS;
-  onNotaChange: (practicaId: string, newNota: string, convocatoriaId?: string) => Promise<void>;
+  // FIX: Change prop signature to accept the full student object to resolve type mismatch with parent.
+  onNotaChange: (student: InformeCorreccionStudent, newNota: string) => Promise<void>;
   updatingNotaId: string | null;
   // Batch update props
   selectedStudents: Set<string>;
@@ -105,9 +106,10 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
   }, [fechaFinalizacion, students]);
 
 
-  const handleNotaChange = async (practicaId: string, newNota: string, convocatoriaId: string) => {
-    await onNotaChange(practicaId, newNota, convocatoriaId);
-    setJustUpdatedPracticaId(practicaId);
+  // FIX: Update handler to pass the full student object to the onNotaChange prop.
+  const handleNotaChange = async (student: InformeCorreccionStudent, newNota: string) => {
+    await onNotaChange(student, newNota);
+    setJustUpdatedPracticaId(student.practicaId || null);
     setTimeout(() => setJustUpdatedPracticaId(null), 1500); 
   };
 
@@ -220,6 +222,7 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
             <tbody className="divide-y divide-slate-200/60">
               {students.map(student => {
                 const isSelected = student.practicaId ? selectedStudents.has(student.practicaId) : false;
+                const isSaving = updatingNotaId === student.practicaId || (!student.practicaId && updatingNotaId === `creating-${student.studentId}`);
                 return (
                   <tr key={student.studentId} className={`transition-colors duration-1000 ${justUpdatedPracticaId === student.practicaId ? 'bg-green-100' : (isSelected ? 'bg-blue-50/50' : 'hover:bg-slate-50/50')}`}>
                     <td className="p-3 text-center">
@@ -238,11 +241,11 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
                     </td>
                     <td className="p-3">
                       <div className="flex items-center gap-2">
+                        {/* FIX: Update NotaSelector call to pass the full student object and adjust isSaving logic. */}
                         <NotaSelector
                           value={student.nota || 'Sin calificar'}
-                          onChange={(e) => student.practicaId && handleNotaChange(student.practicaId, e.target.value, student.convocatoriaId)}
-                          disabled={!student.practicaId}
-                          isSaving={updatingNotaId === student.practicaId}
+                          onChange={(e) => handleNotaChange(student, e.target.value)}
+                          isSaving={isSaving}
                           ariaLabel={`Nota para ${student.studentName}`}
                         />
                          {justUpdatedPracticaId === student.practicaId && (
