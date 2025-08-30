@@ -19,96 +19,78 @@ import {
   FIELD_NOMBRE_ESTUDIANTES,
   FIELD_LANZAMIENTO_VINCULADO_PRACTICAS
 } from '../constants';
-import { calculateCriterios } from '../utils/criteriaCalculations';
 import { normalizeStringForComparison, parseToUTCDate } from '../utils/formatters';
 
-export interface DashboardData {
-  practicas: Practica[];
-  solicitudes: SolicitudPPS[];
-  lanzamientos: LanzamientoPPS[];
-  myEnrollments: Convocatoria[];
-  informeTasks: InformeTask[];
-  criterios: CriteriosCalculados;
-  studentDetails: EstudianteFields | null;
-  studentAirtableId: string | null;
-  userGender: UserGender;
-}
-
-const isCorrectorRole = (role?: 'Jefe' | 'SuperUser') => role === 'SuperUser' || role === 'Jefe';
-
-/**
- * Fetches and processes all necessary data for the student/admin dashboard.
- * This service acts as a single source of truth for dashboard data,
- * abstracting away the complexities of Airtable queries and data transformations.
- */
-export const getDashboardData = async (legajo: string, role?: 'Jefe' | 'SuperUser'): Promise<DashboardData> => {
-  const isCorrector = isCorrectorRole(role);
-
-  // 1. Fetch student record first to get their unique Airtable ID.
-  const { records: studentRecords, error: studentError } = await fetchAllAirtableData<EstudianteFields>(
+export const fetchStudentData = async (legajo: string): Promise<{ studentDetails: EstudianteFields | null; studentAirtableId: string | null; userGender: UserGender }> => {
+  const { records, error } = await fetchAllAirtableData<EstudianteFields>(
     AIRTABLE_TABLE_NAME_ESTUDIANTES, [], `{${FIELD_LEGAJO_ESTUDIANTES}} = '${legajo}'`
   );
 
-  if (studentError) {
-    const errorMsg = typeof studentError.error === 'string' ? studentError.error : studentError.error.message;
+  if (error) {
+    const errorMsg = typeof error.error === 'string' ? error.error : error.error.message;
     throw new Error(`Error fetching student data from Airtable: ${errorMsg}`);
   }
   
-  const studentRecord = studentRecords[0];
+  const studentRecord = records[0];
+  const studentDetails = studentRecord?.fields ?? null;
   const studentAirtableId = studentRecord?.id ?? null;
+  
+  const gender = studentDetails?.[FIELD_GENERO_ESTUDIANTES];
+  let userGender: UserGender = 'neutro';
+  if (gender === 'Mujer') userGender = 'femenino';
+  else if (gender === 'Varon') userGender = 'masculino';
+  
+  return { studentDetails, studentAirtableId, userGender };
+};
 
-  // 2. Build the formula for fetching convocatorias, now more robustly.
+export const fetchPracticas = async (legajo: string): Promise<Practica[]> => {
+  const { records, error } = await fetchAllAirtableData<PracticaFields>(
+    AIRTABLE_TABLE_NAME_PRACTICAS, [], `SEARCH('${legajo}', ARRAYJOIN({${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}}))`
+  );
+  if (error) {
+    const errorMsg = typeof error.error === 'string' ? error.error : error.error.message;
+    throw new Error(`Error fetching practicas: ${errorMsg}`);
+  }
+  return records.map(r => ({ ...r.fields, id: r.id }));
+};
+
+export const fetchSolicitudes = async (legajo: string, studentAirtableId: string | null): Promise<SolicitudPPS[]> => {
+  if (!studentAirtableId) return [];
+  const { records, error } = await fetchAllAirtableData<SolicitudPPSFields>(
+    AIRTABLE_TABLE_NAME_PPS, 
+    [], 
+    `SEARCH('${legajo}', ARRAYJOIN({${FIELD_LEGAJO_PPS}}))`, 
+    [{ field: FIELD_ULTIMA_ACTUALIZACION_PPS, direction: 'desc' }]
+  );
+  if (error) {
+    const errorMsg = typeof error.error === 'string' ? error.error : error.error.message;
+    throw new Error(`Error fetching solicitudes: ${errorMsg}`);
+  }
+  return records.map(r => ({ ...r.fields, id: r.id }));
+};
+
+export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: string | null, isCorrector: boolean): Promise<{ lanzamientos: LanzamientoPPS[], myEnrollments: Convocatoria[], allLanzamientos: LanzamientoPPS[] }> => {
   const convocatoriasFormula = (isCorrector || !studentAirtableId)
-    ? undefined // No need to fetch for correctors or if student ID is missing
+    ? undefined
     : `OR(
         {${FIELD_LEGAJO_CONVOCATORIAS}} = ${legajo},
         FIND('${studentAirtableId}', ARRAYJOIN({${FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS}}))
     )`;
 
-
-  // 3. Fetch all other data, using the student's Airtable ID for precise queries.
-  const [
-    practicasRes,
-    solicitudesRes,
-    convocatoriasRes,
-    lanzamientosRes
-  ] = await Promise.all([
-    fetchAllAirtableData<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS, [], `SEARCH('${legajo}', ARRAYJOIN({${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}}))`),
-    isCorrector || !studentAirtableId
-      ? Promise.resolve({ records: [], error: null })
-      : fetchAllAirtableData<SolicitudPPSFields>(
-          AIRTABLE_TABLE_NAME_PPS, 
-          [], 
-          `SEARCH('${legajo}', ARRAYJOIN({${FIELD_LEGAJO_PPS}}))`, 
-          [{ field: FIELD_ULTIMA_ACTUALIZACION_PPS, direction: 'desc' }]
-        ),
+  const [convocatoriasRes, lanzamientosRes] = await Promise.all([
     fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS, [], convocatoriasFormula),
     fetchAllAirtableData<LanzamientoPPSFields>(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, [], undefined, [{ field: FIELD_FECHA_INICIO_LANZAMIENTOS, direction: 'desc' }])
   ]);
-  
-  const error = practicasRes.error || solicitudesRes.error || convocatoriasRes.error || lanzamientosRes.error;
+
+  const error = convocatoriasRes.error || lanzamientosRes.error;
   if (error) {
     const errorMsg = typeof error.error === 'string' ? error.error : error.error.message;
-    throw new Error(`Error fetching data from Airtable: ${errorMsg}`);
+    throw new Error(`Error fetching convocatorias data: ${errorMsg}`);
   }
 
-  // 4. Map raw records to structured data types
-  const studentDetails = studentRecord?.fields ?? null;
-
-  const gender = studentDetails?.[FIELD_GENERO_ESTUDIANTES];
-  let userGender: UserGender = 'neutro';
-  if (gender === 'Mujer') userGender = 'femenino';
-  else if (gender === 'Varon') userGender = 'masculino';
-
-  const practicas = practicasRes.records.map(r => ({ ...r.fields, id: r.id }));
-  const solicitudes = solicitudesRes.records.map(r => ({ ...r.fields, id: r.id }));
   const myEnrollments = convocatoriasRes.records.map(r => ({ ...r.fields, id: r.id }));
   const allLanzamientos = lanzamientosRes.records.map(r => ({ ...r.fields, id: r.id }));
-
-  // 5. Process and derive data (business logic)
-  const selectedOrientacion = (studentDetails?.['Orientación Elegida'] as any) || "";
-  const criterios = calculateCriterios(practicas, selectedOrientacion);
-
+  
   const lanzamientos = allLanzamientos.filter(l => {
       const ppsName = l[FIELD_NOMBRE_PPS_LANZAMIENTOS];
       if (!(typeof ppsName === 'string' && ppsName.trim())) return false;
@@ -137,55 +119,46 @@ export const getDashboardData = async (legajo: string, role?: 'Jefe' | 'SuperUse
       return false;
   });
 
-  const informeTasks: InformeTask[] = myEnrollments
-    .map((enrollment): InformeTask | null => {
-        const lanzamientoId = (enrollment[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])[0];
-        const lanzamiento = allLanzamientos.find(l => l.id === lanzamientoId);
-        
-        const isSeleccionado = normalizeStringForComparison(enrollment[FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS]) === 'seleccionado';
+  return { lanzamientos, myEnrollments, allLanzamientos };
+};
 
-        if (!lanzamiento || !lanzamiento[FIELD_INFORME_LANZAMIENTOS] || !lanzamiento[FIELD_FECHA_FIN_LANZAMIENTOS] || !isSeleccionado) {
-            return null;
-        }
+export const processInformeTasks = (myEnrollments: Convocatoria[], allLanzamientos: LanzamientoPPS[], practicas: Practica[]): InformeTask[] => {
+    return myEnrollments
+        .map((enrollment): InformeTask | null => {
+            const lanzamientoId = (enrollment[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])[0];
+            const lanzamiento = allLanzamientos.find(l => l.id === lanzamientoId);
+            
+            const isSeleccionado = normalizeStringForComparison(enrollment[FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS]) === 'seleccionado';
 
-        // New, robust method: find by linked record
-        let practicaVinculada = practicas.find(p => (p[FIELD_LANZAMIENTO_VINCULADO_PRACTICAS] as string[] | undefined)?.[0] === lanzamientoId);
-        
-        // Fallback to old method if no linked record is found
-        if (!practicaVinculada) {
-            practicaVinculada = practicas.find(p => {
-                const ppsName = (p[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS] as string[] | undefined)?.[0] ?? '';
-                const practicaStartDate = parseToUTCDate(p[FIELD_FECHA_INICIO_PRACTICAS]);
-                const lanzamientoStartDate = parseToUTCDate(lanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS]);
-                return normalizeStringForComparison(ppsName) === normalizeStringForComparison(lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS]) &&
-                       practicaStartDate?.getTime() === lanzamientoStartDate?.getTime();
-            });
-        }
+            if (!lanzamiento || !lanzamiento[FIELD_INFORME_LANZAMIENTOS] || !lanzamiento[FIELD_FECHA_FIN_LANZAMIENTOS] || !isSeleccionado) {
+                return null;
+            }
 
-        return {
-            convocatoriaId: enrollment.id,
-            ppsName: lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'N/A',
-            informeLink: lanzamiento[FIELD_INFORME_LANZAMIENTOS],
-            fechaFinalizacion: lanzamiento[FIELD_FECHA_FIN_LANZAMIENTOS],
-            informeSubido: !!enrollment[FIELD_INFORME_SUBIDO_CONVOCATORIAS],
-            nota: practicaVinculada?.[FIELD_NOTA_PRACTICAS] || 'Sin calificar',
-        };
-    })
-    .filter((task): task is InformeTask => task !== null)
-    .sort((a, b) => new Date(a.fechaFinalizacion).getTime() - new Date(b.fechaFinalizacion).getTime());
+            // New, robust method: find by linked record
+            let practicaVinculada = practicas.find(p => (p[FIELD_LANZAMIENTO_VINCULADO_PRACTICAS] as string[] | undefined)?.[0] === lanzamientoId);
+            
+            // Fallback to old method if no linked record is found
+            if (!practicaVinculada) {
+                practicaVinculada = practicas.find(p => {
+                    const ppsName = (p[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS] as string[] | undefined)?.[0] ?? '';
+                    const practicaStartDate = parseToUTCDate(p[FIELD_FECHA_INICIO_PRACTICAS]);
+                    const lanzamientoStartDate = parseToUTCDate(lanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+                    return normalizeStringForComparison(ppsName) === normalizeStringForComparison(lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS]) &&
+                           practicaStartDate?.getTime() === lanzamientoStartDate?.getTime();
+                });
+            }
 
-  // 6. Return clean, structured data object
-  return {
-    practicas,
-    solicitudes,
-    lanzamientos,
-    myEnrollments,
-    informeTasks,
-    criterios,
-    studentDetails,
-    studentAirtableId,
-    userGender
-  };
+            return {
+                convocatoriaId: enrollment.id,
+                ppsName: lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'N/A',
+                informeLink: lanzamiento[FIELD_INFORME_LANZAMIENTOS],
+                fechaFinalizacion: lanzamiento[FIELD_FECHA_FIN_LANZAMIENTOS],
+                informeSubido: !!enrollment[FIELD_INFORME_SUBIDO_CONVOCATORIAS],
+                nota: practicaVinculada?.[FIELD_NOTA_PRACTICAS] || 'Sin calificar',
+            };
+        })
+        .filter((task): task is InformeTask => task !== null)
+        .sort((a, b) => new Date(a.fechaFinalizacion).getTime() - new Date(b.fechaFinalizacion).getTime());
 };
 
 

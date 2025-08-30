@@ -1,8 +1,11 @@
-import React, { useEffect } from 'react';
-import { useData } from '../contexts/DataContext';
+import React, { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useModal } from '../contexts/ModalContext';
 import Card from './Card';
 import Loader from './Loader';
+import { fetchStudentData, fetchPracticas } from '../services/dataService';
+import { calculateCriterios } from '../utils/criteriaCalculations';
+import { Orientacion } from '../types';
 import { FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS, FIELD_ESPECIALIDAD_PRACTICAS, FIELD_HORAS_PRACTICAS } from '../constants';
 
 interface StudentPreviewProps {
@@ -12,14 +15,25 @@ interface StudentPreviewProps {
 }
 
 const StudentPreview: React.FC<StudentPreviewProps> = ({ student, onClose, onOpenPanel }) => {
-  const { practicas, criterios, isLoading, error, selectedOrientacion, refetchStudentData } = useData();
   const { showModal } = useModal();
+  
+  // FIX: Replaced useData() with useQuery hooks to fetch data independently.
+  const { data: studentData, isLoading: isLoadingStudent, error: studentError, refetch: refetchStudentData } = useQuery({
+    queryKey: ['studentPreview', student.legajo],
+    queryFn: () => fetchStudentData(student.legajo),
+  });
 
-  useEffect(() => {
-    if (refetchStudentData) {
-      refetchStudentData();
-    }
-  }, [refetchStudentData]);
+  const { data: practicas = [], isLoading: isLoadingPracticas, error: practicasError } = useQuery({
+    queryKey: ['practicasPreview', student.legajo],
+    queryFn: () => fetchPracticas(student.legajo),
+  });
+  
+  const isLoading = isLoadingStudent || isLoadingPracticas;
+  const error = studentError || practicasError;
+
+  const selectedOrientacion = (studentData?.studentDetails?.['Orientación Elegida'] || "") as Orientacion | "";
+  const criterios = useMemo(() => calculateCriterios(practicas, selectedOrientacion), [practicas, selectedOrientacion]);
+  
 
   const handleExport = () => {
     if (isLoading || !criterios || !practicas) {
@@ -75,7 +89,7 @@ ${practicasText}
   if (error) {
     return (
       <Card className="mt-4 animate-fade-in-up border-red-200 bg-red-50">
-        <p className="text-red-700">Error al cargar datos: {error}</p>
+        <p className="text-red-700">Error al cargar datos: {error.message}</p>
       </Card>
     );
   }

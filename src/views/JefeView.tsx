@@ -1,13 +1,11 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import AdminSearch from '../components/AdminSearch';
-import Dashboard from '../components/Dashboard';
-import { DataProvider } from '../contexts/DataContext';
 import Tabs from '../components/Tabs';
 import Card from '../components/Card';
 import ConvocatoriaManager from '../components/ConvocatoriaManager';
 import CorreccionPanel from '../components/CorreccionPanel';
-import type { TabId } from '../types';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, type AuthUser } from '../contexts/AuthContext';
+import StudentDashboard from './StudentDashboard';
 
 
 interface StudentTab {
@@ -15,13 +13,6 @@ interface StudentTab {
     legajo: string;
     nombre: string;
 }
-
-const StudentDashboard: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<TabId>('convocatorias');
-    // The Dashboard for a student in the admin view is self-contained.
-    // Its tab state doesn't need to be shared with other components like the footer.
-    return <Dashboard activeTab={activeTab} onTabChange={setActiveTab} showExportButton />;
-};
 
 const JefeWelcomeBanner: React.FC<{ name: string }> = ({ name }) => {
   const [greeting, setGreeting] = useState('');
@@ -113,9 +104,12 @@ const JefeView: React.FC = () => {
             icon: 'school',
             isClosable: true,
             content: (
-                <DataProvider key={student.legajo} user={student}>
-                    <StudentDashboard />
-                </DataProvider>
+                // FIX: Removed DataProvider and used the imported StudentDashboard component directly.
+                <StudentDashboard 
+                    key={student.legajo} 
+                    user={student as AuthUser} 
+                    showExportButton 
+                />
             )
         }))
     ];

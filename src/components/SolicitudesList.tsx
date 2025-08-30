@@ -1,11 +1,13 @@
 import React from 'react';
 import SolicitudCard from './SolicitudCard';
 import EmptyState from './EmptyState';
-import { useData } from '../contexts/DataContext';
+import type { SolicitudPPS } from '../types';
 
-const SolicitudesList: React.FC = () => {
-  const { solicitudes } = useData();
+interface SolicitudesListProps {
+  solicitudes: SolicitudPPS[];
+}
 
+const SolicitudesList: React.FC<SolicitudesListProps> = ({ solicitudes }) => {
   if (solicitudes.length === 0) {
     return (
        <EmptyState 

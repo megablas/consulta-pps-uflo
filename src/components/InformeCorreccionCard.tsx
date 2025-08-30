@@ -8,7 +8,7 @@ const NOTA_OPTIONS = ['Sin calificar', 'Entregado (sin corregir)', 'No Entregado
 
 interface InformeCorreccionCardProps {
   ppsGroup: InformeCorreccionPPS;
-  // FIX: Change prop signature to accept the full student object to resolve type mismatch with parent.
+  // FIX: Changed prop signature to accept the full student object to resolve type mismatch with parent.
   onNotaChange: (student: InformeCorreccionStudent, newNota: string) => Promise<void>;
   updatingNotaId: string | null;
   // Batch update props
@@ -106,7 +106,7 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
   }, [fechaFinalizacion, students]);
 
 
-  // FIX: Update handler to pass the full student object to the onNotaChange prop.
+  // FIX: Updated handler to pass the full student object to the onNotaChange prop.
   const handleNotaChange = async (student: InformeCorreccionStudent, newNota: string) => {
     await onNotaChange(student, newNota);
     setJustUpdatedPracticaId(student.practicaId || null);
@@ -241,7 +241,7 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
                     </td>
                     <td className="p-3">
                       <div className="flex items-center gap-2">
-                        {/* FIX: Update NotaSelector call to pass the full student object and adjust isSaving logic. */}
+                        {/* FIX: Updated NotaSelector call to pass the full student object. */}
                         <NotaSelector
                           value={student.nota || 'Sin calificar'}
                           onChange={(e) => handleNotaChange(student, e.target.value)}

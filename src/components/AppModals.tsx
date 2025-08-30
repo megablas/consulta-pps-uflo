@@ -1,6 +1,5 @@
 import React from 'react';
 import { useModal } from '../contexts/ModalContext';
-import { useData } from '../contexts/DataContext';
 import Modal from './Modal';
 import { EnrollmentForm } from './EnrollmentForm';
 import SeleccionadosModal from './SeleccionadosModal';
@@ -16,18 +15,10 @@ const AppModals: React.FC = () => {
         isSeleccionadosModalOpen,
         closeSeleccionadosModal,
         seleccionadosData,
-        convocatoriaForModal
+        convocatoriaForModal,
+        isSubmittingEnrollment,
+        onSubmitEnrollment
     } = useModal();
-    
-    // Data-related functions are still sourced from DataContext
-    const { isSubmitting, handleEnrollmentSubmit } = useData();
-
-    // The form needs a callback that knows about the selected lanzamiento
-    const onEnrollmentSubmit = (formData: any) => {
-        if (selectedLanzamientoForEnrollment) {
-            handleEnrollmentSubmit(formData, selectedLanzamientoForEnrollment);
-        }
-    };
 
     const horariosStr = selectedLanzamientoForEnrollment?.[FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS] || '';
     const horariosArray = horariosStr ? horariosStr.split(';').map(h => h.trim()).filter(Boolean) : [];
@@ -44,10 +35,10 @@ const AppModals: React.FC = () => {
             <EnrollmentForm
               isOpen={isEnrollmentFormOpen}
               onClose={closeEnrollmentForm}
-              onSubmit={onEnrollmentSubmit}
+              onSubmit={onSubmitEnrollment || (() => Promise.resolve())} // Proporciona una función vacía como fallback
               convocatoriaName={selectedLanzamientoForEnrollment?.['Nombre PPS'] || ''}
               horariosDisponibles={horariosArray}
-              isSubmitting={isSubmitting}
+              isSubmitting={isSubmittingEnrollment}
             />
 
             <SeleccionadosModal

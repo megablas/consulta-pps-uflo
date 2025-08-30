@@ -7,16 +7,16 @@ import {
     FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS,
 } from '../constants';
 import { getEspecialidadClasses, getStatusVisuals, normalizeStringForComparison } from '../utils/formatters';
-import { useData } from '../contexts/DataContext';
+import { useModal } from '../contexts/ModalContext';
 
 interface ConvocatoriaCardProps {
   lanzamiento: LanzamientoPPS;
   onInscribir: (lanzamiento: LanzamientoPPS) => void;
   onVerSeleccionados: (lanzamiento: LanzamientoPPS) => void;
   enrollmentStatus: string | null;
-  isEnrolling: boolean;
   isVerSeleccionadosLoading: boolean;
   isCompleted: boolean;
+  userGender?: 'Varon' | 'Mujer' | 'Otro';
 }
 
 // Tipos para mejor tipado
@@ -35,11 +35,12 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({
   onInscribir, 
   onVerSeleccionados, 
   enrollmentStatus, 
-  isEnrolling, 
   isVerSeleccionadosLoading,
-  isCompleted
+  isCompleted,
+  userGender
 }) => {
-  const { userGender } = useData();
+  const { isSubmittingEnrollment, selectedLanzamientoForEnrollment } = useModal();
+  const isEnrolling = isSubmittingEnrollment && selectedLanzamientoForEnrollment?.id === lanzamiento.id;
 
   // Destructuring con nombres más claros
   const {
@@ -72,7 +73,7 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({
 
   // Función para obtener el texto con género
   const getGenderedText = (masculino: string, femenino: string): string => {
-    return userGender === 'femenino' ? femenino : masculino;
+    return userGender === 'Mujer' ? femenino : masculino;
   };
 
   // Memoización del estado de información
@@ -108,7 +109,7 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({
     };
 
     return statusMap[enrollmentState];
-  }, [enrollmentState, estadoConvocatoria, convocatoriaStatusVisuals, userGender]);
+  }, [enrollmentState, estadoConvocatoria, convocatoriaStatusVisuals, userGender, getGenderedText]);
 
   // Componentes internos para mejor organización
   const LoadingSpinner: React.FC<{ variant?: 'light' | 'dark' }> = ({ variant = 'light' }) => (

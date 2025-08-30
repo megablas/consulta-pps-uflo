@@ -4,9 +4,7 @@ import Auth from './components/Auth';
 import StudentView from './views/StudentView';
 import Layout from './components/Layout';
 import { useAuth } from './contexts/AuthContext';
-import { DataProvider } from './contexts/DataContext';
 import { ModalProvider } from './contexts/ModalContext';
-import AppModals from './components/AppModals';
 import AdminView from './views/AdminView';
 import JefeView from './views/JefeView';
 
@@ -21,28 +19,22 @@ const App: React.FC = () => {
     );
   }
 
+  // ModalProvider envuelve toda la aplicación para que los modales estén disponibles globalmente.
+  // La lógica de datos y acciones se gestiona ahora dentro de cada vista (StudentView, AdminView),
+  // eliminando la necesidad de un DataProvider global.
   return (
     <ModalProvider>
-      {!authenticatedUser ? (
-        <Layout>
+      <Layout>
+        {!authenticatedUser ? (
           <Auth />
-        </Layout>
-      ) : (
-        <DataProvider
-          key={isSuperUserMode ? 'admin' : authenticatedUser.legajo}
-          user={authenticatedUser}
-        >
-          <Layout>
-            {isSuperUserMode 
-              ? <AdminView /> 
-              : isJefeMode
-                ? <JefeView />
-                : <StudentView />
-            }
-          </Layout>
-          <AppModals />
-        </DataProvider>
-      )}
+        ) : isSuperUserMode ? (
+          <AdminView />
+        ) : isJefeMode ? (
+          <JefeView />
+        ) : (
+          <StudentView />
+        )}
+      </Layout>
     </ModalProvider>
   );
 };

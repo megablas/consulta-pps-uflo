@@ -2,14 +2,20 @@ import React, { useMemo } from 'react';
 import { HORAS_OBJETIVO_TOTAL } from '../constants';
 import ProgressBar from './ProgressBar';
 import RotationTracker from './RotationTracker';
-import { useData } from '../contexts/DataContext';
 import ProgressCircle from './ProgressCircle';
 import OrientacionSelector from './OrientacionSelector';
 import CertificationButton from './CertificationButton';
+import type { CriteriosCalculados, Orientacion } from '../types';
+
+interface CriteriosPanelProps {
+  criterios: CriteriosCalculados;
+  selectedOrientacion: Orientacion | "";
+  handleOrientacionChange: (orientacion: Orientacion | "") => void;
+  showSaveConfirmation: boolean;
+}
 
 // --- Componente Principal Mejorado ---
-const CriteriosPanel: React.FC = () => {
-  const { criterios, selectedOrientacion, handleOrientacionChange, showSaveConfirmation } = useData();
+const CriteriosPanel: React.FC<CriteriosPanelProps> = ({ criterios, selectedOrientacion, handleOrientacionChange, showSaveConfirmation }) => {
 
   const todosLosCriteriosCumplidos = useMemo(() => 
     criterios.cumpleHorasTotales && criterios.cumpleRotacion && criterios.cumpleHorasOrientacion,
