@@ -4,7 +4,7 @@ import { formatDate, parseToUTCDate } from '../utils/formatters';
 
 interface InformeCardProps {
   task: InformeTask;
-  onConfirmar: (convocatoriaId: string) => void;
+  onConfirmar: (task: InformeTask) => void;
 }
 
 const InformeCard: React.FC<InformeCardProps> = ({ task, onConfirmar }) => {
@@ -12,38 +12,43 @@ const InformeCard: React.FC<InformeCardProps> = ({ task, onConfirmar }) => {
   const { nota, informeSubido } = task;
 
   const statusInfo = useMemo(() => {
-    if (nota && nota !== 'Sin calificar') {
+    // If it has been graded with a final score, that's the terminal state.
+    if (nota && nota !== 'Sin calificar' && nota !== 'Entregado (sin corregir)' && nota !== 'No Entregado') {
       return {
         key: 'calificado',
-        icon: 'grading',
-        iconContainerClass: 'bg-blue-50 text-blue-700',
+        icon: 'task_alt',
+        iconContainerClass: 'bg-blue-100 text-blue-700',
       };
     }
+    // If the report has been submitted (either for real or optimistically), it's in correction.
+    // This takes precedence over "Sin calificar" or "No Entregado" notes.
     if (informeSubido) {
       return {
         key: 'en_correccion',
         icon: 'hourglass_top',
-        iconContainerClass: 'bg-emerald-50 text-emerald-700',
+        iconContainerClass: 'bg-emerald-100 text-emerald-700',
       };
     }
+    // If none of the above, it's pending submission.
     return {
       key: 'pendiente',
-      icon: 'assignment_late',
-      iconContainerClass: 'bg-amber-50 text-amber-700',
+      icon: 'upload',
+      iconContainerClass: 'bg-amber-100 text-amber-700 animate-[subtle-bob_1.5s_ease-in-out_infinite] group-hover:scale-110',
     };
   }, [nota, informeSubido]);
 
-  const { deadline, daysRemaining, isOverdue } = useMemo(() => {
-    const finalizacionDate = parseToUTCDate(task.fechaFinalizacion);
-    if (!finalizacionDate) {
-      return {
-        deadline: null,
-        daysRemaining: 0,
-        isOverdue: false,
-      };
+
+  const { deadlineLabel, deadline, daysRemaining, isOverdue } = useMemo(() => {
+    const isSubmitted = statusInfo.key === 'en_correccion' && task.fechaEntregaInforme;
+    const baseDateString = isSubmitted ? task.fechaEntregaInforme : task.fechaFinalizacion;
+    const label = isSubmitted ? 'Límite de Corrección' : 'Límite de Entrega';
+
+    const baseDate = parseToUTCDate(baseDateString);
+    if (!baseDate) {
+      return { deadlineLabel: label, deadline: null, daysRemaining: 0, isOverdue: false };
     }
 
-    const deadlineDate = new Date(finalizacionDate.getTime());
+    const deadlineDate = new Date(baseDate.getTime());
     deadlineDate.setUTCDate(deadlineDate.getUTCDate() + 30);
 
     const today = new Date();
@@ -52,19 +57,15 @@ const InformeCard: React.FC<InformeCardProps> = ({ task, onConfirmar }) => {
     const timeDiff = deadlineDate.getTime() - today.getTime();
     const days = Math.floor(timeDiff / (1000 * 3600 * 24));
 
-    return {
-      deadline: deadlineDate,
-      daysRemaining: days,
-      isOverdue: days < 0,
-    };
-  }, [task.fechaFinalizacion]);
+    return { deadlineLabel: label, deadline: deadlineDate, daysRemaining: days, isOverdue: days < 0 };
+  }, [task.fechaFinalizacion, task.fechaEntregaInforme, statusInfo.key]);
 
   const handleConfirmClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault(); // Evita que el enlace padre se active
-    e.stopPropagation(); // Detiene la propagación del evento
+    e.preventDefault(); 
+    e.stopPropagation(); 
     setIsConfirming(true);
     try {
-      await onConfirmar(task.convocatoriaId);
+      await onConfirmar(task);
     } finally {
       setIsConfirming(false);
     }
@@ -78,7 +79,7 @@ const InformeCard: React.FC<InformeCardProps> = ({ task, onConfirmar }) => {
             </p>
         );
     }
-    if (nota && nota !== 'Sin calificar') {
+    if (statusInfo.key === 'calificado') {
       return null;
     }
     
@@ -97,7 +98,7 @@ const InformeCard: React.FC<InformeCardProps> = ({ task, onConfirmar }) => {
 
     return (
       <p className={`text-sm font-medium mt-1.5 ${textColor} tracking-tight`}>
-        Límite: {formatDate(deadline.toISOString())}
+        {deadlineLabel}: {formatDate(deadline.toISOString())}
         <span className="hidden sm:inline"> ({text})</span>
       </p>
     );
@@ -161,7 +162,7 @@ const InformeCard: React.FC<InformeCardProps> = ({ task, onConfirmar }) => {
     >
         <article className="flex items-center gap-5">
             <div
-                className={`flex-shrink-0 size-12 rounded-xl flex items-center justify-center ${statusInfo.iconContainerClass} transition-transform duration-300 group-hover:scale-110`}
+                className={`flex-shrink-0 size-12 rounded-xl flex items-center justify-center ${statusInfo.iconContainerClass} transition-all duration-300`}
             >
                 <span className="material-icons !text-2xl">{statusInfo.icon}</span>
             </div>

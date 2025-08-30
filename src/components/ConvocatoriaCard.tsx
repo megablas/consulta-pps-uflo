@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import type { LanzamientoPPS } from '../types';
 import {
     FIELD_NOMBRE_PPS_LANZAMIENTOS,
@@ -72,9 +72,9 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({
   const convocatoriaStatusVisuals = useMemo(() => getStatusVisuals(estadoConvocatoria), [estadoConvocatoria]);
 
   // Función para obtener el texto con género
-  const getGenderedText = (masculino: string, femenino: string): string => {
+  const getGenderedText = useCallback((masculino: string, femenino: string): string => {
     return userGender === 'Mujer' ? femenino : masculino;
-  };
+  }, [userGender]);
 
   // Memoización del estado de información
   const statusInfo = useMemo((): StatusInfo => {
@@ -109,7 +109,7 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({
     };
 
     return statusMap[enrollmentState];
-  }, [enrollmentState, estadoConvocatoria, convocatoriaStatusVisuals, userGender, getGenderedText]);
+  }, [enrollmentState, estadoConvocatoria, convocatoriaStatusVisuals, getGenderedText]);
 
   // Componentes internos para mejor organización
   const LoadingSpinner: React.FC<{ variant?: 'light' | 'dark' }> = ({ variant = 'light' }) => (
@@ -143,24 +143,24 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({
     <button
       onClick={() => onInscribir(lanzamiento)}
       disabled={isEnrolling}
-      className={`w-full sm:w-72 font-bold text-sm py-2.5 px-5 rounded-lg transition-all duration-300 ease-in-out shadow-md flex items-center justify-center gap-2.5 group whitespace-nowrap ${
+      className={`relative overflow-hidden w-full sm:w-72 font-bold text-sm py-2.5 px-5 rounded-lg transition-all duration-300 ease-in-out shadow-md flex items-center justify-center gap-2.5 group whitespace-nowrap has-shine-effect ${
         isEnrolling
           ? 'bg-slate-400 text-white cursor-wait'
-          : 'text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-blue-300 focus:ring-offset-2 active:transform active:scale-95'
+          : 'text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-blue-300 focus:ring-offset-2 active:transform active:scale-95 hover:shine-effect'
       }`}
       aria-label={`Postularme para ${nombre}`}
     >
       {isEnrolling ? (
         <>
           <LoadingSpinner variant="light" />
-          <span>Procesando...</span>
+          <span className="relative z-10">Procesando...</span>
         </>
       ) : (
         <>
-          <span className="material-icons !text-lg transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110">
+          <span className="material-icons !text-lg transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110 relative z-10">
             rocket_launch
           </span>
-          <span>Postularme</span>
+          <span className="relative z-10">Postularme</span>
         </>
       )}
     </button>
@@ -187,7 +187,7 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({
     <button
       onClick={() => onVerSeleccionados(lanzamiento)}
       disabled={isVerSeleccionadosLoading}
-      className={`w-full sm:w-72 font-bold text-sm py-2.5 px-5 rounded-lg transition-all duration-300 ease-in-out shadow-md flex items-center justify-center gap-2.5 group whitespace-nowrap ${statusInfo.style} ${statusInfo.hover} hover:shadow-lg hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-offset-2 active:transform active:scale-95`}
+      className={`w-full sm:w-72 font-semibold text-sm py-2.5 px-4 rounded-lg transition-all duration-300 ease-in-out shadow-sm flex items-center justify-center gap-2.5 group whitespace-nowrap ${statusInfo.style} ${statusInfo.hover} hover:shadow-md hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-offset-2 active:transform active:scale-95`}
       aria-label={`Ver seleccionados para ${nombre}`}
     >
       {isVerSeleccionadosLoading ? (
@@ -200,10 +200,10 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({
           <span className="material-icons !text-lg transition-transform duration-200 group-hover:scale-110">
             {statusInfo.icon}
           </span>
-          <span className="font-semibold">{statusInfo.text}</span>
-          <span className="mx-1.5 h-4 w-px bg-current opacity-30" aria-hidden="true" />
-          <span className="font-normal text-sm opacity-90">Ver Lista</span>
-          <span className="material-icons !text-lg opacity-90 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:scale-110">
+          <span>{statusInfo.text}</span>
+          <span className="mx-1 h-4 w-px bg-current opacity-20" aria-hidden="true" />
+          <span className="font-normal text-sm opacity-80">Ver Lista</span>
+          <span className="material-icons !text-lg opacity-80 transition-transform duration-300 group-hover:translate-x-0.5">
             arrow_forward
           </span>
         </>
@@ -212,7 +212,7 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({
   );
 
   const StatusDisplay: React.FC = () => (
-    <div className={`w-full sm:w-72 font-bold text-sm py-2.5 px-5 rounded-lg shadow-md flex items-center justify-center gap-2.5 ${statusInfo.style} cursor-default transition-all duration-200 hover:shadow-lg`}>
+    <div className={`w-full sm:w-72 text-sm py-2.5 px-5 rounded-lg shadow-sm flex items-center justify-center gap-2.5 ${statusInfo.style} cursor-default transition-all duration-200 hover:shadow-md`}>
       <span className="material-icons !text-lg">{statusInfo.icon}</span>
       <span className="font-semibold">{statusInfo.text}</span>
     </div>
@@ -223,24 +223,21 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({
       return <CompletedButton />;
     }
   
-    // Si el usuario no está inscripto y la convocatoria está abierta, puede postularse.
     if (enrollmentState === 'none' && convocatoriaState === 'abierta') {
       return <InscribirButton />;
     }
   
-    // Si la convocatoria está cerrada, todos pueden ver los resultados.
     if (convocatoriaState === 'cerrada') {
       return <VerSeleccionadosButton />;
     }
   
-    // Para todos los demás casos (ya inscripto, no seleccionado, etc.), se muestra el estado actual.
     return <StatusDisplay />;
   };
 
   return (
     <article
       className="group bg-white rounded-2xl shadow-lg shadow-slate-200/40 border border-slate-200/60
-                 transition-all duration-300 ease-in-out hover:shadow-xl hover:shadow-slate-300/50 hover:-translate-y-1 p-6
+                 transition-all duration-300 ease-in-out hover:shadow-xl hover:shadow-blue-500/10 hover:-translate-y-1 p-6
                  focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2"
       style={{ willChange: 'transform, box-shadow' }}
     >

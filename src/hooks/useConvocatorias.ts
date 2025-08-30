@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useModal } from '../contexts/ModalContext';
 import { fetchConvocatoriasData } from '../services/dataService';
 import { createAirtableRecord, updateAirtableRecord } from '../services/airtableService';
-import type { LanzamientoPPS, ConvocatoriaFields } from '../types';
+import type { LanzamientoPPS, ConvocatoriaFields, InformeTask } from '../types';
 import {
     AIRTABLE_TABLE_NAME_CONVOCATORIAS, FIELD_INFORME_SUBIDO_CONVOCATORIAS,
     FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS,
@@ -19,7 +19,10 @@ import {
     FIELD_FECHA_NACIMIENTO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES,
     FIELD_NOMBRE_PPS_LANZAMIENTOS, FIELD_FECHA_INICIO_LANZAMIENTOS, FIELD_FECHA_FIN_LANZAMIENTOS,
     FIELD_DIRECCION_LANZAMIENTOS, FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS, FIELD_ORIENTACION_LANZAMIENTOS,
-    FIELD_HORAS_ACREDITADAS_LANZAMIENTOS, FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS
+    FIELD_HORAS_ACREDITADAS_LANZAMIENTOS, FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS,
+    FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS,
+    AIRTABLE_TABLE_NAME_PRACTICAS,
+    FIELD_NOTA_PRACTICAS,
 } from '../constants';
 
 export const useConvocatorias = (legajo: string, studentAirtableId: string | null, isSuperUserMode: boolean) => {
@@ -78,7 +81,6 @@ export const useConvocatorias = (legajo: string, studentAirtableId: string | nul
     });
 
     const enrollStudent = {
-        // FIX: The spread operator must come before the custom mutate function to ensure it's not overwritten.
         ...enrollmentMutation,
         mutate: (lanzamiento: LanzamientoPPS) => {
             openEnrollmentForm(lanzamiento, async (formData: any) => {
@@ -88,13 +90,82 @@ export const useConvocatorias = (legajo: string, studentAirtableId: string | nul
         },
     };
 
-    const confirmInforme = useMutation({
-        mutationFn: (convocatoriaId: string) => updateAirtableRecord(AIRTABLE_TABLE_NAME_CONVOCATORIAS, convocatoriaId, { [FIELD_INFORME_SUBIDO_CONVOCATORIAS]: true }),
+    const confirmInforme = useMutation<any, Error, InformeTask, { previousConvocatoriasData: any, previousPracticasData: any }>({
+        mutationFn: async (task: InformeTask) => {
+            if (!task.practicaId) {
+                // This case should be rare, but as a safeguard.
+                throw new Error("No se encontró un registro de práctica asociado para actualizar la nota.");
+            }
+            const submissionDate = new Date().toISOString().split('T')[0];
+            const updates = [];
+
+            // 1. Update the Convocatoria record
+            updates.push(
+                updateAirtableRecord(AIRTABLE_TABLE_NAME_CONVOCATORIAS, task.convocatoriaId, {
+                    [FIELD_INFORME_SUBIDO_CONVOCATORIAS]: true,
+                    [FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS]: submissionDate
+                })
+            );
+
+            // 2. Update the Practica record's status (Nota)
+            updates.push(
+                updateAirtableRecord(AIRTABLE_TABLE_NAME_PRACTICAS, task.practicaId, {
+                    [FIELD_NOTA_PRACTICAS]: 'Entregado (sin corregir)'
+                })
+            );
+            
+            return Promise.all(updates);
+        },
+        onMutate: async (task: InformeTask) => {
+            await queryClient.cancelQueries({ queryKey: ['convocatorias', legajo] });
+            await queryClient.cancelQueries({ queryKey: ['practicas', legajo] });
+
+            const previousConvocatoriasData = queryClient.getQueryData(['convocatorias', legajo]);
+            const previousPracticasData = queryClient.getQueryData(['practicas', legajo]);
+            
+            const submissionDate = new Date().toISOString().split('T')[0];
+
+            // Optimistically update convocatorias cache
+            queryClient.setQueryData(['convocatorias', legajo], (oldData: any) => {
+                if (!oldData) return oldData;
+                const newMyEnrollments = oldData.myEnrollments.map((enrollment: any) => 
+                    enrollment.id === task.convocatoriaId
+                        ? { ...enrollment, [FIELD_INFORME_SUBIDO_CONVOCATORIAS]: true, [FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS]: submissionDate }
+                        : enrollment
+                );
+                return { ...oldData, myEnrollments: newMyEnrollments };
+            });
+
+            // Optimistically update practicas cache
+            if (task.practicaId) {
+                queryClient.setQueryData(['practicas', legajo], (oldData: any) => {
+                    if (!oldData) return oldData;
+                    return oldData.map((practica: any) =>
+                        practica.id === task.practicaId
+                            ? { ...practica, fields: { ...practica.fields, [FIELD_NOTA_PRACTICAS]: 'Entregado (sin corregir)' } }
+                            : practica
+                    );
+                });
+            }
+
+            return { previousConvocatoriasData, previousPracticasData };
+        },
         onSuccess: () => {
             showModal('Confirmación Exitosa', 'Se ha registrado la entrega de tu informe.');
-            queryClient.invalidateQueries({ queryKey: ['convocatorias', legajo] });
         },
-        onError: () => showModal('Error', 'No se pudo confirmar la entrega. Inténtalo de nuevo.'),
+        onError: (err, variables, context) => {
+            if (context?.previousConvocatoriasData) {
+                queryClient.setQueryData(['convocatorias', legajo], context.previousConvocatoriasData);
+            }
+            if (context?.previousPracticasData) {
+                queryClient.setQueryData(['practicas', legajo], context.previousPracticasData);
+            }
+            showModal('Error', 'No se pudo confirmar la entrega. Se han revertido los cambios. Inténtalo de nuevo.');
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ['convocatorias', legajo] });
+            queryClient.invalidateQueries({ queryKey: ['practicas', legajo] });
+        },
     });
 
     return {

@@ -101,6 +101,7 @@ export interface ConvocatoriaFields {
   'Teléfono'?: string;
   'Legajo'?: number;
   'Informe Subido'?: boolean;
+  'Fecha_Entrega_Informe'?: string;
 }
 
 export interface SolicitudPPS extends SolicitudPPSFields {
@@ -180,11 +181,13 @@ export interface AirtableErrorResponse {
 // For the new "Informes" feature
 export interface InformeTask {
     convocatoriaId: string;
+    practicaId?: string;
     ppsName: string;
     informeLink: string;
     fechaFinalizacion: string;
     informeSubido: boolean;
     nota?: string;
+    fechaEntregaInforme?: string;
 }
 
 // For the new "Corrección de Informes" feature
@@ -199,6 +202,7 @@ export interface InformeCorreccionStudent {
   orientacion?: string;
   fechaInicio?: string;
   fechaFinalizacionPPS?: string;
+  fechaEntregaInforme?: string;
 }
 
 export interface InformeCorreccionPPS {

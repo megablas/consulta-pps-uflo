@@ -29,13 +29,14 @@ import {
   FIELD_FECHA_FIN_CONVOCATORIAS,
   FIELD_FECHA_FIN_PRACTICAS,
   FIELD_HORAS_ACREDITADAS_LANZAMIENTOS,
+  FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS,
 } from '../constants';
 import Loader from './Loader';
 import EmptyState from './EmptyState';
 import Toast from './Toast';
 import InformeCorreccionCard from './InformeCorreccionCard';
 import CorreccionRapidaView from './CorreccionRapidaView';
-import { normalizeStringForComparison, addBusinessDays, parseToUTCDate } from '../utils/formatters';
+import { normalizeStringForComparison, formatDate, parseToUTCDate } from '../utils/formatters';
 import { useAuth } from '../contexts/AuthContext';
 
 type LoadingState = 'initial' | 'loading' | 'loaded' | 'error';
@@ -223,7 +224,8 @@ const CorreccionPanel: React.FC = () => {
           lanzamientoId: lanzamiento.id,
           orientacion: lanzamiento.fields[FIELD_ORIENTACION_LANZAMIENTOS],
           fechaInicio: convRecord.fields[FIELD_FECHA_INICIO_CONVOCATORIAS],
-          fechaFinalizacionPPS: convRecord.fields[FIELD_FECHA_FIN_CONVOCATORIAS]
+          fechaFinalizacionPPS: convRecord.fields[FIELD_FECHA_FIN_CONVOCATORIAS],
+          fechaEntregaInforme: convRecord.fields[FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS],
         });
       }
       
@@ -313,7 +315,7 @@ const CorreccionPanel: React.FC = () => {
     }
 
     setUpdatingNotaId(null);
-}, [allPpsGroups]);
+}, []);
   
   const handleSelectionChange = useCallback((lanzamientoId: string, practicaId: string) => {
       setSelectedStudents(prev => {
@@ -396,8 +398,16 @@ const CorreccionPanel: React.FC = () => {
     for (const group of filteredGroups) {
       for (const student of group.students) {
         if (student.informeSubido && (student.nota === 'Sin calificar' || student.nota === 'Entregado (sin corregir)')) {
-            const finalizacionDate = group.fechaFinalizacion ? parseToUTCDate(group.fechaFinalizacion) : undefined;
-            const deadline = finalizacionDate ? addBusinessDays(finalizacionDate, 30) : undefined;
+            const baseDateForDeadline = student.fechaEntregaInforme 
+                ? parseToUTCDate(student.fechaEntregaInforme) 
+                : (student.fechaFinalizacionPPS ? parseToUTCDate(student.fechaFinalizacionPPS) : undefined);
+
+            let deadline: Date | undefined;
+            if (baseDateForDeadline) {
+                deadline = new Date(baseDateForDeadline.getTime());
+                deadline.setUTCDate(deadline.getUTCDate() + 30);
+            }
+            
             flatList.push({ 
                 ...student, 
                 ppsName: group.ppsName, 

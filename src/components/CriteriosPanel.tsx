@@ -4,8 +4,24 @@ import ProgressBar from './ProgressBar';
 import RotationTracker from './RotationTracker';
 import ProgressCircle from './ProgressCircle';
 import OrientacionSelector from './OrientacionSelector';
-import CertificationButton from './CertificationButton';
 import type { CriteriosCalculados, Orientacion } from '../types';
+
+// Componente mejorado para el botón de certificación, ahora definido localmente.
+const CertificationButton: React.FC = React.memo(() => (
+  <a
+    href="https://airtable.com/appBY8PYhPZ1X2ka1/paglLBxubDedzl1qz/form"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="group relative overflow-hidden inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-sm py-3 px-6 rounded-xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-300 shadow-lg hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-1 active:transform active:scale-95 has-shine-effect hover:shine-effect"
+    aria-label="Solicitar acreditación final - Se abrirá en nueva ventana"
+  >
+    <span className="material-icons !text-lg transition-transform duration-300 relative z-10 group-hover:rotate-12 group-hover:scale-110">school</span>
+    <span className="relative z-10 tracking-wide">Solicitar Acreditación</span>
+    <span className="material-icons !text-sm opacity-80 transition-transform duration-300 relative z-10 group-hover:translate-x-0.5">open_in_new</span>
+  </a>
+));
+CertificationButton.displayName = 'CertificationButton';
+
 
 interface CriteriosPanelProps {
   criterios: CriteriosCalculados;
@@ -14,9 +30,7 @@ interface CriteriosPanelProps {
   showSaveConfirmation: boolean;
 }
 
-// --- Componente Principal Mejorado ---
 const CriteriosPanel: React.FC<CriteriosPanelProps> = ({ criterios, selectedOrientacion, handleOrientacionChange, showSaveConfirmation }) => {
-
   const todosLosCriteriosCumplidos = useMemo(() => 
     criterios.cumpleHorasTotales && criterios.cumpleRotacion && criterios.cumpleHorasOrientacion,
     [criterios]
@@ -26,7 +40,7 @@ const CriteriosPanel: React.FC<CriteriosPanelProps> = ({ criterios, selectedOrie
     <section className="animate-fade-in-up">
       <div className={`relative bg-gradient-to-br from-white to-slate-50/70 backdrop-blur-xl p-6 sm:p-8 rounded-3xl border shadow-2xl transition-all duration-700 grid grid-cols-1 lg:grid-cols-5 gap-8 overflow-hidden ${
         todosLosCriteriosCumplidos 
-          ? 'border-emerald-300/50 shadow-emerald-500/10' 
+          ? 'border-emerald-300/50 animate-pulse-glow-emerald' 
           : 'border-slate-200 shadow-slate-500/10'
       }`}>
         
@@ -38,11 +52,11 @@ const CriteriosPanel: React.FC<CriteriosPanelProps> = ({ criterios, selectedOrie
               {[...Array(12)].map((_, i) => (
                 <div
                   key={i}
-                  className="absolute w-1 h-1 bg-gradient-to-r from-sky-400 to-emerald-400 rounded-full animate-pulse"
+                  className="absolute w-1.5 h-1.5 bg-gradient-to-r from-sky-400 to-emerald-400 rounded-full animate-particle-fade"
                   style={{
                     left: `${Math.random() * 100}%`,
                     top: `${Math.random() * 100}%`,
-                    animationDelay: `${i * 0.4}s`,
+                    animationDelay: `${i * 0.3}s`,
                     animationDuration: `${2 + Math.random() * 2}s`
                   }}
                 />

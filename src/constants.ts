@@ -97,6 +97,8 @@ export const FIELD_CORREO_CONVOCATORIAS = 'Correo'; // Lookup
 export const FIELD_FECHA_NACIMIENTO_CONVOCATORIAS = 'Fecha de Nacimiento'; // Lookup
 export const FIELD_TELEFONO_CONVOCATORIAS = 'Teléfono'; // Lookup
 export const FIELD_INFORME_SUBIDO_CONVOCATORIAS = 'Informe Subido';
+export const FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS = 'Fecha_Entrega_Informe';
+
 
 // --- Academic criteria constants ---
 export const HORAS_OBJETIVO_TOTAL = 250;
