@@ -16,7 +16,6 @@ import {
   normalizeStringForComparison
 } from '../utils/formatters';
 import EmptyState from './EmptyState';
-import { useData } from '../contexts/DataContext';
 
 const NOTA_OPTIONS = ['Sin calificar', 'Entregado (sin corregir)', 'No Entregado', 'Desaprobado', '4', '5', '6', '7', '8', '9', '10'];
 
@@ -34,6 +33,10 @@ const notaColors: Record<string, string> = {
   'Sin calificar': 'bg-slate-100 text-slate-700'
 };
 
+interface PracticasTableProps {
+    practicas: Practica[];
+    handleNotaChange: (practicaId: string, nota: string, convocatoriaId?: string) => void;
+}
 
 const SortableHeader: React.FC<{
   label: string;
@@ -65,8 +68,7 @@ const SortableHeader: React.FC<{
   );
 };
 
-const PracticasTable: React.FC = () => {
-  const { practicas, handleNotaChange } = useData();
+const PracticasTable: React.FC<PracticasTableProps> = ({ practicas, handleNotaChange }) => {
   const [sortConfig, setSortConfig] = useState<{ key: string | null; direction: 'ascending' | 'descending' }>({ key: 'fechaInicio', direction: 'descending' });
   const [savingNotaId, setSavingNotaId] = useState<string | null>(null);
   const [justUpdatedPracticaId, setJustUpdatedPracticaId] = useState<string | null>(null);

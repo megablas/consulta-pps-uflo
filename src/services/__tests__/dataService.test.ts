@@ -1,6 +1,6 @@
 import { describe, it, expect, jest } from '@jest/globals';
 import * as airtableService from '../airtableService';
-import { getDashboardData, fetchSeleccionados } from '../dataService';
+import { fetchSeleccionados } from '../dataService';
 import {
   AIRTABLE_TABLE_NAME_ESTUDIANTES,
   AIRTABLE_TABLE_NAME_PRACTICAS,
@@ -46,49 +46,6 @@ const mockLanzamientos: LanzamientoPPSFields[] = [
 const mockConvocatorias: ConvocatoriaFields[] = [
     { [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS]: ['lanz1'], [FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS]: 'Seleccionado', [FIELD_INFORME_SUBIDO_CONVOCATORIAS]: true }
 ];
-
-describe('Data Service - getDashboardData', () => {
-    it('should fetch and process data correctly for a student', async () => {
-        // Configurar mocks para devolver datos simulados
-        mockedAirtableService.fetchAllAirtableData.mockImplementation(async (tableName) => {
-            switch (tableName) {
-                case AIRTABLE_TABLE_NAME_ESTUDIANTES:
-                    return { records: [{ id: 'stu1', fields: mockStudent }], error: null } as any;
-                case AIRTABLE_TABLE_NAME_PRACTICAS:
-                    return { records: mockPracticas.map((p, i) => ({ id: `p${i}`, fields: p })), error: null } as any;
-                case AIRTABLE_TABLE_NAME_PPS:
-                    return { records: [], error: null } as any;
-                case AIRTABLE_TABLE_NAME_CONVOCATORIAS:
-                     return { records: mockConvocatorias.map((c, i) => ({ id: `c${i}`, fields: c })), error: null } as any;
-                case AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS:
-                     return { records: mockLanzamientos.map((l, i) => ({ id: `l${i}`, fields: l })), error: null } as any;
-                default:
-                    return { records: [], error: null } as any;
-            }
-        });
-
-        const data = await getDashboardData('12345');
-        
-        // Verificar que los datos del estudiante se procesaron
-        expect(data.studentAirtableId).toBe('stu1');
-        expect(data.studentDetails).toEqual(mockStudent);
-        expect(data.practicas.length).toBe(3);
-
-        // Verificar los criterios calculados
-        expect(data.criterios.horasTotales).toBe(255); // 100 + 80 + 75
-        expect(data.criterios.cumpleHorasTotales).toBe(true);
-        expect(data.criterios.horasOrientacionElegida).toBe(100);
-        expect(data.criterios.cumpleHorasOrientacion).toBe(true);
-        expect(data.criterios.orientacionesCursadasCount).toBe(3);
-        expect(data.criterios.cumpleRotacion).toBe(true);
-
-        // Verificar las tareas de informe
-        expect(data.informeTasks.length).toBe(1);
-        expect(data.informeTasks[0].informeSubido).toBe(true);
-        expect(data.informeTasks[0].ppsName).toBe('PPS Test');
-    });
-});
-
 
 describe('Data Service - fetchSeleccionados', () => {
   it('should robustly fetch and filter selected students by a specific lanzamientoId', async () => {

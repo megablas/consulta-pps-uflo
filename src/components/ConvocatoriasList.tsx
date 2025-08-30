@@ -1,6 +1,6 @@
 import React from 'react';
 import { useMutation } from '@tanstack/react-query';
-import type { Convocatoria, LanzamientoPPS } from '../types';
+import type { Convocatoria, LanzamientoPPS, Practica, EstudianteFields } from '../types';
 import ConvocatoriaCard from './ConvocatoriaCard';
 import { 
     FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, 
@@ -12,7 +12,6 @@ import {
     FIELD_LANZAMIENTO_VINCULADO_PRACTICAS
 } from '../constants';
 import EmptyState from './EmptyState';
-import { useData } from '../contexts/DataContext';
 import { useModal } from '../contexts/ModalContext';
 import { normalizeStringForComparison } from '../utils/formatters';
 import { fetchSeleccionados } from '../services/dataService';
@@ -20,11 +19,13 @@ import { fetchSeleccionados } from '../services/dataService';
 interface ConvocatoriasListProps {
   lanzamientos: LanzamientoPPS[];
   myEnrollments: Convocatoria[];
+  practicas: Practica[];
+  student: EstudianteFields | null;
+  onInscribir: (lanzamiento: LanzamientoPPS) => void;
 }
 
-const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myEnrollments }) => {
-    const { studentAirtableId, practicas } = useData();
-    const { enrollingId, openEnrollmentForm, openSeleccionadosModal, showModal } = useModal();
+const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myEnrollments, practicas, student, onInscribir }) => {
+    const { openSeleccionadosModal, showModal } = useModal();
     
     const seleccionadosMutation = useMutation({
         mutationFn: (lanzamiento: LanzamientoPPS) => fetchSeleccionados(lanzamiento.id),
@@ -60,12 +61,9 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myE
             </div>
             <div className="space-y-5">
               {lanzamientos.map((lanzamiento) => {
-                const enrollment = studentAirtableId
-                    ? myEnrollments.find(e => (e[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || []).includes(lanzamiento.id))
-                    : undefined;
+                const enrollment = myEnrollments.find(e => (e[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || []).includes(lanzamiento.id));
             
                 const enrollmentStatus = enrollment ? enrollment[FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS] : null;
-                const isEnrolling = enrollingId === lanzamiento.id;
                 
                 const isCompleted = practicas.some(practica => {
                     // New, preferred method: check for a direct link
@@ -95,11 +93,11 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myE
                       key={lanzamiento.id} 
                       lanzamiento={lanzamiento}
                       enrollmentStatus={enrollmentStatus}
-                      isEnrolling={isEnrolling}
-                      isVerSeleccionadosLoading={seleccionadosMutation.isPending && seleccionadosMutation.variables?.id === lanzamiento.id}
-                      onInscribir={openEnrollmentForm}
+                      onInscribir={onInscribir}
                       onVerSeleccionados={(l) => seleccionadosMutation.mutate(l)}
+                      isVerSeleccionadosLoading={seleccionadosMutation.isPending && seleccionadosMutation.variables?.id === lanzamiento.id}
                       isCompleted={isCompleted}
+                      userGender={student?.['Género']}
                   />
                 );
               })}

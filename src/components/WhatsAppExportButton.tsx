@@ -1,5 +1,4 @@
 import React from 'react';
-import { useData } from '../contexts/DataContext';
 import { useModal } from '../contexts/ModalContext';
 import { 
   FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS, 
@@ -7,16 +6,18 @@ import {
   FIELD_HORAS_PRACTICAS,
   FIELD_LEGAJO_ESTUDIANTES
 } from '../constants';
+import type { Practica, CriteriosCalculados, Orientacion, EstudianteFields } from '../types';
 
-const WhatsAppExportButton: React.FC = () => {
-  const { 
-    practicas, 
-    criterios, 
-    isLoading, 
-    selectedOrientacion, 
-    studentNameForPanel,
-    studentDetails 
-  } = useData();
+interface WhatsAppExportButtonProps {
+    practicas: Practica[];
+    criterios: CriteriosCalculados;
+    isLoading: boolean;
+    selectedOrientacion: Orientacion | "";
+    studentNameForPanel: string;
+    studentDetails: EstudianteFields | null;
+}
+
+const WhatsAppExportButton: React.FC<WhatsAppExportButtonProps> = ({ practicas, criterios, isLoading, selectedOrientacion, studentNameForPanel, studentDetails }) => {
   const { showModal } = useModal();
 
   const handleExport = () => {

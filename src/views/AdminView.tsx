@@ -1,29 +1,22 @@
 import React, { useState, useCallback } from 'react';
 import AdminSearch from '../components/AdminSearch';
 import SeguroGenerator from '../components/SeguroGenerator';
-import Dashboard from '../components/Dashboard';
-import { DataProvider } from '../contexts/DataContext';
 import { useModal } from '../contexts/ModalContext';
 import Tabs from '../components/Tabs';
 import Card from '../components/Card';
 import ConvocatoriaManager from '../components/ConvocatoriaManager';
 import CorreccionPanel from '../components/CorreccionPanel';
-import type { TabId } from '../types';
 import ConvocatoriaStatusManager from '../components/ConvocatoriaStatusManager';
 import RepitentesPanel from '../components/RepitentesPanel';
+import StudentDashboard from './StudentDashboard'; // Import the new reusable component
+import type { AuthUser } from '../contexts/AuthContext';
+
 
 interface StudentTab {
     id: string; // legajo
     legajo: string;
     nombre: string;
 }
-
-const StudentDashboard: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<TabId>('convocatorias');
-    // The Dashboard for a student in the admin view is self-contained.
-    // Its tab state doesn't need to be shared with other components like the footer.
-    return <Dashboard activeTab={activeTab} onTabChange={setActiveTab} showExportButton />;
-};
 
 const AdminView: React.FC = () => {
     const [studentTabs, setStudentTabs] = useState<StudentTab[]>([]);
@@ -106,9 +99,11 @@ const AdminView: React.FC = () => {
             icon: 'school',
             isClosable: true,
             content: (
-                <DataProvider key={student.legajo} user={student}>
-                    <StudentDashboard />
-                </DataProvider>
+                <StudentDashboard 
+                    key={student.legajo} 
+                    user={student as AuthUser} 
+                    showExportButton 
+                />
             )
         }))
     ];
