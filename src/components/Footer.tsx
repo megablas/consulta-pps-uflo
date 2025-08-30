@@ -48,6 +48,14 @@ const noticeConfig: Partial<Record<TabId, NoticeConfig>> = {
     mailToSubject: 'Solicitud de Corrección de Datos - Mi Panel Académico',
     mailToBody: 'Hola,\n\nSolicito una corrección en mis datos. Adjunto la documentación respaldatoria (ej. planilla de asistencia).\n\n- Nombre Completo: [Escribe tu nombre]\n- Legajo: [Escribe tu legajo]\n\nGracias.',
     buttonText: 'Enviar correo para corrección'
+  },
+  profile: {
+    title: 'Sobre tus Datos Personales',
+    text: 'Mantener tus datos de contacto actualizados es fundamental para que podamos comunicarnos contigo sobre el estado de tus PPS, nuevas convocatorias y fechas importantes. Si detectas algún error, no dudes en solicitar una corrección.',
+    icon: 'contact_mail',
+    mailToSubject: 'Solicitud de Actualización de Datos - Mi Panel Académico',
+    mailToBody: 'Hola,\n\nTengo una consulta o solicitud sobre mis datos personales.\n\n- Nombre Completo: [Escribe tu nombre]\n- Legajo: [Escribe tu legajo]\n- Mi consulta es: [Describe tu duda]\n\nGracias.',
+    buttonText: 'Consultar sobre mis datos'
   }
 };
 

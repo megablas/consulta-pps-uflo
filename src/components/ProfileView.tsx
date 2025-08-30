@@ -1,0 +1,86 @@
+import React from 'react';
+import Card from './Card';
+import { EstudianteFields } from '../types';
+import {
+  FIELD_NOMBRE_ESTUDIANTES,
+  FIELD_LEGAJO_ESTUDIANTES,
+  FIELD_DNI_ESTUDIANTES,
+  FIELD_CORREO_ESTUDIANTES,
+  FIELD_TELEFONO_ESTUDIANTES,
+} from '../constants';
+import { SkeletonBox } from './Skeletons';
+
+interface ProfileViewProps {
+  studentDetails: EstudianteFields | null;
+  isLoading: boolean;
+}
+
+const InfoRow: React.FC<{ icon: string; label: string; value?: string | number | null }> = ({ icon, label, value }) => {
+  if (!value) return null;
+  return (
+    <div className="flex items-start gap-4 py-4">
+      <div className="flex-shrink-0 bg-slate-100 text-slate-500 rounded-full h-10 w-10 flex items-center justify-center">
+        <span className="material-icons !text-xl">{icon}</span>
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-slate-500">{label}</p>
+        <p className="text-base font-medium text-slate-800">{value}</p>
+      </div>
+    </div>
+  );
+};
+
+const ProfileViewSkeleton: React.FC = () => (
+    <div className="space-y-4">
+        <SkeletonBox className="h-12 w-full" />
+        <SkeletonBox className="h-12 w-full" />
+        <SkeletonBox className="h-12 w-full" />
+    </div>
+);
+
+
+const ProfileView: React.FC<ProfileViewProps> = ({ studentDetails, isLoading }) => {
+  if (isLoading || !studentDetails) {
+    return <ProfileViewSkeleton />;
+  }
+
+  const {
+    [FIELD_NOMBRE_ESTUDIANTES]: nombre,
+    [FIELD_LEGAJO_ESTUDIANTES]: legajo,
+    [FIELD_DNI_ESTUDIANTES]: dni,
+    [FIELD_CORREO_ESTUDIANTES]: correo,
+    [FIELD_TELEFONO_ESTUDIANTES]: telefono,
+  } = studentDetails;
+
+  const mailToSubject = `Solicitud de Actualización de Datos - Legajo ${legajo}`;
+  const mailToBody = `Hola,\n\nQuisiera solicitar una actualización de mis datos personales.\n\n- Nombre Completo: ${nombre}\n- Legajo: ${legajo}\n\nDatos a actualizar (por favor, completar):\n- DNI: \n- Correo Electrónico: \n- Teléfono: \n\nAdjunto la documentación respaldatoria si es necesario.\n\nGracias.`;
+  const mailToLink = `mailto:blas.rivera@uflouniversidad.edu.ar?subject=${encodeURIComponent(mailToSubject)}&body=${encodeURIComponent(mailToBody)}`;
+
+  return (
+    <Card
+        icon="badge"
+        title="Mis Datos Personales"
+        description="Aquí puedes revisar la información de contacto que tenemos registrada. Si algo es incorrecto, por favor solicita una actualización."
+    >
+        <div className="mt-6 border-t border-slate-200 divide-y divide-slate-200">
+            <InfoRow icon="fingerprint" label="DNI" value={dni} />
+            <InfoRow icon="email" label="Correo Electrónico" value={correo} />
+            <InfoRow icon="phone" label="Teléfono" value={telefono} />
+        </div>
+        <div className="mt-8 pt-6 border-t border-slate-200 text-center">
+             <a
+              href={mailToLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative overflow-hidden inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-bold text-sm py-3 px-6 rounded-xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-300 shadow-lg hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-1 active:transform active:scale-95"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+              <span className="material-icons !text-lg transition-transform duration-300 relative z-10">edit</span>
+              <span className="relative z-10 tracking-wide">Solicitar Actualización de Datos</span>
+            </a>
+        </div>
+    </Card>
+  );
+};
+
+export default ProfileView;

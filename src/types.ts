@@ -195,7 +195,6 @@ export interface InformeCorreccionStudent {
   practicaId?: string;
   informeSubido: boolean;
   nota: string;
-  // FIX: Added missing properties to align with usage in CorreccionPanel.tsx.
   lanzamientoId: string;
   orientacion?: string;
   fechaInicio?: string;
@@ -219,7 +218,7 @@ export interface FlatCorreccionStudent extends InformeCorreccionStudent {
 }
 
 // Tab identifier for the student dashboard
-export type TabId = 'convocatorias' | 'informes' | 'solicitudes' | 'practicas';
+export type TabId = 'convocatorias' | 'informes' | 'solicitudes' | 'practicas' | 'profile';
 
 // Gender identifier for personalization
 export type UserGender = 'masculino' | 'femenino' | 'neutro';

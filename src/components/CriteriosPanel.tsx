@@ -64,7 +64,7 @@ const CriteriosPanel: React.FC<CriteriosPanelProps> = ({ criterios, selectedOrie
             </div>
             
             <p className="text-slate-700 text-lg leading-relaxed mb-4">
-              Has completado {criterios.cumpleHorasTotales ? 'exitosamente' : 'un total de'} <strong className="font-black text-blue-600 text-xl">{Math.round(criterios.horasTotales)}</strong> de <strong className="font-black text-slate-800 text-xl">{HORAS_OBJETIVO_TOTAL}</strong> horas requeridas.
+              Has completado {todosLosCriteriosCumplidos ? 'exitosamente' : 'un total de'} <strong className="font-black text-blue-600 text-xl">{Math.round(criterios.horasTotales)}</strong> de <strong className="font-black text-slate-800 text-xl">{HORAS_OBJETIVO_TOTAL}</strong> horas requeridas.
             </p>
             
             {todosLosCriteriosCumplidos && (

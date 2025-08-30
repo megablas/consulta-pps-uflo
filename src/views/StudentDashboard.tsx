@@ -5,7 +5,6 @@ import SolicitudesList from '../components/SolicitudesList';
 import EmptyState from '../components/EmptyState';
 import Tabs from '../components/Tabs';
 import Card from '../components/Card';
-import { CriteriosPanelSkeleton, TableSkeleton } from '../components/Skeletons';
 import WelcomeBanner from '../components/WelcomeBanner';
 import ConvocatoriasList from '../components/ConvocatoriasList';
 import InformesList from '../components/InformesList';
@@ -21,6 +20,7 @@ import { useStudentPracticas } from '../hooks/useStudentPracticas';
 import { useStudentSolicitudes } from '../hooks/useStudentSolicitudes';
 import { useConvocatorias } from '../hooks/useConvocatorias';
 import { processInformeTasks } from '../services/dataService';
+import ProfileView from '../components/ProfileView';
 
 interface StudentDashboardProps {
   user: AuthUser;
@@ -60,7 +60,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab = '
   const informeTasks = useMemo(() => processInformeTasks(myEnrollments, allLanzamientos, practicas), [myEnrollments, allLanzamientos, practicas]);
 
   // --- MUTATION HANDLERS ---
-  const handleOrientationChange = (orientacion: Orientacion | "") => {
+  // FIX: Renamed function to match the prop name expected by CriteriosPanel.
+  const handleOrientacionChange = (orientacion: Orientacion | "") => {
     updateOrientation.mutate(orientacion, {
       onSuccess: () => {
         setShowSaveConfirmation(true);
@@ -73,18 +74,32 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab = '
     updateNota.mutate({ practicaId, nota, convocatoriaId });
   };
   
-  const studentDataTabs = useMemo(() => [
-    { id: 'convocatorias' as TabId, label: `Convocatorias`, icon: 'campaign', content: <ConvocatoriasList lanzamientos={lanzamientos} myEnrollments={myEnrollments} practicas={practicas} student={studentDetails} onInscribir={enrollStudent.mutate} />, badge: lanzamientos.length > 0 ? lanzamientos.length : undefined },
-    { id: 'informes' as TabId, label: `Informes`, icon: 'assignment_turned_in', content: <InformesList tasks={informeTasks} onConfirmar={confirmInforme.mutate} />, badge: informeTasks.length > 0 ? informeTasks.length : undefined },
-    { id: 'solicitudes' as TabId, label: `Mis Solicitudes`, icon: 'list_alt', content: <SolicitudesList solicitudes={solicitudes} />, badge: solicitudes.length > 0 ? solicitudes.length : undefined },
-    { id: 'practicas' as TabId, label: `Mis Prácticas`, icon: 'work_history', content: <PracticasTable practicas={practicas} handleNotaChange={handleNotaChange} />, badge: practicas.length > 0 ? practicas.length : undefined }
-  ], [solicitudes, practicas, lanzamientos, myEnrollments, informeTasks, studentDetails, confirmInforme.mutate, handleNotaChange, enrollStudent.mutate]);
+  const studentDataTabs = useMemo(() => {
+    const tabs = [
+      { id: 'convocatorias' as TabId, label: `Convocatorias`, icon: 'campaign', content: <ConvocatoriasList lanzamientos={lanzamientos} myEnrollments={myEnrollments} practicas={practicas} student={studentDetails} onInscribir={enrollStudent.mutate} />, badge: lanzamientos.length > 0 ? lanzamientos.length : undefined },
+      { id: 'informes' as TabId, label: `Informes`, icon: 'assignment_turned_in', content: <InformesList tasks={informeTasks} onConfirmar={confirmInforme.mutate} />, badge: informeTasks.length > 0 ? informeTasks.length : undefined },
+      { id: 'solicitudes' as TabId, label: `Mis Solicitudes`, icon: 'list_alt', content: <SolicitudesList solicitudes={solicitudes} />, badge: solicitudes.length > 0 ? solicitudes.length : undefined },
+      { id: 'practicas' as TabId, label: `Mis Prácticas`, icon: 'work_history', content: <PracticasTable practicas={practicas} handleNotaChange={handleNotaChange} />, badge: practicas.length > 0 ? practicas.length : undefined }
+    ];
+
+    // Only add the profile tab for the student's own view, not for the admin's preview panel.
+    if (!showExportButton) {
+        tabs.push({
+            id: 'profile' as TabId,
+            label: 'Mi Perfil',
+            icon: 'person',
+            content: <ProfileView studentDetails={studentDetails} isLoading={isStudentLoading} />,
+            badge: undefined
+        });
+    }
+
+    return tabs;
+  }, [solicitudes, practicas, lanzamientos, myEnrollments, informeTasks, studentDetails, confirmInforme.mutate, handleNotaChange, enrollStudent.mutate, showExportButton, isStudentLoading]);
   
   const hasData = useMemo(() => practicas.length > 0 || solicitudes.length > 0 || lanzamientos.length > 0 || informeTasks.length > 0, [practicas, solicitudes, lanzamientos, informeTasks]);
   const showEmptyState = useMemo(() => !isLoading && !hasData && isSuperUserMode, [isLoading, hasData, isSuperUserMode]);
 
   // --- RENDER LOGIC ---
-  // FIX: Replaced complex, broken loading condition with a simpler, correct one.
   if (isLoading) return <DashboardLoadingSkeleton />;
   if (error) return <ErrorState error={error.message} onRetry={refetchAll} />;
 
@@ -92,7 +107,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab = '
     return (
       <div className="space-y-8 animate-fade-in-up">
         <WelcomeBanner studentName={studentNameForPanel} studentDetails={studentDetails} isLoading={false} />
-        <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientationChange} showSaveConfirmation={showSaveConfirmation} />
+        <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
         <Card className="border-slate-300/50 bg-slate-50/30">
           <EmptyState icon="search_off" title="Sin Resultados" message="No se encontró información de prácticas o solicitudes para este estudiante." action={<button onClick={refetchAll} className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-300 hover:scale-105">Actualizar Datos</button>} />
         </Card>
@@ -104,7 +119,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab = '
   return (
     <div className="space-y-8 animate-fade-in-up">
       <WelcomeBanner studentName={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />
-      <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientationChange} showSaveConfirmation={showSaveConfirmation} />
+      <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
       {hasData && (
         <Card>
           <Tabs
