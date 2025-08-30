@@ -179,8 +179,8 @@ const PracticasTable: React.FC<PracticasTableProps> = ({ practicas, handleNotaCh
               return (
                 <tr 
                   key={practica.id} 
-                  className={`transition-all duration-300 odd:bg-white even:bg-slate-50/70 hover:bg-blue-50 hover:shadow-md hover:relative hover:z-10 ${
-                    justUpdatedPracticaId === practica.id ? '!bg-emerald-50' : ''
+                  className={`transition-all duration-300 odd:bg-white even:bg-slate-50/70 hover:bg-blue-50 hover:shadow-lg hover:ring-2 hover:ring-blue-200/50 hover:relative hover:z-10 ${
+                    justUpdatedPracticaId === practica.id ? 'animate-flash-green' : ''
                   }`}
                 >
                   <td className="p-4 align-middle text-slate-900 font-semibold break-words text-left">{institucion || 'N/A'}</td>

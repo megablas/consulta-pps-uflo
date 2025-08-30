@@ -5,7 +5,7 @@ import EmptyState from './EmptyState';
 
 interface InformesListProps {
   tasks: InformeTask[];
-  onConfirmar: (convocatoriaId: string) => void;
+  onConfirmar: (task: InformeTask) => void;
 }
 
 const InformesList: React.FC<InformesListProps> = ({ tasks, onConfirmar }) => {

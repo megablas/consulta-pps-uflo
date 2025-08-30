@@ -11,7 +11,7 @@ const ProgressCircle: React.FC<ProgressCircleProps> = React.memo(({
   value, 
   max, 
   size = 180, 
-  strokeWidth = 16,
+  strokeWidth = 18,
 }) => {
   const percentage = max > 0 ? Math.max(0, Math.min((value / max) * 100, 100)) : 0;
   const radius = (size - strokeWidth) / 2;
@@ -32,10 +32,10 @@ const ProgressCircle: React.FC<ProgressCircleProps> = React.memo(({
       aria-valuemax={max}
       aria-label={`Progreso total: ${Math.round(percentage)}% completado`}
     >
-      <div className={`absolute inset-0 rounded-full transition-all duration-700 ${isComplete ? 'animate-pulse-glow' : ''}`} />
+      <div className={`absolute inset-0 rounded-full transition-all duration-700 ${isComplete ? 'animate-pulse-glow-emerald' : ''}`} />
       
       <svg 
-        className="w-full h-full transform -rotate-90 relative z-10 transition-transform duration-300 group-hover:scale-[1.02]"
+        className="w-full h-full transform -rotate-90 relative z-10 transition-transform duration-300 group-hover:scale-[1.03]"
         viewBox={`0 0 ${size} ${size}`}
       >
         <defs>
@@ -47,8 +47,8 @@ const ProgressCircle: React.FC<ProgressCircleProps> = React.memo(({
             <stop offset="0%" stopColor="var(--gradient-complete-from)" />
             <stop offset="100%" stopColor="var(--gradient-complete-to)" />
           </linearGradient>
-          <filter id="shadow">
-            <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.2" />
+          <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="rgb(var(--color-primary) / 0.2)" />
           </filter>
         </defs>
 
@@ -60,7 +60,7 @@ const ProgressCircle: React.FC<ProgressCircleProps> = React.memo(({
           r={radius}
           cx={size / 2}
           cy={size / 2}
-          opacity="0.5"
+          opacity="0.7"
         />
 
         <circle
@@ -74,13 +74,13 @@ const ProgressCircle: React.FC<ProgressCircleProps> = React.memo(({
           r={radius}
           cx={size / 2}
           cy={size / 2}
-          filter="url(#shadow)"
+          style={{ filter: 'url(#shadow)' }}
         />
       </svg>
       
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-20">
-        <span className={`text-5xl font-black tracking-tight drop-shadow-sm ${isComplete ? 'text-emerald-600' : 'text-blue-600'}`}>
-          {Math.round(percentage)}%
+        <span className={`text-6xl font-black tracking-tighter drop-shadow-sm transition-colors duration-500 ${isComplete ? 'text-emerald-600' : 'text-blue-600'}`}>
+          {Math.round(percentage)}<span className="text-4xl opacity-50">%</span>
         </span>
         <span className="text-sm font-semibold text-slate-500 -mt-1 tracking-wide">
           {Math.round(value)} / {max} hs

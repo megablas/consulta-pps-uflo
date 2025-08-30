@@ -17,7 +17,8 @@ import {
   FIELD_GENERO_ESTUDIANTES,
   FIELD_HORARIO_FORMULA_CONVOCATORIAS,
   FIELD_NOMBRE_ESTUDIANTES,
-  FIELD_LANZAMIENTO_VINCULADO_PRACTICAS
+  FIELD_LANZAMIENTO_VINCULADO_PRACTICAS,
+  FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS
 } from '../constants';
 import { normalizeStringForComparison, parseToUTCDate } from '../utils/formatters';
 
@@ -78,7 +79,12 @@ export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: 
     )`;
 
   const [convocatoriasRes, lanzamientosRes] = await Promise.all([
-    fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS, [], convocatoriasFormula),
+    fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS, [
+        FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
+        FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS,
+        FIELD_INFORME_SUBIDO_CONVOCATORIAS,
+        FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS
+    ], convocatoriasFormula),
     fetchAllAirtableData<LanzamientoPPSFields>(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, [], undefined, [{ field: FIELD_FECHA_INICIO_LANZAMIENTOS, direction: 'desc' }])
   ]);
 
@@ -150,11 +156,13 @@ export const processInformeTasks = (myEnrollments: Convocatoria[], allLanzamient
 
             return {
                 convocatoriaId: enrollment.id,
+                practicaId: practicaVinculada?.id,
                 ppsName: lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'N/A',
                 informeLink: lanzamiento[FIELD_INFORME_LANZAMIENTOS],
                 fechaFinalizacion: lanzamiento[FIELD_FECHA_FIN_LANZAMIENTOS],
                 informeSubido: !!enrollment[FIELD_INFORME_SUBIDO_CONVOCATORIAS],
                 nota: practicaVinculada?.[FIELD_NOTA_PRACTICAS] || 'Sin calificar',
+                fechaEntregaInforme: enrollment[FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS],
             };
         })
         .filter((task): task is InformeTask => task !== null)

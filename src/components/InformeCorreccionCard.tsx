@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import type { InformeCorreccionPPS, InformeCorreccionStudent } from '../types';
 import NotaSelector from './NotaSelector';
 import Checkbox from './Checkbox';
-import { addBusinessDays, formatDate, parseToUTCDate } from '../utils/formatters';
+import { formatDate, parseToUTCDate } from '../utils/formatters';
 
 const NOTA_OPTIONS = ['Sin calificar', 'Entregado (sin corregir)', 'No Entregado', 'Desaprobado', '4', '5', '6', '7', '8', '9', '10'];
 
@@ -52,7 +52,7 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
   isBatchUpdating,
   searchTerm,
 }) => {
-  const { ppsName, orientacion, students, informeLink, fechaFinalizacion } = ppsGroup;
+  const { ppsName, orientacion, students, informeLink } = ppsGroup;
   const [batchNota, setBatchNota] = useState('10');
   const [justUpdatedPracticaId, setJustUpdatedPracticaId] = useState<string | null>(null);
 
@@ -65,33 +65,23 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
   }, [students, selectedStudents]);
 
   const correctionDeadlineInfo = useMemo(() => {
-    // The correction deadline is relevant for any PPS group where at least one student is pending a grade.
-    // We display it based on the end date, regardless of individual report submission status,
-    // as it provides a clear timeline for the person correcting.
-    const isPending = students.some(s => !s.nota || s.nota === 'Sin calificar' || s.nota === 'Entregado (sin corregir)');
-    if (!isPending) return null;
+    const studentWithEarliestDeadline = students
+      .filter(s => s.informeSubido && (s.nota === 'Sin calificar' || s.nota === 'Entregado (sin corregir)'))
+      .map(s => {
+        const baseDateString = s.fechaEntregaInforme || s.fechaFinalizacionPPS;
+        if (!baseDateString) return null;
+        const baseDate = parseToUTCDate(baseDateString);
+        if (!baseDate) return null;
+        const deadline = new Date(baseDate);
+        deadline.setDate(deadline.getDate() + 30);
+        return deadline;
+      })
+      .filter((d): d is Date => d !== null)
+      .sort((a, b) => a.getTime() - b.getTime())[0];
 
-    if (!fechaFinalizacion) {
-        return {
-            text: 'Límite no calculable (sin fecha de fin)',
-            className: 'bg-slate-100 text-slate-600',
-            icon: 'help_outline',
-            date: null
-        };
-    }
-    
-    const finalizacionDate = parseToUTCDate(fechaFinalizacion);
+    if (!studentWithEarliestDeadline) return null;
 
-    if (!finalizacionDate) {
-        return {
-            text: 'Límite no calculable (fecha inválida)',
-            className: 'bg-slate-100 text-slate-600',
-            icon: 'help_outline',
-            date: null
-        };
-    }
-
-    const deadline = addBusinessDays(finalizacionDate, 30);
+    const deadline = studentWithEarliestDeadline;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const diffDays = Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 3600 * 24));
@@ -102,8 +92,8 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
     } else if (diffDays <= 7) {
       className = 'bg-amber-100 text-amber-700';
     }
-    return { date: deadline, className, icon: 'alarm', text: null };
-  }, [fechaFinalizacion, students]);
+    return { date: deadline, className, icon: 'alarm' };
+  }, [students]);
 
 
   // FIX: Updated handler to pass the full student object to the onNotaChange prop.
@@ -135,10 +125,7 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
             <p className={`text-xs font-semibold px-2 py-1 rounded-md inline-flex items-center gap-1 mt-2 ${correctionDeadlineInfo.className}`}>
                 <span className="material-icons !text-sm">{correctionDeadlineInfo.icon}</span>
                 <span>
-                    {correctionDeadlineInfo.date
-                        ? `Límite de corrección: ${formatDate(correctionDeadlineInfo.date.toISOString())}`
-                        : correctionDeadlineInfo.text
-                    }
+                    Límite de corrección: {formatDate(correctionDeadlineInfo.date.toISOString())}
                 </span>
             </p>
           )}
