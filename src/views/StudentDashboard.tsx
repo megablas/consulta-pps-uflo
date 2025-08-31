@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import CriteriosPanel from '../components/CriteriosPanel';
 import PracticasTable from '../components/PracticasTable';
 import SolicitudesList from '../components/SolicitudesList';
@@ -29,7 +29,7 @@ interface StudentDashboardProps {
   showExportButton?: boolean;
 }
 
-const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab = 'convocatorias', onTabChange = () => {}, showExportButton = false }) => {
+const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, onTabChange, showExportButton = false }) => {
   const { isSuperUserMode } = useAuth();
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
 
@@ -43,6 +43,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab = '
   } = useConvocatorias(user.legajo, studentAirtableId, isSuperUserMode);
 
   // --- DERIVED STATE & MEMOIZATION ---
+  const [internalActiveTab, setInternalActiveTab] = useState<TabId>(showExportButton ? 'practicas' : 'convocatorias');
+  const currentActiveTab = activeTab ?? internalActiveTab;
+  const setCurrentActiveTab = onTabChange ?? setInternalActiveTab;
+  
   const isLoading = isStudentLoading || isPracticasLoading || isSolicitudesLoading || isConvocatoriasLoading;
   const error = studentError || practicasError || solicitudesError || convocatoriasError;
 
@@ -60,7 +64,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab = '
   const informeTasks = useMemo(() => processInformeTasks(myEnrollments, allLanzamientos, practicas), [myEnrollments, allLanzamientos, practicas]);
 
   // --- MUTATION HANDLERS ---
-  // FIX: Renamed function to match the prop name expected by CriteriosPanel.
   const handleOrientacionChange = (orientacion: Orientacion | "") => {
     updateOrientation.mutate(orientacion, {
       onSuccess: () => {
@@ -75,27 +78,38 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab = '
   };
   
   const studentDataTabs = useMemo(() => {
-    const tabs = [
+    let tabs = [
       { id: 'convocatorias' as TabId, label: `Convocatorias`, icon: 'campaign', content: <ConvocatoriasList lanzamientos={lanzamientos} myEnrollments={myEnrollments} practicas={practicas} student={studentDetails} onInscribir={enrollStudent.mutate} />, badge: lanzamientos.length > 0 ? lanzamientos.length : undefined },
       { id: 'informes' as TabId, label: `Informes`, icon: 'assignment_turned_in', content: <InformesList tasks={informeTasks} onConfirmar={confirmInforme.mutate} />, badge: informeTasks.length > 0 ? informeTasks.length : undefined },
       { id: 'solicitudes' as TabId, label: `Mis Solicitudes`, icon: 'list_alt', content: <SolicitudesList solicitudes={solicitudes} />, badge: solicitudes.length > 0 ? solicitudes.length : undefined },
       { id: 'practicas' as TabId, label: `Mis Prácticas`, icon: 'work_history', content: <PracticasTable practicas={practicas} handleNotaChange={handleNotaChange} />, badge: practicas.length > 0 ? practicas.length : undefined }
     ];
 
-    // Only add the profile tab for the student's own view, not for the admin's preview panel.
-    if (!showExportButton) {
-        tabs.push({
-            id: 'profile' as TabId,
-            label: 'Mi Perfil',
-            icon: 'person',
-            content: <ProfileView studentDetails={studentDetails} isLoading={isStudentLoading} />,
-            badge: undefined
-        });
+    if (showExportButton) {
+      // Admin/Jefe view of a student. User wants 'Informes', 'Solicitudes', 'Prácticas'.
+      return tabs.filter(tab => tab.id === 'informes' || tab.id === 'solicitudes' || tab.id === 'practicas');
     }
-
+    
+    // Student's own view, add profile tab.
+    tabs.push({
+        id: 'profile' as TabId,
+        label: 'Mi Perfil',
+        icon: 'person',
+        content: <ProfileView studentDetails={studentDetails} isLoading={isStudentLoading} />,
+        badge: undefined
+    });
     return tabs;
+
   }, [solicitudes, practicas, lanzamientos, myEnrollments, informeTasks, studentDetails, confirmInforme.mutate, handleNotaChange, enrollStudent.mutate, showExportButton, isStudentLoading]);
   
+  // Effect to reset active tab if it's no longer in the list of available tabs (e.g., after filtering for admin view).
+  useEffect(() => {
+    const isCurrentTabValid = studentDataTabs.some(tab => tab.id === currentActiveTab);
+    if (!isCurrentTabValid && studentDataTabs.length > 0) {
+      setCurrentActiveTab(studentDataTabs[0].id);
+    }
+  }, [studentDataTabs, currentActiveTab, setCurrentActiveTab]);
+
   const hasData = useMemo(() => practicas.length > 0 || solicitudes.length > 0 || lanzamientos.length > 0 || informeTasks.length > 0, [practicas, solicitudes, lanzamientos, informeTasks]);
   const showEmptyState = useMemo(() => !isLoading && !hasData && isSuperUserMode, [isLoading, hasData, isSuperUserMode]);
 
@@ -124,8 +138,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab = '
         <Card>
           <Tabs
             tabs={studentDataTabs}
-            activeTabId={activeTab}
-            onTabChange={(id) => onTabChange(id as TabId)}
+            activeTabId={currentActiveTab}
+            onTabChange={(id) => setCurrentActiveTab(id as TabId)}
           />
         </Card>
       )}

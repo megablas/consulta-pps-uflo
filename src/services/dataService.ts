@@ -71,12 +71,12 @@ export const fetchSolicitudes = async (legajo: string, studentAirtableId: string
 };
 
 export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: string | null, isCorrector: boolean): Promise<{ lanzamientos: LanzamientoPPS[], myEnrollments: Convocatoria[], allLanzamientos: LanzamientoPPS[] }> => {
-  const convocatoriasFormula = (isCorrector || !studentAirtableId)
-    ? undefined
-    : `OR(
+  const convocatoriasFormula = (studentAirtableId)
+    ? `OR(
         {${FIELD_LEGAJO_CONVOCATORIAS}} = ${legajo},
         FIND('${studentAirtableId}', ARRAYJOIN({${FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS}}))
-    )`;
+    )`
+    : undefined;
 
   const [convocatoriasRes, lanzamientosRes] = await Promise.all([
     fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS, [
@@ -100,13 +100,14 @@ export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: 
   const lanzamientos = allLanzamientos.filter(l => {
       const ppsName = l[FIELD_NOMBRE_PPS_LANZAMIENTOS];
       if (!(typeof ppsName === 'string' && ppsName.trim())) return false;
-      if (isCorrector) return true;
-
+      
       const status = normalizeStringForComparison(l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]);
-      if (status === 'oculto') return false;
+      if (status === 'oculto' && !isCorrector) return false;
 
       const isEnrolled = myEnrollments.some(e => (e[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || []).includes(l.id));
       if (isEnrolled) return true;
+
+      if (isCorrector) return true; // Show all to admin if not filtered by student enrollment
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
