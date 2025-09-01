@@ -17,8 +17,6 @@ interface TabsProps {
 }
 
 const Tabs: React.FC<TabsProps> = ({ tabs, activeTabId, onTabChange, onTabClose, className = '' }) => {
-  const activeTabContent = tabs.find(tab => tab.id === activeTabId)?.content;
-  
   const tabsRef = useRef<HTMLDivElement>(null);
   const [gliderStyle, setGliderStyle] = useState({});
 
@@ -44,7 +42,11 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeTabId, onTabChange, onTabClose,
             return (
               <div key={tab.id} data-tab-id={tab.id} className="relative group flex-shrink-0">
                 <button
+                  id={`tab-${tab.id}`}
                   onClick={() => onTabChange(tab.id)}
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-controls={`tabpanel-${tab.id}`}
                   className={`
                     whitespace-nowrap text-sm transition-colors duration-200 rounded-t-lg
                     flex items-center gap-2
@@ -57,7 +59,6 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeTabId, onTabChange, onTabClose,
                     }
                     ${tab.isClosable && onTabClose ? 'pr-9' : ''}
                   `}
-                  aria-current={isActive ? 'page' : undefined}
                 >
                   {tab.icon && <span className="material-icons !text-lg">{tab.icon}</span>}
                   <span className="truncate max-w-[150px] sm:max-w-none">{tab.label}</span>
@@ -83,8 +84,21 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeTabId, onTabChange, onTabClose,
            style={gliderStyle}
         />
       </div>
-      <div className="pt-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-        {activeTabContent}
+      <div className="pt-6">
+        {tabs.map(tab => (
+          <div
+            key={tab.id}
+            id={`tabpanel-${tab.id}`}
+            role="tabpanel"
+            hidden={activeTabId !== tab.id}
+            className="focus:outline-none"
+            aria-labelledby={`tab-${tab.id}`}
+            tabIndex={0}
+          >
+            {/* El contenido de la pestaña se renderiza aquí y se mantiene en el DOM */}
+            {tab.content}
+          </div>
+        ))}
       </div>
     </div>
   );
