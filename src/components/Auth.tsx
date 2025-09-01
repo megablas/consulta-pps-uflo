@@ -275,34 +275,24 @@ const Auth: React.FC = () => {
     setIsLoading(true);
     setError(null);
     
-    const genericSuccessMessage = "Si existe una cuenta asociada a ese legajo, se han enviado las instrucciones para restablecer la contraseña al correo electrónico registrado.";
+    const contactCoordinatorMessage = "Para restablecer tu contraseña, por favor ponte en contacto con tu coordinador de PPS.";
 
     try {
       const legajoTrimmed = legajo.trim();
       if (!legajoTrimmed) {
         setError("Por favor, ingresa tu número de legajo.");
-        setIsLoading(false);
         return;
       }
-
-      // This fetch is a placeholder. In a real app, this would be a call to a backend 
-      // endpoint that triggers an email. We perform the fetch to simulate work, but we 
-      // don't use the result to change the UI message for security reasons (user enumeration).
-      await fetchAirtableData<EstudianteFields>(
-          AIRTABLE_TABLE_NAME_ESTUDIANTES,
-          [FIELD_CORREO_ESTUDIANTES],
-          `{${FIELD_LEGAJO_ESTUDIANTES}} = '${legajoTrimmed}'`,
-          1
-      );
+      // This is just a simulation to provide feedback to the user, but the message is always the same.
+      await new Promise(resolve => setTimeout(resolve, 750));
 
     } catch (err: any) {
-      // We log the error but don't show a specific error message to the user
       console.error("Forgot password check failed:", err);
     } finally {
       setIsLoading(false);
-      showModal('Revisa tu Correo', genericSuccessMessage);
+      showModal('Restablecer Contraseña', contactCoordinatorMessage);
       setLegajo('');
-      setMode('login');
+      handleModeChange('login');
     }
   };
 
@@ -453,9 +443,9 @@ const Auth: React.FC = () => {
                 <div className="pt-4 space-y-4">
                   <button type="submit" disabled={isLoading} className="w-full bg-blue-600 text-white font-bold text-base py-3 px-6 rounded-lg transition-all duration-200 ease-in-out shadow-md hover:bg-blue-700 hover:-translate-y-0.5 active:scale-95 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-y-0 flex items-center justify-center gap-3">
                     {isLoading ? (
-                        <><div className="border-2 border-white/50 border-t-white rounded-full w-5 h-5 animate-spin"></div><span>Enviando...</span></>
+                        <><div className="border-2 border-white/50 border-t-white rounded-full w-5 h-5 animate-spin"></div><span>Procesando...</span></>
                     ) : (
-                        <span>Enviar Instrucciones</span>
+                        <span>Solicitar Restablecimiento</span>
                     )}
                   </button>
                   <button type="button" onClick={() => handleModeChange('login')} className="w-full text-center text-sm font-semibold text-slate-600 hover:text-slate-800 transition-colors">
