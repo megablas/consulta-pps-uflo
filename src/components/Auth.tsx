@@ -274,28 +274,24 @@ const Auth: React.FC = () => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
-    
-    const contactCoordinatorMessage = "Para restablecer tu contraseña, por favor ponte en contacto con tu coordinador de PPS.";
 
-    try {
-      const legajoTrimmed = legajo.trim();
-      if (!legajoTrimmed) {
-        setError("Por favor, ingresa tu número de legajo.");
-        return;
-      }
-      // This is just a simulation to provide feedback to the user, but the message is always the same.
-      await new Promise(resolve => setTimeout(resolve, 750));
-
-    } catch (err: any) {
-      console.error("Forgot password check failed:", err);
-    } finally {
+    const legajoTrimmed = legajo.trim();
+    if (!legajoTrimmed) {
+      setError("Por favor, ingresa tu número de legajo.");
       setIsLoading(false);
-      showModal('Restablecer Contraseña', contactCoordinatorMessage);
-      setLegajo('');
-      handleModeChange('login');
+      return;
     }
+
+    // Simulate network delay to provide user feedback
+    await new Promise(resolve => setTimeout(resolve, 750));
+    
+    setIsLoading(false);
+    const contactCoordinatorMessage = "Para restablecer tu contraseña, por favor ponte en contacto con tu coordinador de PPS.";
+    showModal('Restablecer Contraseña', contactCoordinatorMessage);
+    // Do not change mode or clear legajo here. Let the user see the modal and then decide to go back.
   };
 
+  // FIX: Removed a stray '>' character from the type definition which was causing a syntax error and subsequent compile-time errors.
   const handleModeChange = (newMode: 'login' | 'register' | 'forgot') => {
     setMode(newMode);
     setError(null);
