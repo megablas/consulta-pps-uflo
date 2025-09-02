@@ -10,6 +10,7 @@ export const AIRTABLE_TABLE_NAME_AUTH_USERS = 'Auth Users';
 export const AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS = 'Lanzamientos de PPS';
 export const AIRTABLE_TABLE_NAME_CONVOCATORIAS = 'Convocatorias';
 export const AIRTABLE_TABLE_NAME_INSTITUCIONES = 'Instituciones';
+export const AIRTABLE_TABLE_NAME_FINALIZACION = 'Finalización de PPS';
 
 
 // --- Fields for 'Estudiantes' table ---
@@ -23,6 +24,7 @@ export const FIELD_DNI_ESTUDIANTES = 'DNI';
 export const FIELD_FECHA_NACIMIENTO_ESTUDIANTES = 'Fecha de Nacimiento';
 export const FIELD_CORREO_ESTUDIANTES = 'Correo';
 export const FIELD_TELEFONO_ESTUDIANTES = 'Teléfono';
+export const FIELD_NOTAS_INTERNAS_ESTUDIANTES = 'Notas Internas';
 
 // --- Fields for 'Prácticas' table ---
 export const FIELD_NOMBRE_BUSQUEDA_PRACTICAS = 'Legajo Busqueda'; // Lookup from Estudiantes (should contain the Legajo value as text)
@@ -98,6 +100,9 @@ export const FIELD_FECHA_NACIMIENTO_CONVOCATORIAS = 'Fecha de Nacimiento'; // Lo
 export const FIELD_TELEFONO_CONVOCATORIAS = 'Teléfono'; // Lookup
 export const FIELD_INFORME_SUBIDO_CONVOCATORIAS = 'Informe Subido';
 export const FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS = 'Fecha_Entrega_Informe';
+
+// --- Fields for 'Finalizacion PPS' table ---
+export const FIELD_ESTUDIANTE_FINALIZACION = 'Nombre';
 
 
 // --- Academic criteria constants ---

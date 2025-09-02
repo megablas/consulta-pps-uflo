@@ -5,6 +5,7 @@ import CorreccionPanel from '../components/CorreccionPanel';
 import { useAuth, type AuthUser } from '../contexts/AuthContext';
 import StudentDashboard from './StudentDashboard';
 import Tabs from '../components/Tabs';
+import MetricsDashboard from '../components/MetricsDashboard';
 
 interface StudentTabInfo {
     id: string; // legajo
@@ -43,7 +44,7 @@ const JefeView: React.FC = () => {
     const [studentTabs, setStudentTabs] = useState<StudentTabInfo[]>([]);
     
     const jefeOrientations = authenticatedUser?.orientaciones || [];
-    const initialTabId = jefeOrientations.length > 0 ? 'manager-jefe' : 'correccion';
+    const initialTabId = 'metrics';
     const [activeTabId, setActiveTabId] = useState(initialTabId);
 
     const openStudentPanel = useCallback((student: { legajo: string, nombre: string }) => {
@@ -70,6 +71,12 @@ const JefeView: React.FC = () => {
 
     const allTabs = useMemo(() => {
         const mainTabs = [
+            {
+                id: 'metrics',
+                label: 'Métricas',
+                icon: 'bar_chart',
+                content: <MetricsDashboard />,
+            },
             {
                 id: 'correccion',
                 label: 'Corrección',
