@@ -18,7 +18,7 @@ const StudentPreview: React.FC<StudentPreviewProps> = ({ student, onClose, onOpe
   const { showModal } = useModal();
   
   // FIX: Replaced useData() with useQuery hooks to fetch data independently.
-  const { data: studentData, isLoading: isLoadingStudent, error: studentError, refetch: refetchStudentData } = useQuery({
+  const { data: studentData, isLoading: isLoadingStudent, error: studentError } = useQuery({
     queryKey: ['studentPreview', student.legajo],
     queryFn: () => fetchStudentData(student.legajo),
   });

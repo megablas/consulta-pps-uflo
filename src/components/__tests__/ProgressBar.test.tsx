@@ -1,4 +1,3 @@
-// FIX: Replaced Jest types reference with an explicit import to resolve TypeScript errors.
 // FIX: Import '@testing-library/jest-dom' to provide custom matchers for DOM assertions and fix TypeScript type errors.
 import '@testing-library/jest-dom';
 import { describe, it, expect } from '@jest/globals';

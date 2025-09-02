@@ -6,7 +6,7 @@ export interface AirtableRecord<T> {
 
 export interface SolicitudPPSFields {
   [key: string]: any; // Allow other fields
-  'Legajo'?: string;
+  'Legajo'?: string | number | boolean | (string|number)[]; // Changed to flexible lookup type
   'Estado de seguimiento'?: string;
   'Nombre de la Institución'?: string;
   'Nombre Busqueda'?: string; // Lookup field
@@ -16,8 +16,8 @@ export interface SolicitudPPSFields {
 
 export interface PracticaFields {
   [key:string]: any; // Allow other fields
-  'Legajo Busqueda'?: (string|number)[]; // Lookup field, can be array of strings or numbers
-  'Nombre (de Institución)'?: string[]; // Lookup field
+  'Legajo Busqueda'?: string | number | boolean | (string|number)[]; // Lookup field, can be array of strings or numbers
+  'Nombre (de Institución)'?: string | number | boolean | (string | number)[]; // Lookup field
   'Horas Realizadas'?: number;
   'Fecha de Inicio'?: string; // Date string
   'Fecha de Finalización'?: string; // Date string
@@ -67,7 +67,7 @@ export interface LanzamientoPPSFields {
   'Estado de Gestión'?: string;
   'Notas de Gestión'?: string;
   'Fecha de Relanzamiento'?: string; // Date string for confirmed relaunches
-  'Teléfono (from Instituciones)'?: string[]; // Lookup from Instituciones table
+  'Teléfono (from Instituciones)'?: string | number | boolean | (string | number)[]; // Lookup from Instituciones table
 }
 
 export interface InstitucionFields {
@@ -81,7 +81,7 @@ export interface ConvocatoriaFields {
   'Lanzamiento Vinculado'?: string[]; // Link to Lanzamientos de PPS record
   'Nombre PPS'?: string;
   'Estudiante Inscripto'?: string[]; // Array of record IDs from 'Estudiante Inscripto'
-  'Nombre (de Estudiante Inscripto)'?: string[]; // Lookup field from Estudiante
+  'Nombre (de Estudiante Inscripto)'?: string | number | boolean | (string | number)[]; // Lookup field from Estudiante
   'Fecha de Inicio'?: string; // Date string
   'Fecha de Finalización'?: string; // Date string
   'Dirección'?: string;

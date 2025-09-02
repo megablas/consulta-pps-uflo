@@ -5,6 +5,13 @@ import {
   GroupedSeleccionados
 } from '../types';
 import {
+    solicitudPPSArraySchema,
+    practicaArraySchema,
+    lanzamientoPPSArraySchema,
+    convocatoriaArraySchema,
+    estudianteSchema
+} from '../schemas';
+import {
   AIRTABLE_TABLE_NAME_PRACTICAS, AIRTABLE_TABLE_NAME_PPS, AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
   AIRTABLE_TABLE_NAME_CONVOCATORIAS, AIRTABLE_TABLE_NAME_ESTUDIANTES,
   FIELD_NOMBRE_BUSQUEDA_PRACTICAS, FIELD_LEGAJO_PPS,
@@ -33,8 +40,23 @@ export const fetchStudentData = async (legajo: string): Promise<{ studentDetails
   }
   
   const studentRecord = records[0];
-  const studentDetails = studentRecord?.fields ?? null;
-  const studentAirtableId = studentRecord?.id ?? null;
+
+  if (!studentRecord) {
+    return { studentDetails: null, studentAirtableId: null, userGender: 'neutro' };
+  }
+
+  const validationResult = estudianteSchema.safeParse(studentRecord);
+  if (!validationResult.success) {
+    const formattedErrors = validationResult.error.issues.map(issue => 
+        `  - Campo '${issue.path.join('.')}': ${issue.message}`
+    ).join('\n');
+    console.error('[Zod Validation Error in Estudiantes]:', validationResult.error.issues);
+    throw new Error(`Error de validación de datos del estudiante:\n${formattedErrors}`);
+  }
+
+  const validatedStudent = validationResult.data;
+  const studentDetails = validatedStudent.fields;
+  const studentAirtableId = validatedStudent.id;
   
   const gender = studentDetails?.[FIELD_GENERO_ESTUDIANTES];
   let userGender: UserGender = 'neutro';
@@ -46,28 +68,51 @@ export const fetchStudentData = async (legajo: string): Promise<{ studentDetails
 
 export const fetchPracticas = async (legajo: string): Promise<Practica[]> => {
   const { records, error } = await fetchAllAirtableData<PracticaFields>(
-    AIRTABLE_TABLE_NAME_PRACTICAS, [], `SEARCH('${legajo}', ARRAYJOIN({${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}}))`
+    AIRTABLE_TABLE_NAME_PRACTICAS, [], `SEARCH('${legajo}', {${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}} & '')`
   );
   if (error) {
     const errorMsg = typeof error.error === 'string' ? error.error : error.error.message;
     throw new Error(`Error fetching practicas: ${errorMsg}`);
   }
-  return records.map(r => ({ ...r.fields, id: r.id }));
+
+  const validationResult = practicaArraySchema.safeParse(records);
+  if (!validationResult.success) {
+      const formattedErrors = validationResult.error.issues.map(issue => 
+        `  - Registro #${String(issue.path[0])}, Campo '${issue.path.slice(1).map(String).join('.')}': ${issue.message}`
+      ).join('\n');
+      console.error('[Zod Validation Error in Prácticas]:', validationResult.error.issues);
+      throw new Error(`Error de validación de datos en 'Prácticas':\n${formattedErrors}`);
+  }
+
+  return validationResult.data.map(r => ({ ...r.fields, id: r.id }));
 };
 
 export const fetchSolicitudes = async (legajo: string, studentAirtableId: string | null): Promise<SolicitudPPS[]> => {
-  if (!studentAirtableId) return [];
+  // The formula is changed to use the student's `legajo` number, which is more reliable
+  // and consistent with how other data types like `Practicas` are fetched.
+  const formula = `SEARCH('${legajo}', {${FIELD_LEGAJO_PPS}} & '')`;
+
   const { records, error } = await fetchAllAirtableData<SolicitudPPSFields>(
     AIRTABLE_TABLE_NAME_PPS, 
     [], 
-    `SEARCH('${legajo}', ARRAYJOIN({${FIELD_LEGAJO_PPS}}))`, 
+    formula, 
     [{ field: FIELD_ULTIMA_ACTUALIZACION_PPS, direction: 'desc' }]
   );
   if (error) {
     const errorMsg = typeof error.error === 'string' ? error.error : error.error.message;
     throw new Error(`Error fetching solicitudes: ${errorMsg}`);
   }
-  return records.map(r => ({ ...r.fields, id: r.id }));
+  
+  const validationResult = solicitudPPSArraySchema.safeParse(records);
+  if (!validationResult.success) {
+      const formattedErrors = validationResult.error.issues.map(issue => 
+        `  - Registro #${String(issue.path[0])}, Campo '${issue.path.slice(1).map(String).join('.')}': ${issue.message}`
+      ).join('\n');
+      console.error('[Zod Validation Error in Solicitud de PPS]:', validationResult.error.issues);
+      throw new Error(`Error de validación de datos en 'Solicitud de PPS':\n${formattedErrors}`);
+  }
+
+  return validationResult.data.map(r => ({ ...r.fields, id: r.id }));
 };
 
 export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: string | null, isCorrector: boolean): Promise<{ lanzamientos: LanzamientoPPS[], myEnrollments: Convocatoria[], allLanzamientos: LanzamientoPPS[] }> => {
@@ -93,9 +138,23 @@ export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: 
     const errorMsg = typeof error.error === 'string' ? error.error : error.error.message;
     throw new Error(`Error fetching convocatorias data: ${errorMsg}`);
   }
+  
+  const convocatoriasValidation = convocatoriaArraySchema.safeParse(convocatoriasRes.records);
+  if (!convocatoriasValidation.success) {
+      const formattedErrors = convocatoriasValidation.error.issues.map(issue => `  - Registro Convocatorias #${String(issue.path[0])}, Campo '${issue.path.slice(1).map(String).join('.')}': ${issue.message}`).join('\n');
+      console.error('[Zod Validation Error in Convocatorias]:', convocatoriasValidation.error.issues);
+      throw new Error(`Error de validación de datos en 'Convocatorias':\n${formattedErrors}`);
+  }
+  const lanzamientosValidation = lanzamientoPPSArraySchema.safeParse(lanzamientosRes.records);
+  if (!lanzamientosValidation.success) {
+      const formattedErrors = lanzamientosValidation.error.issues.map(issue => `  - Registro Lanzamientos #${String(issue.path[0])}, Campo '${issue.path.slice(1).map(String).join('.')}': ${issue.message}`).join('\n');
+      console.error('[Zod Validation Error in Lanzamientos]:', lanzamientosValidation.error.issues);
+      throw new Error(`Error de validación de datos en 'Lanzamientos':\n${formattedErrors}`);
+  }
 
-  const myEnrollments = convocatoriasRes.records.map(r => ({ ...r.fields, id: r.id }));
-  const allLanzamientos = lanzamientosRes.records.map(r => ({ ...r.fields, id: r.id }));
+
+  const myEnrollments: Convocatoria[] = convocatoriasValidation.data.map(r => ({ ...r.fields, id: r.id }));
+  const allLanzamientos: LanzamientoPPS[] = lanzamientosValidation.data.map(r => ({ ...r.fields, id: r.id }));
   
   const lanzamientos = allLanzamientos.filter(l => {
       const ppsName = l[FIELD_NOMBRE_PPS_LANZAMIENTOS];
@@ -147,7 +206,7 @@ export const processInformeTasks = (myEnrollments: Convocatoria[], allLanzamient
             // Fallback to old method if no linked record is found
             if (!practicaVinculada) {
                 practicaVinculada = practicas.find(p => {
-                    const ppsName = (p[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS] as string[] | undefined)?.[0] ?? '';
+                    const ppsName = (p[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS] as (string|number)[] | undefined)?.[0] ?? '';
                     const practicaStartDate = parseToUTCDate(p[FIELD_FECHA_INICIO_PRACTICAS]);
                     const lanzamientoStartDate = parseToUTCDate(lanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS]);
                     return normalizeStringForComparison(ppsName) === normalizeStringForComparison(lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS]) &&
