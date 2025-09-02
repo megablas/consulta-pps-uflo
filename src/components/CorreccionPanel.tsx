@@ -255,10 +255,15 @@ const CorreccionPanel: React.FC = () => {
     if (!currentPracticaId) {
         setUpdatingNotaId(`creating-${student.studentId}`);
         
+        // If a Lanzamiento has multiple orientations (e.g., "Laboral, Comunitaria"),
+        // the Practica's "Especialidad" field (likely a single-select) can only take one.
+        // We'll take the first one from the list.
+        const firstOrientation = (student.orientacion || '').split(',')[0].trim();
+
         const newPracticaFields: Partial<PracticaFields> = {
             [FIELD_ESTUDIANTE_LINK_PRACTICAS]: [student.studentId],
             [FIELD_LANZAMIENTO_VINCULADO_PRACTICAS]: [student.lanzamientoId],
-            [FIELD_ESPECIALIDAD_PRACTICAS]: student.orientacion,
+            [FIELD_ESPECIALIDAD_PRACTICAS]: firstOrientation,
             [FIELD_FECHA_INICIO_PRACTICAS]: student.fechaInicio,
             [FIELD_FECHA_FIN_PRACTICAS]: student.fechaFinalizacionPPS,
         };

@@ -342,7 +342,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
 
             const mappedRecords = lanzamientosRes.records.map(r => ({ ...r.fields, id: r.id }));
             const filteredRecords = mappedRecords.filter(pps => 
-                !pps[FIELD_NOMBRE_PPS_LANZAMIENTOS]?.toLowerCase().includes('uflo')
+                !String(pps[FIELD_NOMBRE_PPS_LANZAMIENTOS] || '').toLowerCase().includes('uflo')
             );
             setLanzamientos(filteredRecords);
             setLoadingState('loaded');
@@ -458,12 +458,14 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                     const nameRaw = templatePractica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
                     const ppsName = Array.isArray(nameRaw) ? nameRaw[0] : nameRaw;
                     
-                    if (ppsName && ppsName.toLowerCase().includes('uflo')) {
+                    // FIX: Ensure ppsName is a string before calling toLowerCase
+                    if (ppsName && String(ppsName).toLowerCase().includes('uflo')) {
                         continue;
                     }
 
                     const newLaunch = {
-                        [FIELD_NOMBRE_PPS_LANZAMIENTOS]: ppsName,
+                        // FIX: Ensure ppsName is a string for the new record
+                        [FIELD_NOMBRE_PPS_LANZAMIENTOS]: String(ppsName),
                         [FIELD_FECHA_INICIO_LANZAMIENTOS]: templatePractica[FIELD_FECHA_INICIO_PRACTICAS],
                         [FIELD_FECHA_FIN_LANZAMIENTOS]: templatePractica[FIELD_FECHA_FIN_PRACTICAS],
                         [FIELD_ORIENTACION_LANZAMIENTOS]: templatePractica[FIELD_ESPECIALIDAD_PRACTICAS],

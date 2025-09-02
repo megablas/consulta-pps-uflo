@@ -8,9 +8,9 @@ export const useStudentSolicitudes = (legajo: string, studentAirtableId: string 
         error: solicitudesError, 
         refetch: refetchSolicitudes 
     } = useQuery({
-        queryKey: ['solicitudes', legajo, studentAirtableId],
+        queryKey: ['solicitudes', legajo],
         queryFn: () => fetchSolicitudes(legajo, studentAirtableId),
-        enabled: !!studentAirtableId, // The query will not run until studentAirtableId is available
+        enabled: !!legajo, // The query runs as soon as we have a legajo
     });
 
     return {

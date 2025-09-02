@@ -92,7 +92,8 @@ const RepitentesPanel: React.FC = () => {
                     const [legajo, normInstitution, normOrientation] = key.split('::');
                     
                     const firstPractice = group[0];
-                    const institution = (Array.isArray(firstPractice[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]) ? firstPractice[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS][0] : firstPractice[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]) || normInstitution;
+                    // FIX: Ensure institution is a string to match the 'RepeatedPracticeInfo' type.
+                    const institution = String((Array.isArray(firstPractice[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]) ? firstPractice[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS][0] : firstPractice[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]) || normInstitution);
                     const orientation = firstPractice[FIELD_ESPECIALIDAD_PRACTICAS] || normOrientation;
 
                     results.push({
