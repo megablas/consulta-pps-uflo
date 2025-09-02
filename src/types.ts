@@ -16,7 +16,7 @@ export interface SolicitudPPSFields {
 
 export interface PracticaFields {
   [key:string]: any; // Allow other fields
-  'Legajo Busqueda'?: string | number | boolean | (string|number)[]; // Lookup field, can be array of strings or numbers
+  'Legajo Busqueda'?: string | number | boolean | (string | number)[]; // Lookup field, can be array of strings or numbers
   'Nombre (de Institución)'?: string | number | boolean | (string | number)[]; // Lookup field
   'Horas Realizadas'?: number;
   'Fecha de Inicio'?: string; // Date string
@@ -38,6 +38,7 @@ export interface EstudianteFields {
   'Fecha de Nacimiento'?: string; // Date string
   'Correo'?: string;
   'Teléfono'?: string;
+  'Notas Internas'?: string;
 }
 
 export interface AuthUserFields {
@@ -118,6 +119,16 @@ export interface LanzamientoPPS extends LanzamientoPPSFields {
 
 export interface Convocatoria extends ConvocatoriaFields {
   id: string;
+}
+
+export interface FinalizacionPPSFields {
+  [key: string]: any;
+  'Estudiante'?: string[];
+}
+
+export interface FinalizacionPPS extends FinalizacionPPSFields {
+    id: string;
+    createdTime: string;
 }
 
 export enum Orientacion {

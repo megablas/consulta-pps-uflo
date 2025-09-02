@@ -110,6 +110,7 @@ export const estudianteFieldsSchema = z.object({
   'Fecha de Nacimiento': robustStringSchema,
   'Correo': robustStringSchema,
   'Teléfono': robustStringSchema,
+  'Notas Internas': robustStringSchema,
 }).catchall(z.any());
 export const estudianteSchema = z.object({
     id: z.string(),
@@ -175,3 +176,16 @@ export const convocatoriaSchema = z.object({
     fields: convocatoriaFieldsSchema,
 });
 export const convocatoriaArraySchema = z.array(convocatoriaSchema);
+
+// Schema for 'Finalizacion PPS'
+export const finalizacionPPSFieldsSchema = z.object({
+  'Estudiante': z.array(z.string()).optional().nullable(),
+}).catchall(z.any());
+
+export const finalizacionPPSSchema = z.object({
+  id: z.string(),
+  createdTime: z.string(),
+  fields: finalizacionPPSFieldsSchema,
+});
+
+export const finalizacionPPSArraySchema = z.array(finalizacionPPSSchema);

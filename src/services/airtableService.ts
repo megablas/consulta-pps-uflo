@@ -203,7 +203,11 @@ const fetchAllAirtableData = async <TFields>(
             const params = new URLSearchParams();
             fields.forEach(field => params.append('fields[]', field));
             if (filterByFormula) params.set('filterByFormula', filterByFormula);
-            if (offset) params.set('offset', offset);
+            if (offset) {
+                params.set('offset', offset);
+                // Wait for 250ms ONLY between paginated requests to avoid rate limiting.
+                await new Promise(resolve => setTimeout(resolve, 250));
+            }
             if (sort && sort.length > 0) {
                 sort.forEach((sortObject, index) => {
                     params.append(`sort[${index}][field]`, sortObject.field);
@@ -228,7 +232,7 @@ const fetchAllAirtableData = async <TFields>(
 
     } catch (e: any) {
         const error: AirtableErrorResponse = e.error ? e : { error: { type: 'PAGINATION_ERROR', message: e.message || 'An error occurred while fetching all records.' } };
-        console.error('[fetchAllAirtableData] Error:', error);
+        console.error(`[fetchAllAirtableData] Error during pagination for table "${tableName}":`, JSON.stringify(error, null, 2));
         return { records: [], error };
     }
 }

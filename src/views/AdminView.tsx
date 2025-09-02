@@ -10,6 +10,7 @@ import StudentDashboard from './StudentDashboard';
 import Tabs from '../components/Tabs';
 import SubTabs from '../components/SubTabs';
 import type { AuthUser } from '../contexts/AuthContext';
+import MetricsDashboard from '../components/MetricsDashboard';
 
 interface StudentTabInfo {
     id: string; // legajo
@@ -19,7 +20,7 @@ interface StudentTabInfo {
 
 const AdminView: React.FC = () => {
     const [studentTabs, setStudentTabs] = useState<StudentTabInfo[]>([]);
-    const [activeTabId, setActiveTabId] = useState('correccion');
+    const [activeTabId, setActiveTabId] = useState('metrics');
     const [activeGestionTabId, setActiveGestionTabId] = useState('manager');
     const [activeHerramientasTabId, setActiveHerramientasTabId] = useState('repitentes');
     const { showModal } = useModal();
@@ -42,7 +43,7 @@ const AdminView: React.FC = () => {
     const handleCloseTab = useCallback((tabId: string) => {
         setStudentTabs(prev => prev.filter(s => s.id !== tabId));
         if (activeTabId === tabId) {
-            setActiveTabId('correccion'); // Fallback to a default tab
+            setActiveTabId('metrics'); // Fallback to a default tab
         }
     }, [activeTabId]);
 
@@ -59,6 +60,12 @@ const AdminView: React.FC = () => {
         ];
         
         const mainTabs = [
+            {
+                id: 'metrics',
+                label: 'Métricas',
+                icon: 'bar_chart',
+                content: <MetricsDashboard />,
+            },
             {
                 id: 'correccion',
                 label: 'Corrección',
