@@ -203,23 +203,30 @@ const PracticasTable: React.FC<PracticasTableProps> = ({ practicas, handleNotaCh
                       <span>{status || 'N/A'}</span>
                     </span>
                   </td>
-                  <td className="p-4 align-middle w-48 text-center">
+                  <td className="p-4 align-middle w-56 text-center">
                     {isEditable ? (
-                      <div className="relative">
-                        <select
-                          value={nota}
-                          onChange={(e) => handleLocalNotaChange(practica.id, e.target.value)}
-                          className={`appearance-none w-full text-sm font-semibold rounded-lg border border-slate-300 p-2.5 bg-white shadow-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 hover:border-blue-400 hover:bg-slate-50
-                            ${savingNotaId === practica.id ? 'ring-2 ring-blue-500 border-blue-500 shadow-blue-100 animate-pulse' : ''}`}
-                          aria-label={`Calificación para ${institucion}`}
-                        >
-                          {NOTA_OPTIONS.map(option => (
-                            <option key={option} value={option}>{option}</option>
-                          ))}
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3">
-                          <span className="material-icons !text-base text-slate-500">expand_more</span>
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex-1">
+                            <select
+                              value={nota}
+                              onChange={(e) => handleLocalNotaChange(practica.id, e.target.value)}
+                              className={`appearance-none w-full text-sm font-semibold rounded-lg border border-slate-300 p-2.5 bg-white shadow-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 hover:border-blue-400 hover:bg-slate-50
+                                ${savingNotaId === practica.id ? 'ring-2 ring-blue-500 border-blue-500 shadow-blue-100 animate-pulse' : ''}`}
+                              aria-label={`Calificación para ${institucion}`}
+                            >
+                              {NOTA_OPTIONS.map(option => (
+                                <option key={option} value={option}>{option}</option>
+                              ))}
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3">
+                              <span className="material-icons !text-base text-slate-500">expand_more</span>
+                            </div>
                         </div>
+                        {justUpdatedPracticaId === practica.id && (
+                            <span className="text-xs font-bold text-emerald-600 animate-fade-in-up whitespace-nowrap" style={{ animationDuration: '300ms' }}>
+                                Guardado ✓
+                            </span>
+                        )}
                       </div>
                     ) : (
                       <div className={notaClass} title={`Nota: ${nota}`}>
