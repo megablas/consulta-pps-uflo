@@ -291,7 +291,6 @@ const Auth: React.FC = () => {
     // Do not change mode or clear legajo here. Let the user see the modal and then decide to go back.
   };
 
-  // FIX: Removed a stray '>' character from the type definition which was causing a syntax error and subsequent compile-time errors.
   const handleModeChange = (newMode: 'login' | 'register' | 'forgot') => {
     setMode(newMode);
     setError(null);
@@ -424,7 +423,7 @@ const Auth: React.FC = () => {
               <form onSubmit={handleForgotPassword} className="space-y-5 animate-fade-in-up">
                 <div className="text-left mb-8">
                     <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Restablecer Contraseña</h2>
-                    <p className="text-slate-500 mt-1">Ingresa tu legajo y te enviaremos las instrucciones para restablecer tu contraseña a tu correo electrónico registrado.</p>
+                    <p className="text-slate-500 mt-1">Ingresa tu legajo. Te indicaremos los pasos a seguir para restablecer tu contraseña.</p>
                 </div>
                 
                 <div>
