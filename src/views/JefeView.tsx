@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import AdminSearch from '../components/AdminSearch';
 import ConvocatoriaManager from '../components/ConvocatoriaManager';
 import CorreccionPanel from '../components/CorreccionPanel';
@@ -6,6 +6,8 @@ import { useAuth, type AuthUser } from '../contexts/AuthContext';
 import StudentDashboard from './StudentDashboard';
 import Tabs from '../components/Tabs';
 import MetricsDashboard from '../components/MetricsDashboard';
+import TimelineView from '../components/TimelineView';
+import SubTabs from '../components/SubTabs';
 
 interface StudentTabInfo {
     id: string; // legajo
@@ -16,7 +18,7 @@ interface StudentTabInfo {
 const JefeWelcomeBanner: React.FC<{ name: string }> = ({ name }) => {
   const [greeting, setGreeting] = useState('');
 
-  useEffect(() => {
+  React.useEffect(() => {
     const hour = new Date().getHours();
     if (hour >= 5 && hour < 12) {
       setGreeting('Buenos días');
@@ -46,6 +48,7 @@ const JefeView: React.FC = () => {
     const jefeOrientations = authenticatedUser?.orientaciones || [];
     const initialTabId = 'metrics';
     const [activeTabId, setActiveTabId] = useState(initialTabId);
+    const [activeMetricsTabId, setActiveMetricsTabId] = useState('dashboard');
 
     const openStudentPanel = useCallback((student: { legajo: string, nombre: string }) => {
         if (studentTabs.some(s => s.legajo === student.legajo)) {
@@ -70,12 +73,25 @@ const JefeView: React.FC = () => {
     }, [activeTabId, initialTabId]);
 
     const allTabs = useMemo(() => {
+        const metricsSubTabs = [
+            { id: 'dashboard', label: 'Dashboard', icon: 'bar_chart' },
+            { id: 'timeline', label: 'Línea de Tiempo', icon: 'timeline' },
+        ];
+
         const mainTabs = [
             {
                 id: 'metrics',
                 label: 'Métricas',
-                icon: 'bar_chart',
-                content: <MetricsDashboard />,
+                icon: 'analytics',
+                content: (
+                    <>
+                        <SubTabs tabs={metricsSubTabs} activeTabId={activeMetricsTabId} onTabChange={setActiveMetricsTabId} />
+                        <div className="mt-6">
+                            {activeMetricsTabId === 'dashboard' && <MetricsDashboard />}
+                            {activeMetricsTabId === 'timeline' && <TimelineView />}
+                        </div>
+                    </>
+                ),
             },
             {
                 id: 'correccion',
@@ -107,7 +123,7 @@ const JefeView: React.FC = () => {
 
         return [...mainTabs, ...dynamicStudentTabs];
 
-    }, [studentTabs, jefeOrientations, openStudentPanel]);
+    }, [studentTabs, jefeOrientations, openStudentPanel, activeMetricsTabId]);
 
     return (
         <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg border border-slate-200/60 animate-fade-in-up">
