@@ -130,6 +130,12 @@ body {
   50% { transform: translateY(-4px); }
 }
 
+/* New subtle background for hero metrics */
+.hero-metric-bg {
+  background-image: radial-gradient(circle at 1px 1px, rgba(0,0,0,0.03) 1px, transparent 0);
+  background-size: 1rem 1rem;
+}
+
 /* -- Prose styles for AI-generated content (good practice) -- */
 .prose {
     color: #334155;

@@ -11,6 +11,8 @@ import Tabs from '../components/Tabs';
 import SubTabs from '../components/SubTabs';
 import type { AuthUser } from '../contexts/AuthContext';
 import MetricsDashboard from '../components/MetricsDashboard';
+import TimelineView from '../components/TimelineView';
+import NuevosConvenios from '../components/NuevosConvenios';
 
 interface StudentTabInfo {
     id: string; // legajo
@@ -21,6 +23,7 @@ interface StudentTabInfo {
 const AdminView: React.FC = () => {
     const [studentTabs, setStudentTabs] = useState<StudentTabInfo[]>([]);
     const [activeTabId, setActiveTabId] = useState('metrics');
+    const [activeMetricsTabId, setActiveMetricsTabId] = useState('dashboard');
     const [activeGestionTabId, setActiveGestionTabId] = useState('manager');
     const [activeHerramientasTabId, setActiveHerramientasTabId] = useState('repitentes');
     const { showModal } = useModal();
@@ -48,6 +51,11 @@ const AdminView: React.FC = () => {
     }, [activeTabId]);
 
     const allTabs = useMemo(() => {
+        const metricsSubTabs = [
+            { id: 'dashboard', label: 'Dashboard', icon: 'bar_chart' },
+            { id: 'timeline', label: 'Línea de Tiempo', icon: 'timeline' },
+        ];
+
         const gestionSubTabs = [
             { id: 'manager', label: 'Gestionar Prácticas', icon: 'dynamic_feed' },
             { id: 'status-manager', label: 'Control de Estados', icon: 'toggle_on' },
@@ -57,14 +65,23 @@ const AdminView: React.FC = () => {
             { id: 'repitentes', label: 'Repitentes', icon: 'history_edu' },
             { id: 'search', label: 'Buscar Alumno', icon: 'person_search' },
             { id: 'insurance', label: 'Seguros', icon: 'shield' },
+            { id: 'convenios', label: 'Convenios Nuevos', icon: 'handshake' },
         ];
         
         const mainTabs = [
             {
                 id: 'metrics',
                 label: 'Métricas',
-                icon: 'bar_chart',
-                content: <MetricsDashboard />,
+                icon: 'analytics',
+                content: (
+                    <>
+                        <SubTabs tabs={metricsSubTabs} activeTabId={activeMetricsTabId} onTabChange={setActiveMetricsTabId} />
+                        <div className="mt-6">
+                            {activeMetricsTabId === 'dashboard' && <MetricsDashboard />}
+                            {activeMetricsTabId === 'timeline' && <TimelineView />}
+                        </div>
+                    </>
+                ),
             },
             {
                 id: 'correccion',
@@ -97,6 +114,7 @@ const AdminView: React.FC = () => {
                             {activeHerramientasTabId === 'repitentes' && <RepitentesPanel />}
                             {activeHerramientasTabId === 'search' && <div className="p-4"><AdminSearch onStudentSelect={openStudentPanel} /></div>}
                             {activeHerramientasTabId === 'insurance' && <SeguroGenerator showModal={showModal} />}
+                            {activeHerramientasTabId === 'convenios' && <NuevosConvenios />}
                         </div>
                     </>
                 )
@@ -112,7 +130,7 @@ const AdminView: React.FC = () => {
         }));
 
         return [...mainTabs, ...dynamicStudentTabs];
-    }, [studentTabs, activeGestionTabId, activeHerramientasTabId, openStudentPanel, showModal]);
+    }, [studentTabs, activeMetricsTabId, activeGestionTabId, activeHerramientasTabId, openStudentPanel, showModal]);
 
     return (
         <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg border border-slate-200/60 animate-fade-in-up">

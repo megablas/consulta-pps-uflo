@@ -1,0 +1,349 @@
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchAllAirtableData, updateAirtableRecords } from '../services/airtableService';
+import type { LanzamientoPPS, InstitucionFields, LanzamientoPPSFields } from '../types';
+import {
+  AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
+  AIRTABLE_TABLE_NAME_INSTITUCIONES,
+  FIELD_NOMBRE_PPS_LANZAMIENTOS,
+  FIELD_FECHA_INICIO_LANZAMIENTOS,
+  FIELD_NOMBRE_INSTITUCIONES,
+  FIELD_CONVENIO_NUEVO_INSTITUCIONES,
+  FIELD_REVISADO_CONVENIO_2025_INSTITUCIONES,
+  FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS,
+} from '../constants';
+import Loader from './Loader';
+import EmptyState from './EmptyState';
+import { parseToUTCDate, normalizeStringForComparison } from '../utils/formatters';
+import { lanzamientoPPSArraySchema } from '../schemas';
+import Card from './Card';
+import Toast from './Toast';
+
+// Fetches all PPS launches and institutions from Airtable
+const fetchConveniosData = async (): Promise<{ launches: LanzamientoPPS[], institutions: (InstitucionFields & { id: string })[] }> => {
+    const [launchesRes, institutionsRes] = await Promise.all([
+        fetchAllAirtableData<LanzamientoPPSFields>(
+            AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
+            [
+                FIELD_NOMBRE_PPS_LANZAMIENTOS,
+                FIELD_FECHA_INICIO_LANZAMIENTOS,
+                FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS,
+            ],
+        ),
+        fetchAllAirtableData<InstitucionFields>(
+            AIRTABLE_TABLE_NAME_INSTITUCIONES,
+            [FIELD_NOMBRE_INSTITUCIONES, FIELD_CONVENIO_NUEVO_INSTITUCIONES, FIELD_REVISADO_CONVENIO_2025_INSTITUCIONES]
+        )
+    ]);
+
+    if (launchesRes.error || institutionsRes.error) {
+        const errorObj = (launchesRes.error || institutionsRes.error)?.error;
+        const errorMsg = typeof errorObj === 'string'
+            ? errorObj
+            : (errorObj && typeof errorObj === 'object' && 'message' in errorObj)
+                ? String((errorObj as { message: unknown }).message)
+                : 'Error al obtener los datos';
+        throw new Error(`Error al cargar datos de convenios: ${errorMsg}`);
+    }
+  
+    const launchesValidation = lanzamientoPPSArraySchema.safeParse(launchesRes.records);
+    if (!launchesValidation.success) {
+        console.error('[Zod Validation Error in NuevosConvenios Launches]:', launchesValidation.error.issues);
+        throw new Error('Error de validación de datos para los lanzamientos.');
+    }
+
+    return {
+        launches: launchesValidation.data.map(r => ({ ...r.fields, id: r.id })),
+        institutions: institutionsRes.records.map(r => ({...r.fields, id: r.id}))
+    };
+};
+
+interface GroupedInstitutionInfo {
+    id: string; 
+    groupName: string;
+    totalCupos: number;
+    subPps: { name: string; cupos: number }[];
+}
+
+const NuevosConvenios: React.FC = () => {
+    const queryClient = useQueryClient();
+    const { data, isLoading, error } = useQuery({
+        queryKey: ['nuevosConveniosData'],
+        queryFn: fetchConveniosData,
+    });
+    
+    const [selection, setSelection] = useState<Map<string, boolean>>(new Map());
+    const [initialStatus, setInitialStatus] = useState<Map<string, { isNew: boolean, isReviewed: boolean }>>(new Map());
+    const [toastInfo, setToastInfo] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+    const toggleExpanded = (groupName: string) => {
+        setExpandedGroups(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(groupName)) {
+                newSet.delete(groupName);
+            } else {
+                newSet.add(groupName);
+            }
+            return newSet;
+        });
+    };
+
+    const { confirmedNewConvenios, suggestedNewConvenios } = useMemo((): {
+        confirmedNewConvenios: GroupedInstitutionInfo[],
+        suggestedNewConvenios: GroupedInstitutionInfo[]
+    } => {
+        if (!data) return { confirmedNewConvenios: [], suggestedNewConvenios: [] };
+        
+        const getGroupName = (name: string | undefined): string => {
+            if (!name) return 'Sin Nombre';
+            return name.split(' - ')[0].trim();
+        };
+
+        const institutionMap = new Map<string, { id: string; originalName: string; isNew: boolean; isReviewed: boolean }>();
+        data.institutions.forEach(inst => {
+            if (inst[FIELD_NOMBRE_INSTITUCIONES]) {
+                const normName = normalizeStringForComparison(inst[FIELD_NOMBRE_INSTITUCIONES]);
+                institutionMap.set(normName, {
+                    id: inst.id,
+                    originalName: inst[FIELD_NOMBRE_INSTITUCIONES],
+                    isNew: !!inst[FIELD_CONVENIO_NUEVO_INSTITUCIONES],
+                    isReviewed: !!inst[FIELD_REVISADO_CONVENIO_2025_INSTITUCIONES],
+                });
+            }
+        });
+
+        const institutions2024GroupNames = new Set<string>();
+        data.launches.forEach(launch => {
+            const date = parseToUTCDate(launch[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+            if (date?.getUTCFullYear() === 2024 && launch[FIELD_NOMBRE_PPS_LANZAMIENTOS]) {
+                institutions2024GroupNames.add(normalizeStringForComparison(getGroupName(launch[FIELD_NOMBRE_PPS_LANZAMIENTOS])));
+            }
+        });
+
+        const groups2025 = new Map<string, { totalCupos: number; subPps: { name: string; cupos: number }[]; }>();
+        data.launches.forEach(launch => {
+            const date = parseToUTCDate(launch[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+            const originalName = launch[FIELD_NOMBRE_PPS_LANZAMIENTOS];
+            if (date?.getUTCFullYear() === 2025 && originalName) {
+                const groupName = getGroupName(originalName);
+                const normGroupName = normalizeStringForComparison(groupName);
+                
+                if (!groups2025.has(normGroupName)) {
+                    groups2025.set(normGroupName, { totalCupos: 0, subPps: [] });
+                }
+                
+                const group = groups2025.get(normGroupName)!;
+                const cupos = launch[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0;
+                group.totalCupos += cupos;
+                group.subPps.push({ name: originalName, cupos });
+            }
+        });
+
+        const confirmed: GroupedInstitutionInfo[] = [];
+        const suggested: GroupedInstitutionInfo[] = [];
+
+        for (const [normGroupName, groupData] of groups2025.entries()) {
+            const groupName = getGroupName(groupData.subPps[0].name);
+            let representativeInst = institutionMap.get(normGroupName);
+            if (!representativeInst) {
+                for (const sub of groupData.subPps) {
+                    representativeInst = institutionMap.get(normalizeStringForComparison(sub.name));
+                    if (representativeInst) break;
+                }
+            }
+            if (!representativeInst) continue;
+
+            const finalGroupData: GroupedInstitutionInfo = {
+                id: representativeInst.id,
+                groupName,
+                totalCupos: groupData.totalCupos,
+                subPps: groupData.subPps.sort((a, b) => a.name.localeCompare(b.name)),
+            };
+
+            if (representativeInst.isNew) {
+                confirmed.push(finalGroupData);
+            } else if (!representativeInst.isReviewed && !institutions2024GroupNames.has(normGroupName)) {
+                suggested.push(finalGroupData);
+            }
+        }
+        
+        return {
+            confirmedNewConvenios: confirmed.sort((a,b) => a.groupName.localeCompare(b.groupName)),
+            suggestedNewConvenios: suggested.sort((a,b) => a.groupName.localeCompare(b.groupName)),
+        };
+    }, [data]);
+    
+    useEffect(() => {
+        if (data?.institutions) {
+            const initialStatusMap = new Map<string, { isNew: boolean, isReviewed: boolean }>();
+            data.institutions.forEach(inst => {
+                initialStatusMap.set(inst.id, {
+                    isNew: !!inst[FIELD_CONVENIO_NUEVO_INSTITUCIONES],
+                    isReviewed: !!inst[FIELD_REVISADO_CONVENIO_2025_INSTITUCIONES]
+                });
+            });
+            setInitialStatus(initialStatusMap);
+
+            const newSelection = new Map<string, boolean>();
+            confirmedNewConvenios.forEach(group => newSelection.set(group.id, true));
+            suggestedNewConvenios.forEach(group => newSelection.set(group.id, true));
+            setSelection(newSelection);
+        }
+    }, [data, confirmedNewConvenios, suggestedNewConvenios]);
+    
+    const mutation = useMutation({
+        mutationFn: (recordsToUpdate: { id: string; fields: Partial<InstitucionFields> }[]) => 
+            updateAirtableRecords(AIRTABLE_TABLE_NAME_INSTITUCIONES, recordsToUpdate),
+        onSuccess: () => {
+            setToastInfo({ message: 'Cambios guardados exitosamente.', type: 'success' });
+            queryClient.invalidateQueries({ queryKey: ['nuevosConveniosData'] });
+        },
+        onError: (err) => {
+            setToastInfo({ message: `Error al guardar: ${err.message}`, type: 'error' });
+        }
+    });
+
+    const handleToggleSelection = (groupId: string) => {
+        setSelection(prev => {
+            const newSelection = new Map(prev);
+            newSelection.set(groupId, !prev.get(groupId));
+            return newSelection;
+        });
+    };
+
+    const changesToSave = useMemo(() => {
+        const changes: { id: string, fields: Partial<InstitucionFields> }[] = [];
+        const allDisplayedGroups = [
+            ...confirmedNewConvenios.map(g => ({...g, wasSuggested: false })),
+            ...suggestedNewConvenios.map(g => ({...g, wasSuggested: true }))
+        ];
+
+        for (const group of allDisplayedGroups) {
+            const isSelectedInUI = selection.get(group.id) ?? false;
+            
+            const initial = initialStatus.get(group.id) || { isNew: false, isReviewed: false };
+            const wasInitiallyNew = initial.isNew;
+            const wasInitiallyReviewed = initial.isReviewed;
+            
+            const hasStatusChanged = isSelectedInUI !== wasInitiallyNew;
+            const needsReviewUpdate = (group.wasSuggested && !wasInitiallyReviewed) || (wasInitiallyNew && !isSelectedInUI);
+
+            if (hasStatusChanged || needsReviewUpdate) {
+                const fieldsToUpdate: Partial<InstitucionFields> = {};
+                if(hasStatusChanged) fieldsToUpdate[FIELD_CONVENIO_NUEVO_INSTITUCIONES] = isSelectedInUI;
+                if(needsReviewUpdate) fieldsToUpdate[FIELD_REVISADO_CONVENIO_2025_INSTITUCIONES] = true;
+                if(Object.keys(fieldsToUpdate).length > 0) changes.push({ id: group.id, fields: fieldsToUpdate });
+            }
+        }
+        return changes;
+    }, [selection, initialStatus, confirmedNewConvenios, suggestedNewConvenios]);
+
+    const handleSaveChanges = useCallback(() => {
+        if (changesToSave.length > 0) {
+            mutation.mutate(changesToSave);
+        }
+    }, [changesToSave, mutation]);
+
+
+    if (isLoading) return <div className="flex justify-center p-8"><Loader /></div>;
+    if (error) return <EmptyState icon="error" title="Error al Cargar Datos" message={error.message} />;
+
+    const renderList = (list: GroupedInstitutionInfo[]) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {list.map(group => {
+                const isSelected = selection.get(group.id) ?? false;
+                const isExpanded = expandedGroups.has(group.groupName);
+                return (
+                    <div key={group.id} className={`bg-white rounded-xl border-2 transition-all duration-200 ${isSelected ? 'border-emerald-400 shadow-sm' : 'border-slate-200/80'}`}>
+                        <div className="flex items-start gap-3 p-4">
+                            <button onClick={() => handleToggleSelection(group.id)} className="flex-shrink-0 mt-1">
+                                <span className={`material-icons !text-2xl transition-colors ${isSelected ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                    {isSelected ? 'check_box' : 'check_box_outline_blank'}
+                                </span>
+                            </button>
+                            <div className="flex-grow">
+                                <p className={`font-bold ${isSelected ? 'text-emerald-900' : 'text-slate-800'}`}>{group.groupName}</p>
+                                <p className="text-sm text-slate-500">
+                                    <span className="font-semibold">{group.totalCupos}</span> cupos en <span className="font-semibold">{group.subPps.length}</span> PPS
+                                </p>
+                            </div>
+                            <button onClick={() => toggleExpanded(group.groupName)} className="flex-shrink-0 p-2 -m-2 rounded-full text-slate-500 hover:bg-slate-100 transition-colors">
+                                <span className={`material-icons !text-lg transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>expand_more</span>
+                            </button>
+                        </div>
+                        {isExpanded && (
+                            <div className="border-t border-slate-200/80 bg-slate-50/50 p-4 animate-fade-in-up" style={{animationDuration: '300ms'}}>
+                                <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Desglose de PPS</h5>
+                                <ul className="space-y-1.5">
+                                    {group.subPps.map(pps => (
+                                        <li key={pps.name} className="flex justify-between items-center text-sm">
+                                            <span className="text-slate-700">{pps.name.replace(`${group.groupName} - `, '')}</span>
+                                            <span className="font-semibold text-slate-600 bg-slate-200/70 px-2 py-0.5 rounded-md">{pps.cupos} cupos</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+
+    return (
+        <div className="animate-fade-in-up space-y-8">
+            {toastInfo && <Toast message={toastInfo.message} type={toastInfo.type} onClose={() => setToastInfo(null)} />}
+            
+            <Card
+                icon="fact_check"
+                title="Convenios Nuevos Confirmados"
+                description="Esta es la lista de instituciones marcadas como nuevos convenios para el ciclo 2025. Desmarca una para eliminarla y marcarla como revisada."
+            >
+                {confirmedNewConvenios.length > 0 ? (
+                    <div className="mt-6 border-t border-slate-200 pt-6">
+                        {renderList(confirmedNewConvenios)}
+                    </div>
+                ) : (
+                    <div className="mt-4">
+                        <EmptyState 
+                            icon="checklist"
+                            title="Sin Convenios Confirmados"
+                            message="Aún no se ha confirmado ningún convenio nuevo para 2025. Las sugerencias aparecerán abajo."
+                        />
+                    </div>
+                )}
+            </Card>
+
+            {suggestedNewConvenios.length > 0 && (
+                <Card
+                    icon="lightbulb"
+                    title="Sugerencias para Revisar"
+                    description={`Hemos identificado ${suggestedNewConvenios.length} instituciones que podrían ser convenios nuevos. Mantén marcadas las que quieres confirmar y desmarca las que no.`}
+                >
+                    <div className="mt-6 border-t border-slate-200 pt-6">
+                        {renderList(suggestedNewConvenios)}
+                    </div>
+                </Card>
+            )}
+
+            {changesToSave.length > 0 && (
+                <div className="flex justify-end sticky bottom-4">
+                    <button
+                        onClick={handleSaveChanges}
+                        disabled={mutation.isPending}
+                        className="bg-blue-600 text-white font-bold py-3 px-6 rounded-xl text-base transition-all duration-200 shadow-lg hover:bg-blue-700 hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                    >
+                        {mutation.isPending ? (
+                            <><div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin"/><span>Guardando...</span></>
+                        ) : (
+                            <><span className="material-icons !text-base">save</span><span>Guardar Cambios ({changesToSave.length})</span></>
+                        )}
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default NuevosConvenios;
