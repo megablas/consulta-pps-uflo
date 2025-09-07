@@ -24,7 +24,7 @@ const AppHeader: React.FC = () => {
   }, []);
 
   return (
-    <header className={`sticky top-0 z-50 bg-white/80 backdrop-blur-xl transition-all duration-300 ${hasScrolled ? 'border-b border-slate-200/70 shadow-sm' : 'border-b border-transparent'}`}>
+    <header className={`no-print sticky top-0 z-50 bg-white/80 backdrop-blur-xl transition-all duration-300 ${hasScrolled ? 'border-b border-slate-200/70 shadow-sm' : 'border-b border-transparent'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
             {/* Left side */}

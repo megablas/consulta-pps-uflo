@@ -199,9 +199,6 @@ body {
     font-size: 10pt;
     color: #000;
   }
-  #root {
-    display: none;
-  }
   .no-print {
     display: none !important;
   }
