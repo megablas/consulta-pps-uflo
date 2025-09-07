@@ -25,16 +25,13 @@ jobs:
         node-version: '18'
 
       - name: Delete package-lock.json
-  	run: rm package-lock.json
-
-      - name: Clear npm cache
-  	run: npm cache clean --force
+        run: rm package-lock.json
 
       - name: Clear npm cache
         run: npm cache clean --force
 
       - name: Install dependencies
-  	run: npm install
+        run: npm install
 
       - name: Build project
         run: npm run build
