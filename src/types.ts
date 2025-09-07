@@ -44,6 +44,9 @@ export interface EstudianteFields {
   'Correo'?: string;
   'Teléfono'?: string;
   'Notas Internas'?: string;
+  'Fecha de Finalización'?: string; // Date string
+  'Finalizaron'?: boolean;
+  'Creada'?: string;
 }
 
 export interface AuthUserFields {
@@ -99,6 +102,7 @@ export interface ConvocatoriaFields {
   'Estado de Convocatoria'?: string; // e.g. 'Abierta', 'Cerrada'
   'Estado'?: string; // e.g., 'No seleccionado', 'Seleccionado', 'Inscripto'
   'Orientación'?: string;
+  // FIX: Made '¿Terminó de cursar?' optional to align with schema and usage, resolving multiple type errors.
   '¿Terminó de cursar?'?: string;
   'Cursando Materias Electivas'?: string;
   'Finales que adeuda'?: string;
@@ -244,3 +248,24 @@ export type TabId = 'convocatorias' | 'informes' | 'solicitudes' | 'practicas' |
 
 // Gender identifier for personalization
 export type UserGender = 'masculino' | 'femenino' | 'neutro';
+
+export interface ExecutiveReportData {
+    period: {
+        current: { start: string, end: string },
+        previous: { start: string, end: string },
+    };
+    summary: string;
+    kpis: {
+        activeStudents: { current: number, previous: number };
+        studentsWithoutPpsExcludingRelevamiento: { current: number, previous: number };
+        studentsWithoutAnyPps: { current: number, previous: number };
+        finishedStudents: { current: number, previous: number };
+        newStudents: { current: number, previous: number };
+        newPpsLaunches: { current: number, previous: number };
+        totalOfferedSpots: { current: number, previous: number };
+        newAgreements: { current: number, previous: number };
+    };
+// FIX: Added 'date' and 'orientation' to the ppsLaunchedInPeriod type to match the data structure created in useExecutiveReportData.ts, fixing errors in PrintableExecutiveReport.tsx.
+    ppsLaunchedInPeriod: { name: string; spots: number; date: string; orientation: string; }[];
+    newAgreementsList: string[];
+}

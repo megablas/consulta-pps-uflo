@@ -52,7 +52,7 @@ const WelcomeBannerSkeleton: React.FC = () => (
 const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
   studentName,
   studentDetails,
-  isLoading
+  isLoading,
 }) => {
   const [greeting, setGreeting] = useState('');
 
@@ -110,18 +110,21 @@ const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
 
       {/* Contenido */}
       <div className="relative z-10">
-        <h1 className="text-4xl md:text-5xl font-black text-slate-800 tracking-tight">
-          {greeting},{' '}
-          <span className="text-blue-600">
-            {studentName?.split(' ')[0] || 'Estudiante'}
-          </span>
-          .
-        </h1>
-        <p className="mt-2 text-md text-slate-600 max-w-2xl">
-          Bienvenido a tu panel de mando. Aquí seguimos tu progreso y te acercamos nuevas
-          oportunidades.
-        </p>
-
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+            <div className="flex-grow">
+                <h1 className="text-4xl md:text-5xl font-black text-slate-800 tracking-tight">
+                  {greeting},{' '}
+                  <span className="text-blue-600">
+                      {studentName?.split(' ')[0] || 'Estudiante'}
+                  </span>
+                  .
+                </h1>
+                <p className="mt-2 text-md text-slate-600 max-w-2xl">
+                  Bienvenido a tu panel de mando. Aquí seguimos tu progreso y te acercamos nuevas
+                  oportunidades.
+                </p>
+            </div>
+        </div>
         {hasAnyInfo && (
           <div className="mt-6 pt-6 border-t border-slate-200/80">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -136,4 +139,4 @@ const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
   );
 };
 
-export default WelcomeBanner;
+export default React.memo(WelcomeBanner);

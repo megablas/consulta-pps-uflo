@@ -25,6 +25,8 @@ export const FIELD_FECHA_NACIMIENTO_ESTUDIANTES = 'Fecha de Nacimiento';
 export const FIELD_CORREO_ESTUDIANTES = 'Correo';
 export const FIELD_TELEFONO_ESTUDIANTES = 'Teléfono';
 export const FIELD_NOTAS_INTERNAS_ESTUDIANTES = 'Notas Internas';
+export const FIELD_FECHA_FINALIZACION_ESTUDIANTES = 'Fecha de Finalización';
+
 
 // --- Fields for 'Prácticas' table ---
 export const FIELD_NOMBRE_BUSQUEDA_PRACTICAS = 'Legajo Busqueda'; // Lookup from Estudiantes (should contain the Legajo value as text)

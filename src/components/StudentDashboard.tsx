@@ -21,6 +21,7 @@ import { useStudentSolicitudes } from '../hooks/useStudentSolicitudes';
 import { useConvocatorias } from '../hooks/useConvocatorias';
 import { processInformeTasks } from '../services/dataService';
 import ProfileView from '../components/ProfileView';
+import PrintableReport from './PrintableReport';
 
 interface StudentDashboardProps {
   user: AuthUser;
@@ -117,20 +118,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   if (isLoading) return <DashboardLoadingSkeleton />;
   if (error) return <ErrorState error={error.message} onRetry={refetchAll} />;
 
-  if (showEmptyState) {
-    return (
-      <div className="space-y-8 animate-fade-in-up">
-        <WelcomeBanner studentName={studentNameForPanel} studentDetails={studentDetails} isLoading={false} />
-        <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
-        <Card className="border-slate-300/50 bg-slate-50/30">
-          <EmptyState icon="search_off" title="Sin Resultados" message="No se encontró información de prácticas o solicitudes para este estudiante." action={<button onClick={refetchAll} className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-300 hover:scale-105">Actualizar Datos</button>} />
-        </Card>
-        {showExportButton && <WhatsAppExportButton practicas={practicas} criterios={criterios} selectedOrientacion={selectedOrientacion} studentNameForPanel={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />}
-      </div>
-    );
-  }
-  
-  return (
+  const DashboardContent = () => (
     <div className="space-y-8 animate-fade-in-up">
       <WelcomeBanner studentName={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />
       <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
@@ -143,8 +131,58 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
           />
         </Card>
       )}
-      {showExportButton && <WhatsAppExportButton practicas={practicas} criterios={criterios} selectedOrientacion={selectedOrientacion} studentNameForPanel={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />}
     </div>
+  );
+  
+  if (showEmptyState) {
+    return (
+      <>
+        <div className="print-only">
+          <PrintableReport studentDetails={studentDetails} criterios={criterios} practicas={practicas} />
+        </div>
+        <div className="no-print">
+          <div className="space-y-8 animate-fade-in-up">
+            <WelcomeBanner studentName={studentNameForPanel} studentDetails={studentDetails} isLoading={false} />
+            <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
+            <Card className="border-slate-300/50 bg-slate-50/30">
+              <EmptyState icon="search_off" title="Sin Resultados" message="No se encontró información de prácticas o solicitudes para este estudiante." action={<button onClick={refetchAll} className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-300 hover:scale-105">Actualizar Datos</button>} />
+            </Card>
+          </div>
+          <WhatsAppExportButton practicas={practicas} criterios={criterios} selectedOrientacion={selectedOrientacion} studentNameForPanel={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />
+           <button onClick={() => window.print()} className="fixed bottom-6 right-24 z-50 w-14 h-14 bg-slate-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-300 ease-in-out transform hover:scale-110 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-slate-400" aria-label="Imprimir reporte">
+             <span className="material-icons !text-2xl">print</span>
+           </button>
+        </div>
+      </>
+    );
+  }
+  
+  return (
+    <>
+      <div className="print-only">
+          <PrintableReport 
+              studentDetails={studentDetails} 
+              criterios={criterios} 
+              practicas={practicas} 
+          />
+      </div>
+      <div className="no-print">
+        <DashboardContent />
+        {showExportButton && (
+          <>
+            <WhatsAppExportButton practicas={practicas} criterios={criterios} selectedOrientacion={selectedOrientacion} studentNameForPanel={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />
+             <button
+              onClick={() => window.print()}
+              className="fixed bottom-6 right-24 z-50 w-14 h-14 bg-slate-700 text-white rounded-full shadow-lg flex items-center justify-center
+                         transition-all duration-300 ease-in-out transform hover:scale-110 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-slate-400"
+              aria-label="Imprimir reporte"
+            >
+              <span className="material-icons !text-2xl">print</span>
+            </button>
+          </>
+        )}
+      </div>
+    </>
   );
 };
 

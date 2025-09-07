@@ -1,5 +1,3 @@
-// FIX: Import '@testing-library/jest-dom' to provide custom matchers for DOM assertions and fix TypeScript type errors.
-import '@testing-library/jest-dom';
 import { describe, it, expect } from '@jest/globals';
 import React from 'react';
 import { render, screen } from '@testing-library/react';

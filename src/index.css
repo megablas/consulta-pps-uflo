@@ -42,6 +42,12 @@ body {
   border-width: 0;
 }
 
+/* Fix for dark-mode browser default styles on date inputs */
+.force-light-scheme {
+  color-scheme: light;
+}
+
+
 /* -- Custom Animations -- */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(20px); }
@@ -178,4 +184,71 @@ body {
     margin-top: 2em;
     margin-bottom: 2em;
     border-top: 1px solid #e2e8f0;
+}
+
+/* -- Print Styles -- */
+@media screen {
+  .print-only {
+    display: none;
+  }
+}
+
+@media print {
+  body {
+    background: none !important;
+    font-size: 10pt;
+    color: #000;
+  }
+  #root {
+    display: none;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  .printable-executive-report {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+  .printable-section {
+    page-break-inside: avoid;
+    margin-top: 2rem;
+  }
+  
+  /* Force all elements inside the report to have transparent background and black text */
+  .printable-executive-report * {
+      background-color: transparent !important;
+      color: #000 !important;
+      box-shadow: none !important;
+      text-shadow: none !important;
+  }
+
+  .printable-executive-report table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+  }
+  .printable-executive-report th, 
+  .printable-executive-report td {
+    border: 1px solid #ccc !important;
+    padding: 6px;
+    text-align: left;
+  }
+  /* Re-apply the desired background for table headers after the global override */
+  .printable-executive-report th {
+    background-color: #f2f2f2 !important;
+    -webkit-print-color-adjust: exact;
+    color-adjust: exact;
+  }
+  .print-chart-container {
+    page-break-inside: avoid;
+    /* Charts might need specific handling if they are SVGs to ensure they scale correctly */
+  }
 }
