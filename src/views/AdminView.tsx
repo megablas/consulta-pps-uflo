@@ -13,6 +13,7 @@ import type { AuthUser } from '../contexts/AuthContext';
 import MetricsDashboard from '../components/MetricsDashboard';
 import TimelineView from '../components/TimelineView';
 import NuevosConvenios from '../components/NuevosConvenios';
+import ExecutiveReportGenerator from '../components/ExecutiveReportGenerator';
 
 interface StudentTabInfo {
     id: string; // legajo
@@ -66,6 +67,7 @@ const AdminView: React.FC = () => {
             { id: 'search', label: 'Buscar Alumno', icon: 'person_search' },
             { id: 'insurance', label: 'Seguros', icon: 'shield' },
             { id: 'convenios', label: 'Convenios Nuevos', icon: 'handshake' },
+            { id: 'executive-report', label: 'Reporte Ejecutivo', icon: 'summarize' },
         ];
         
         const mainTabs = [
@@ -115,6 +117,7 @@ const AdminView: React.FC = () => {
                             {activeHerramientasTabId === 'search' && <div className="p-4"><AdminSearch onStudentSelect={openStudentPanel} /></div>}
                             {activeHerramientasTabId === 'insurance' && <SeguroGenerator showModal={showModal} />}
                             {activeHerramientasTabId === 'convenios' && <NuevosConvenios />}
+                            {activeHerramientasTabId === 'executive-report' && <ExecutiveReportGenerator />}
                         </div>
                     </>
                 )

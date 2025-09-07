@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import CriteriosPanel from '../components/CriteriosPanel';
 import PracticasTable from '../components/PracticasTable';
 import SolicitudesList from '../components/SolicitudesList';
@@ -21,6 +21,7 @@ import { useStudentSolicitudes } from '../hooks/useStudentSolicitudes';
 import { useConvocatorias } from '../hooks/useConvocatorias';
 import { processInformeTasks } from '../services/dataService';
 import ProfileView from '../components/ProfileView';
+import PrintableReport from '../components/PrintableReport';
 
 interface StudentDashboardProps {
   user: AuthUser;
@@ -64,18 +65,18 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   const informeTasks = useMemo(() => processInformeTasks(myEnrollments, allLanzamientos, practicas), [myEnrollments, allLanzamientos, practicas]);
 
   // --- MUTATION HANDLERS ---
-  const handleOrientacionChange = (orientacion: Orientacion | "") => {
+  const handleOrientacionChange = useCallback((orientacion: Orientacion | "") => {
     updateOrientation.mutate(orientacion, {
       onSuccess: () => {
         setShowSaveConfirmation(true);
         setTimeout(() => setShowSaveConfirmation(false), 2000);
       }
     });
-  };
+  }, [updateOrientation]);
 
-  const handleNotaChange = (practicaId: string, nota: string, convocatoriaId?: string) => {
+  const handleNotaChange = useCallback((practicaId: string, nota: string, convocatoriaId?: string) => {
     updateNota.mutate({ practicaId, nota, convocatoriaId });
-  };
+  }, [updateNota]);
   
   const studentDataTabs = useMemo(() => {
     let tabs = [
@@ -116,35 +117,53 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   // --- RENDER LOGIC ---
   if (isLoading) return <DashboardLoadingSkeleton />;
   if (error) return <ErrorState error={error.message} onRetry={refetchAll} />;
-
-  if (showEmptyState) {
-    return (
-      <div className="space-y-8 animate-fade-in-up">
-        <WelcomeBanner studentName={studentNameForPanel} studentDetails={studentDetails} isLoading={false} />
-        <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
-        <Card className="border-slate-300/50 bg-slate-50/30">
-          <EmptyState icon="search_off" title="Sin Resultados" message="No se encontró información de prácticas o solicitudes para este estudiante." action={<button onClick={refetchAll} className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-300 hover:scale-105">Actualizar Datos</button>} />
-        </Card>
-        {showExportButton && <WhatsAppExportButton practicas={practicas} criterios={criterios} selectedOrientacion={selectedOrientacion} studentNameForPanel={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />}
-      </div>
-    );
-  }
   
   return (
-    <div className="space-y-8 animate-fade-in-up">
-      <WelcomeBanner studentName={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />
-      <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
-      {hasData && (
-        <Card>
-          <Tabs
-            tabs={studentDataTabs}
-            activeTabId={currentActiveTab}
-            onTabChange={(id) => setCurrentActiveTab(id as TabId)}
+    <>
+      <div className="print-only">
+          <PrintableReport 
+              studentDetails={studentDetails} 
+              criterios={criterios} 
+              practicas={practicas} 
           />
-        </Card>
-      )}
-      {showExportButton && <WhatsAppExportButton practicas={practicas} criterios={criterios} selectedOrientacion={selectedOrientacion} studentNameForPanel={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />}
-    </div>
+      </div>
+      <div className="no-print">
+        <div className="space-y-8 animate-fade-in-up">
+          <WelcomeBanner studentName={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />
+          <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
+          
+          {hasData && (
+            <Card>
+              <Tabs
+                tabs={studentDataTabs}
+                activeTabId={currentActiveTab}
+                onTabChange={(id) => setCurrentActiveTab(id as TabId)}
+              />
+            </Card>
+          )}
+
+          {showEmptyState && (
+            <Card className="border-slate-300/50 bg-slate-50/30">
+              <EmptyState icon="search_off" title="Sin Resultados" message="No se encontró información de prácticas o solicitudes para este estudiante." action={<button onClick={refetchAll} className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-300 hover:scale-105">Actualizar Datos</button>} />
+            </Card>
+          )}
+        </div>
+        
+        {showExportButton && (
+          <>
+            <WhatsAppExportButton practicas={practicas} criterios={criterios} selectedOrientacion={selectedOrientacion} studentNameForPanel={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />
+             <button
+              onClick={() => window.print()}
+              className="fixed bottom-6 right-24 z-50 w-14 h-14 bg-slate-700 text-white rounded-full shadow-lg flex items-center justify-center
+                         transition-all duration-300 ease-in-out transform hover:scale-110 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-slate-400"
+              aria-label="Imprimir reporte"
+            >
+              <span className="material-icons !text-2xl">print</span>
+            </button>
+          </>
+        )}
+      </div>
+    </>
   );
 };
 
