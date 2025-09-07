@@ -1,13 +1,14 @@
 import { AIRTABLE_PAT, AIRTABLE_BASE_ID } from '../constants';
 import type { AirtableResponse, AirtableErrorResponse, AirtableRecord } from '../types';
 
-// Use window.location.hostname to determine if in development,
-// as import.meta.env is not available in the project's setup.
-const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+// Use Vite's built-in environment variable to detect development mode.
+// This is more reliable than checking hostname and works correctly with `npm run dev`.
+// FIX: Use optional chaining to safely access Vite's `env` properties to prevent runtime errors.
+const isDevelopment = (import.meta as any)?.env?.DEV;
 
 const API_BASE = isDevelopment
-    ? `/airtable-api/v0/${AIRTABLE_BASE_ID}`
-    : `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}`;
+    ? `/airtable-api/v0/${AIRTABLE_BASE_ID}` // Use the proxy in development
+    : `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}`; // Direct call in production (requires a proper backend/proxy for CORS)
 
 const fetchDataGeneric = async <T>(url: string): Promise<{ data: AirtableResponse<T> | null, error: AirtableErrorResponse | null }> => {
     try {

@@ -27,6 +27,23 @@ const PrintableExecutiveReport: React.FC<PrintableExecutiveReportProps> = ({ dat
                 </p>
             </header>
 
+            <section className="mb-8 printable-section p-4 bg-blue-50 border border-blue-200/60 rounded-lg text-sm text-blue-800">
+                <div className="flex items-start gap-4">
+                    <span className="material-icons mt-1 text-blue-600">info</span>
+                    <div>
+                        <h3 className="font-bold mb-1 text-base">Cómo funciona este reporte</h3>
+                        <p className="text-xs leading-relaxed">
+                            Este panel compara dos "fotos" acumulativas del ciclo 2025 para mostrar la evolución entre las fechas seleccionadas.
+                            <ul className="list-disc pl-5 mt-2 space-y-1">
+                                <li><strong>Período Actual:</strong> Muestra el total acumulado desde el 1 de enero de 2025 hasta la <strong>Fecha de Fin</strong> que elijas.</li>
+                                <li><strong>Período Anterior:</strong> Muestra la "foto" de los mismos datos acumulados, pero hasta el día <strong>anterior a la Fecha de Inicio</strong> seleccionada.</li>
+                                <li><strong>Evolución:</strong> Es la diferencia neta entre estas dos fotos, reflejando la actividad ocurrida dentro del rango de fechas que seleccionaste.</li>
+                            </ul>
+                        </p>
+                    </div>
+                </div>
+            </section>
+
             <section className="mb-10 printable-section">
                 <h2 className="text-2xl font-bold text-slate-800 border-b-2 border-slate-200 pb-2 mb-4">Resumen Ejecutivo</h2>
                 <div className="prose" dangerouslySetInnerHTML={{ __html: data.summary }} />
