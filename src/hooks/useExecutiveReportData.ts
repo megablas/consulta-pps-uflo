@@ -155,15 +155,6 @@ const calculateCumulativeMetrics = (
         newPpsLaunches,
         totalOfferedSpots,
         newAgreements: newAgreements.length,
-        newAgreementsList: newAgreements.map(i => i.fields[FIELD_NOMBRE_INSTITUCIONES] || 'N/A').sort(),
-        ppsLaunchedInPeriod: ppsLaunched
-            .map(l => ({
-                name: l.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'N/A',
-                spots: l.fields[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0,
-                date: formatDate(l.fields[FIELD_FECHA_INICIO_LANZAMIENTOS]),
-                orientation: l.fields[FIELD_ORIENTACION_LANZAMIENTOS] || 'N/A',
-            }))
-            .sort((a, b) => parseToUTCDate(a.date)!.getTime() - parseToUTCDate(b.date)!.getTime())
     };
 };
 
@@ -191,6 +182,40 @@ export const useExecutiveReportData = (startDateStr: string, endDateStr: string,
             
             const currentStockMetrics = getMetricsSnapshot(currentEnd, allData.estudiantes, allData.practicas);
             const previousStockMetrics = getMetricsSnapshot(previousEnd, allData.estudiantes, allData.practicas);
+            
+            // Period-specific calculations for lists
+            const ppsLaunchedInPeriod = allData.lanzamientos
+                .filter(l => {
+                    const launchDate = parseToUTCDate(l.fields[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+                    return launchDate && launchDate >= currentStart && launchDate <= currentEnd;
+                })
+                .map(l => ({
+                    name: l.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'N/A',
+                    spots: l.fields[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0,
+                    date: formatDate(l.fields[FIELD_FECHA_INICIO_LANZAMIENTOS]),
+                    orientation: l.fields[FIELD_ORIENTACION_LANZAMIENTOS] || 'N/A',
+                }))
+                .sort((a, b) => parseToUTCDate(a.date)!.getTime() - parseToUTCDate(b.date)!.getTime());
+
+            const newAgreementsList = allData.instituciones
+                .filter(i => {
+                    const isMarkedAsNew = i.fields[FIELD_CONVENIO_NUEVO_INSTITUCIONES];
+                    if (!isMarkedAsNew) return false;
+                    
+                    const firstLaunchDate = allData.lanzamientos
+                        .filter(l => {
+                            const launchDate = parseToUTCDate(l.fields[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+                            return launchDate && launchDate.getUTCFullYear() === 2025 && normalizeStringForComparison(l.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS]).startsWith(normalizeStringForComparison(i.fields[FIELD_NOMBRE_INSTITUCIONES]));
+                        })
+                        .map(l => parseToUTCDate(l.fields[FIELD_FECHA_INICIO_LANZAMIENTOS]))
+                        .filter((d): d is Date => d !== null)
+                        .sort((a, b) => a.getTime() - b.getTime())[0];
+                        
+                    return firstLaunchDate && firstLaunchDate >= currentStart && firstLaunchDate <= currentEnd;
+                })
+                .map(i => i.fields[FIELD_NOMBRE_INSTITUCIONES] || 'N/A')
+                .sort();
+
 
             const summary = `
                 <p>Comparando el estado acumulado desde el inicio del ciclo hasta el <strong>${formatDate(previousEnd.toISOString())}</strong> (período anterior) con el estado al <strong>${formatDate(endDateStr)}</strong> (período actual).</p>
@@ -215,8 +240,8 @@ export const useExecutiveReportData = (startDateStr: string, endDateStr: string,
                     totalOfferedSpots: { current: currentCumulativeMetrics.totalOfferedSpots, previous: previousCumulativeMetrics.totalOfferedSpots },
                     newAgreements: { current: currentCumulativeMetrics.newAgreements, previous: previousCumulativeMetrics.newAgreements },
                 },
-                ppsLaunchedInPeriod: currentCumulativeMetrics.ppsLaunchedInPeriod,
-                newAgreementsList: currentCumulativeMetrics.newAgreementsList,
+                ppsLaunchedInPeriod,
+                newAgreementsList,
             };
         },
         enabled: enabled,
