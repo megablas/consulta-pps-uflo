@@ -541,74 +541,71 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
     const { finalizadasParaReactivar, relanzamientosConfirmados, activasYPorFinalizar, activasIndefinidas } = useMemo(() => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-    
-        const activePpsNames = new Set<string>();
+
+        // 1. Group all launches by normalized institution name
+        const ppsGroups = new Map<string, LanzamientoPPS[]>();
         for (const pps of filteredData) {
-            const endDate = parseToUTCDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS]);
-            if (!endDate || endDate >= today) {
-                const ppsName = pps[FIELD_NOMBRE_PPS_LANZAMIENTOS];
-                if (ppsName) {
-                    activePpsNames.add(normalizeStringForComparison(ppsName));
-                }
+            const ppsName = pps[FIELD_NOMBRE_PPS_LANZAMIENTOS];
+            if (!ppsName) continue;
+
+            const normalizedName = normalizeStringForComparison(ppsName);
+            if (!ppsGroups.has(normalizedName)) {
+                ppsGroups.set(normalizedName, []);
             }
+            ppsGroups.get(normalizedName)!.push(pps);
         }
-    
-        const fin: LanzamientoPPS[] = [];
-        const conf: LanzamientoPPS[] = [];
-        const act: LanzamientoPPS[] = [];
-        const actIndef: LanzamientoPPS[] = [];
+
+        const finalizadasParaReactivarList: LanzamientoPPS[] = [];
+        const relanzamientosConfirmadosList: LanzamientoPPS[] = [];
+        const activasYPorFinalizarList: LanzamientoPPS[] = [];
+        const activasIndefinidasList: LanzamientoPPS[] = [];
+
         const nonManagedStatuses = ['Archivado', 'No se Relanza'];
-    
-        for (const pps of filteredData) {
-            const gestionStatus = pps[FIELD_ESTADO_GESTION_LANZAMIENTOS];
-            if (nonManagedStatuses.includes(gestionStatus!)) {
-                continue;
-            }
-    
-            if (gestionStatus === 'Relanzamiento Confirmado') {
-                conf.push(pps);
-            } else {
+
+        // 2. Process each group
+        for (const group of ppsGroups.values()) {
+            const activeLaunches = group.filter(pps => {
                 const endDate = parseToUTCDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS]);
-                const ppsName = pps[FIELD_NOMBRE_PPS_LANZAMIENTOS];
-                const normalizedName = ppsName ? normalizeStringForComparison(ppsName) : '';
-    
-                if (!endDate) {
-                    actIndef.push(pps);
-                } else if (endDate >= today) {
-                    act.push(pps);
-                } else if (endDate < today) {
-                    if (!activePpsNames.has(normalizedName)) {
-                        fin.push(pps);
+                return !endDate || endDate >= today;
+            });
+
+            if (activeLaunches.length > 0) {
+                activeLaunches.forEach(pps => {
+                    const endDate = parseToUTCDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS]);
+                    if (!endDate) {
+                        activasIndefinidasList.push(pps);
+                    } else {
+                        activasYPorFinalizarList.push(pps);
+                    }
+                });
+            } else { // No active launches, so process finished ones
+                const sortedFinished = group.sort((a, b) => {
+                    const dateA = parseToUTCDate(a[FIELD_FECHA_FIN_LANZAMIENTOS])?.getTime() || 0;
+                    const dateB = parseToUTCDate(b[FIELD_FECHA_FIN_LANZAMIENTOS])?.getTime() || 0;
+                    return dateB - dateA; // Most recent first
+                });
+
+                const mostRecentFinished = sortedFinished[0];
+
+                if (mostRecentFinished) {
+                    const gestionStatus = mostRecentFinished[FIELD_ESTADO_GESTION_LANZAMIENTOS];
+                    if (nonManagedStatuses.includes(gestionStatus!)) {
+                        continue;
+                    }
+
+                    if (gestionStatus === 'Relanzamiento Confirmado') {
+                        relanzamientosConfirmadosList.push(mostRecentFinished);
+                    } else {
+                        finalizadasParaReactivarList.push(mostRecentFinished);
                     }
                 }
             }
         }
-        
-        const mostRecentFinished = new Map<string, LanzamientoPPS>();
-        for (const pps of fin) {
-            const ppsName = pps[FIELD_NOMBRE_PPS_LANZAMIENTOS];
-            if (!ppsName) continue;
-            
-            const normalizedName = normalizeStringForComparison(ppsName);
-            const existing = mostRecentFinished.get(normalizedName);
-            
-            if (!existing) {
-                mostRecentFinished.set(normalizedName, pps);
-            } else {
-                const existingEndDate = parseToUTCDate(existing[FIELD_FECHA_FIN_LANZAMIENTOS]);
-                const currentEndDate = parseToUTCDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS]);
-                
-                // Keep the one that finished most recently
-                if (currentEndDate && (!existingEndDate || currentEndDate > existingEndDate)) {
-                    mostRecentFinished.set(normalizedName, pps);
-                }
-            }
-        }
-        const uniqueFin = Array.from(mostRecentFinished.values());
 
-        act.sort((a, b) => (parseToUTCDate(a[FIELD_FECHA_FIN_LANZAMIENTOS]!)?.getTime() || 0) - (parseToUTCDate(b[FIELD_FECHA_FIN_LANZAMIENTOS]!)?.getTime() || 0));
-        conf.sort((a, b) => (parseToUTCDate(a[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]!)?.getTime() || 0) - (parseToUTCDate(b[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]!)?.getTime() || 0));
-        uniqueFin.sort((a, b) => {
+        // Sort the final lists
+        activasYPorFinalizarList.sort((a, b) => (parseToUTCDate(a[FIELD_FECHA_FIN_LANZAMIENTOS]!)?.getTime() || 0) - (parseToUTCDate(b[FIELD_FECHA_FIN_LANZAMIENTOS]!)?.getTime() || 0));
+        relanzamientosConfirmadosList.sort((a, b) => (parseToUTCDate(a[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]!)?.getTime() || 0) - (parseToUTCDate(b[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]!)?.getTime() || 0));
+        finalizadasParaReactivarList.sort((a, b) => {
             const aIsEnConversacion = a[FIELD_ESTADO_GESTION_LANZAMIENTOS] === 'En Conversación';
             const bIsEnConversacion = b[FIELD_ESTADO_GESTION_LANZAMIENTOS] === 'En Conversación';
             if (aIsEnConversacion && !bIsEnConversacion) return -1;
@@ -619,7 +616,12 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
             return dateB - dateA; // Most recently finished first
         });
     
-        return { finalizadasParaReactivar: uniqueFin, relanzamientosConfirmados: conf, activasYPorFinalizar: act, activasIndefinidas: actIndef };
+        return { 
+            finalizadasParaReactivar: finalizadasParaReactivarList, 
+            relanzamientosConfirmados: relanzamientosConfirmadosList, 
+            activasYPorFinalizar: activasYPorFinalizarList, 
+            activasIndefinidas: activasIndefinidasList 
+        };
     }, [filteredData]);
     
     const getInstitutionForPps = useCallback((pps: LanzamientoPPS) => {
