@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { getEspecialidadClasses } from '../utils/formatters';
 
 interface StudentInfo {
     legajo: string;
@@ -16,9 +17,10 @@ interface StudentListModalProps {
     students: StudentInfo[];
     headers?: { key: string; label: string }[];
     description?: React.ReactNode;
+    onStudentClick?: (student: StudentInfo) => void;
 }
 
-const StudentListModal: React.FC<StudentListModalProps> = ({ isOpen, onClose, title, students, headers, description }) => {
+const StudentListModal: React.FC<StudentListModalProps> = ({ isOpen, onClose, title, students, headers, description, onStudentClick }) => {
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredStudents = useMemo(() => {
@@ -42,6 +44,9 @@ const StudentListModal: React.FC<StudentListModalProps> = ({ isOpen, onClose, ti
                     {headers!.map(header => (
                         <th key={header.key} scope="col" className="px-4 py-3 font-semibold tracking-wider">{header.label}</th>
                     ))}
+                     {onStudentClick && (
+                         <th scope="col" className="px-4 py-3 font-semibold tracking-wider text-right">Acciones</th>
+                    )}
                 </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-200/70">
@@ -50,41 +55,90 @@ const StudentListModal: React.FC<StudentListModalProps> = ({ isOpen, onClose, ti
                         {headers!.map(header => (
                             <td key={header.key} className="px-4 py-3 text-slate-700">{student[header.key]}</td>
                         ))}
+                        {onStudentClick && (
+                            <td className="px-4 py-3 text-right">
+                                <button
+                                    onClick={() => onStudentClick(student)}
+                                    className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 font-semibold text-xs py-2 px-3 rounded-lg hover:bg-blue-200 transition-colors"
+                                    aria-label={`Ver panel de ${student.nombre}`}
+                                >
+                                    <span className="material-icons !text-base">visibility</span>
+                                    <span>Ver Panel</span>
+                                </button>
+                            </td>
+                        )}
                     </tr>
                 ))}
             </tbody>
         </table>
     );
 
+    const isInstitutionList = headers?.some(h => h.key === 'legajo' && h.label === 'Orientaciones');
+
     const renderList = () => (
         <ul className="divide-y divide-slate-200/70">
-            {filteredStudents.map((student, index) => (
-                <li key={student.ppsId || `${student.legajo}-${index}`} className="p-4 transition-colors hover:bg-slate-100/70 rounded-lg">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-y-3">
-                        <div className="flex-1 min-w-0">
-                            <p className="font-bold text-slate-800 truncate" title={student.nombre}>{student.nombre}</p>
-                            {student.institucion && (
-                                <div className="mt-1.5 flex items-center gap-2 text-sm text-slate-600">
-                                    <span className="material-icons !text-base text-slate-400">business</span>
-                                    <span className="truncate" title={student.institucion}>{student.institucion}</span>
-                                </div>
-                            )}
-                        </div>
-                        <div className="flex-shrink-0 flex flex-row sm:flex-col items-start sm:items-end gap-x-6 gap-y-1.5">
-                            <div className="flex items-center gap-2 text-sm text-slate-500">
-                                <span className="material-icons !text-base text-slate-400">badge</span>
-                                <span className="font-mono">{student.legajo}</span>
+            {filteredStudents.map((student, index) => {
+                const key = student.ppsId || `${student.nombre}-${student.legajo}-${index}`;
+                return (
+                    <li key={key} className="p-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                                <p className="font-bold text-slate-800 truncate" title={student.nombre}>{student.nombre}</p>
+                                
+                                {isInstitutionList && student.legajo && (
+                                    <div className="flex flex-wrap gap-1.5 mt-2">
+                                        {student.legajo.split(',').map(o => o.trim()).filter(Boolean).map(o => {
+                                            const especialidadVisuals = getEspecialidadClasses(o);
+                                            return <span key={o} className={`${especialidadVisuals.tag} shadow-sm`}>{o}</span>;
+                                        })}
+                                    </div>
+                                )}
+
+                                {student.institucion && !isInstitutionList && (
+                                    <div className="mt-1.5 flex items-center gap-2 text-sm text-slate-600">
+                                        <span className="material-icons !text-base text-slate-400">business</span>
+                                        <span className="truncate" title={student.institucion}>{student.institucion}</span>
+                                    </div>
+                                )}
                             </div>
-                            {student.fechaFin && (
-                                <div className="flex items-center gap-2 text-sm text-slate-500">
-                                    <span className="material-icons !text-base text-slate-400">event_busy</span>
-                                    <span>{student.fechaFin}</span>
-                                </div>
-                            )}
+                            
+                            <div className="flex-shrink-0 flex flex-row sm:flex-row items-center gap-x-6 gap-y-1.5 self-start sm:self-center">
+                                {!isInstitutionList && (
+                                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                                        <span className="material-icons !text-base text-slate-400">badge</span>
+                                        <span className="font-mono">{student.legajo}</span>
+                                    </div>
+                                )}
+                                
+                                {student.fechaFin && (
+                                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                                        <span className="material-icons !text-base text-slate-400">event_busy</span>
+                                        <span>{student.fechaFin}</span>
+                                    </div>
+                                )}
+
+                                {student.totalHoras !== undefined && (
+                                    <div className="flex items-center gap-2 text-sm text-slate-500 font-semibold">
+                                        <span className="material-icons !text-base text-slate-400">functions</span>
+                                        <span>{student.totalHoras} hs</span>
+                                    </div>
+                                )}
+                                
+                                {onStudentClick && !isInstitutionList && (
+                                    <button
+                                        onClick={() => onStudentClick(student)}
+                                        className="ml-auto sm:ml-4 inline-flex items-center gap-2 bg-blue-100 text-blue-700 font-semibold text-xs py-2 px-3 rounded-lg hover:bg-blue-200 transition-colors"
+                                        aria-label={`Ver panel de ${student.nombre}`}
+                                    >
+                                        <span className="material-icons !text-base">visibility</span>
+                                        <span>Ver Panel</span>
+                                    </button>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                </li>
-            ))}
+                    </li>
+                );
+            })}
         </ul>
     );
 

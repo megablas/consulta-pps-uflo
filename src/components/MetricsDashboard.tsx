@@ -168,7 +168,6 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
   const { estudiantes, practicas, convocatorias, finalizaciones, lanzamientos, institutions } = data;
 
   const studentMapById = new Map<string, any>(estudiantes.map((e) => [e.id, e]));
-  const studentMapByLegajo = new Map<string, any>(estudiantes.map((e) => [String(e[FIELD_LEGAJO_ESTUDIANTES]), e]));
 
   const startOfTargetYear = new Date(Date.UTC(targetYear, 0, 1));
   const endOfTargetYear = new Date(Date.UTC(targetYear + 1, 0, 1));
@@ -421,34 +420,34 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
     })
     .sort((a, b) => a.nombre.localeCompare(b.nombre));
 
-  const studentTotalHours = practicas.reduce((acc, p) => {
-    const legajo = getText(p[FIELD_NOMBRE_BUSQUEDA_PRACTICAS]);
-    if (legajo) {
-      acc.set(legajo, (acc.get(legajo) || 0) + (p[FIELD_HORAS_PRACTICAS] || 0));
-    }
+  const studentTotalHoursById = practicas.reduce((acc, p) => {
+    const studentIds = p[FIELD_ESTUDIANTE_LINK_PRACTICAS] || [];
+    const hours = p[FIELD_HORAS_PRACTICAS] || 0;
+    studentIds.forEach((id: string) => {
+        acc.set(id, (acc.get(id) || 0) + hours);
+    });
     return acc;
   }, new Map<string, number>());
 
-  const hourBins = {
-    '0-50 hs': { count: 0, students: [] as StudentInfo[] },
-    '51-100 hs': { count: 0, students: [] as StudentInfo[] },
-    '101-150 hs': { count: 0, students: [] as StudentInfo[] },
-    '151-200 hs': { count: 0, students: [] as StudentInfo[] },
-    '201-249 hs': { count: 0, students: [] as StudentInfo[] },
+  const hourBins: { [key: string]: { count: number; students: StudentInfo[] } } = {
+    '0-50 hs': { count: 0, students: [] },
+    '51-100 hs': { count: 0, students: [] },
+    '101-150 hs': { count: 0, students: [] },
+    '151-200 hs': { count: 0, students: [] },
+    '201-249 hs': { count: 0, students: [] },
   };
-  studentTotalHours.forEach((hours, legajo) => {
+
+  allActiveStudents.forEach(student => {
+    const hours = studentTotalHoursById.get(student.id) || 0;
     if (hours >= 250) return;
-    const student = studentMapByLegajo.get(legajo);
-    const studentInfo = { legajo, nombre: student?.[FIELD_NOMBRE_ESTUDIANTES] || `Legajo ${legajo}`, totalHoras: Math.round(hours) };
+    const studentInfo = { legajo: student[FIELD_LEGAJO_ESTUDIANTES] || 'N/A', nombre: student[FIELD_NOMBRE_ESTUDIANTES] || `ID ${student.id}`, totalHoras: Math.round(hours) };
     if (hours >= 201) hourBins['201-249 hs'].students.push(studentInfo);
     else if (hours >= 151) hourBins['151-200 hs'].students.push(studentInfo);
     else if (hours >= 101) hourBins['101-150 hs'].students.push(studentInfo);
     else if (hours >= 51) hourBins['51-100 hs'].students.push(studentInfo);
     else hourBins['0-50 hs'].students.push(studentInfo);
   });
-  Object.keys(hourBins).forEach(
-    (key) => (hourBins[key as keyof typeof hourBins].count = hourBins[key as keyof typeof hourBins].students.length)
-  );
+  Object.keys(hourBins).forEach((key) => (hourBins[key as keyof typeof hourBins].count = hourBins[key as keyof typeof hourBins].students.length));
 
   const topInstitutions = Array.from(
     lanzamientosYear
@@ -508,6 +507,57 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
     };
   });
 
+  const studentsWithPracticeEnCurso = new Set<string>();
+    practicas.forEach(p => {
+        const estado = p[FIELD_ESTADO_PRACTICA];
+        if (normalizeStringForComparison(getText(estado)) === 'en curso') {
+            const studentIds = p[FIELD_ESTUDIANTE_LINK_PRACTICAS] || [];
+            studentIds.forEach((id: string) => studentsWithPracticeEnCurso.add(id));
+        }
+    });
+
+    const alumnosProximosAFinalizarList = allActiveStudents
+        .filter(student => {
+            const totalHours = studentTotalHoursById.get(student.id) || 0;
+            const hasPracticeEnCurso = studentsWithPracticeEnCurso.has(student.id);
+            const conditionA = totalHours >= 230 && totalHours < 250;
+            const conditionB = totalHours >= 250 && hasPracticeEnCurso;
+            return conditionA || conditionB;
+        })
+        .map(student => ({
+            legajo: student[FIELD_LEGAJO_ESTUDIANTES] || 'N/A',
+            nombre: student[FIELD_NOMBRE_ESTUDIANTES] || `ID ${student.id}`,
+            totalHoras: Math.round(studentTotalHoursById.get(student.id) || 0),
+        }))
+        .sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+  const activeInstitutionsMap = new Map<string, { groupName: string, orientations: Set<string> }>();
+  lanzamientosYear.forEach(l => {
+      const instName = getText(l[FIELD_NOMBRE_PPS_LANZAMIENTOS]);
+      const orientation = getText(l[FIELD_ORIENTACION_LANZAMIENTOS]);
+      if (instName) {
+          const groupName = getGroupName(instName);
+          const normGroupName = normalizeStringForComparison(groupName);
+
+          if (!activeInstitutionsMap.has(normGroupName)) {
+              activeInstitutionsMap.set(normGroupName, { groupName: groupName, orientations: new Set<string>() });
+          }
+          if (orientation) {
+              orientation.split(',').forEach(o => {
+                  const trimmedO = o.trim();
+                  if (trimmedO) {
+                      activeInstitutionsMap.get(normGroupName)!.orientations.add(trimmedO);
+                  }
+              });
+          }
+      }
+  });
+
+  const activeInstitutionsList = Array.from(activeInstitutionsMap.values()).map(data => ({
+      nombre: data.groupName,
+      legajo: Array.from(data.orientations).join(', '),
+  })).sort((a, b) => a.nombre.localeCompare(b.nombre));
+
   return {
     alumnosEnPPS: { value: studentsWithActivePPS_Set.size, list: alumnosEnPPSList },
     alumnosActivos: { value: allActiveStudents.length, list: alumnosActivosList },
@@ -531,6 +581,8 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
     nuevosAlumnos: { value: newStudentsThisYear.length, list: nuevosAlumnosList },
     picoAlumnos: { value: maxStudentCount },
     ultimas5Lanzadas,
+    alumnosProximosAFinalizar: { value: alumnosProximosAFinalizarList.length, list: alumnosProximosAFinalizarList },
+    activeInstitutions: { value: activeInstitutionsMap.size, list: activeInstitutionsList },
   };
 }
 
@@ -642,8 +694,13 @@ const Tabs: React.FC<{ active: string; onChange: (t: string) => void }> = ({ act
   );
 };
 
-const MetricsDashboard: React.FC = () => {
+interface MetricsDashboardProps {
+  onStudentSelect?: (student: { legajo: string; nombre: string }) => void;
+}
+
+const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSelect }) => {
   const [modalData, setModalData] = useState<ModalData | null>(null);
+  const [proximosModalOpen, setProximosModalOpen] = useState(false);
   const [targetYear] = useState<number>(2025);
   const [activeTab, setActiveTab] = useState<'overview' | 'students' | 'institutions'>('overview');
 
@@ -657,20 +714,6 @@ const MetricsDashboard: React.FC = () => {
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
-  
-  const conveniosEstrategicos = [
-    { name: 'Hospital Central "Dr. Ramón Carrillo"', orientation: 'Clinica' },
-    { name: 'Centro de Salud Mental "Mentes Serenas"', orientation: 'Clinica' },
-    { name: 'Clínica Pediátrica "Niños Sanos"', orientation: 'Clinica' },
-    { name: 'Escuela Primaria N°1 "D. F. Sarmiento"', orientation: 'Educacional' },
-    { name: 'Gabinete Psicopedagógico Municipal', orientation: 'Educacional' },
-    { name: 'Colegio Secundario "Manuel Belgrano"', orientation: 'Educacional' },
-    { name: 'Empresa "Tech Solutions S.A." - Dpto. RRHH', orientation: 'Laboral' },
-    { name: 'Consultora "Crecer-RH"', orientation: 'Laboral' },
-    { name: 'Centro Comunitario "Barrio Unido"', orientation: 'Comunitaria' },
-    { name: 'Fundación "Manos que Ayudan"', orientation: 'Comunitaria' },
-    { name: 'ONG "Puentes Solidarios"', orientation: 'Comunitaria' },
-  ].sort((a,b) => a.name.localeCompare(b.name));
 
   if (error) {
     return (
@@ -703,6 +746,26 @@ const MetricsDashboard: React.FC = () => {
         headers={modalData?.headers}
         description={modalData?.description}
       />
+      
+      {metrics && (
+        <StudentListModal
+          isOpen={proximosModalOpen}
+          onClose={() => setProximosModalOpen(false)}
+          title="Alumnos Próximos a Finalizar"
+          students={metrics.alumnosProximosAFinalizar.list}
+          headers={[
+              { key: 'nombre', label: 'Nombre' },
+              { key: 'legajo', label: 'Legajo' },
+              { key: 'totalHoras', label: 'Horas Totales' },
+          ]}
+          onStudentClick={(student) => {
+              if (onStudentSelect) {
+                  onStudentSelect({ legajo: student.legajo, nombre: student.nombre });
+                  setProximosModalOpen(false);
+              }
+          }}
+        />
+      )}
 
       <div className="flex items-center justify-between gap-3">
           <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
@@ -798,6 +861,14 @@ const MetricsDashboard: React.FC = () => {
                     }
                   />
                   <FunnelRow
+                    label="Próximos a Finalizar"
+                    value={metrics.alumnosProximosAFinalizar.value}
+                    total={metrics.alumnosActivos.value}
+                    color="bg-sky-500"
+                    description="Con 230+ horas o con 250+ y práctica en curso."
+                    onClick={() => setProximosModalOpen(true)}
+                  />
+                  <FunnelRow
                     label="Activos sin PPS (excl. Relevamiento)"
                     value={metrics.alumnosSinPPS.value}
                     total={metrics.alumnosActivos.value}
@@ -829,28 +900,20 @@ const MetricsDashboard: React.FC = () => {
               <Card icon="assessment" title="Análisis de PPS e Instituciones" description="Oferta, demanda y convenios.">
                 <div className="space-y-6 mt-4">
                   <MetricCard
-                    title="Convenios nuevos 2025"
-                    value={conveniosEstrategicos.length}
+                    title="Convenios con Instituciones Nuevas"
+                    value={metrics.nuevosConvenios.value}
                     icon="handshake"
-                    description="Principales instituciones con convenio para el ciclo."
+                    description={`Instituciones nuevas con PPS lanzadas en ${targetYear}.`}
                     isLoading={false}
                     className="bg-slate-50/50"
                     onClick={() =>
                       openModal({
-                        title: 'Convenios Estratégicos 2025',
-                        students: conveniosEstrategicos.map((c) => ({
-                          nombre: c.name,
-                          legajo: c.orientation,
-                        })),
+                        title: 'Convenios Con Instituciones Nuevas (2025)',
+                        students: metrics.nuevosConvenios.list,
                         headers: [
                           { key: 'nombre', label: 'Institución' },
-                          { key: 'legajo', label: 'Orientación' },
+                          { key: 'cupos', label: 'Cupos Ofrecidos' },
                         ],
-                        description: (
-                          <span>
-                            Esta es una lista estática de instituciones clave con las que se ha asegurado un convenio para el ciclo lectivo 2025, garantizando una oferta de prácticas en diversas orientaciones.
-                          </span>
-                        ),
                       })
                     }
                   />
@@ -1053,6 +1116,21 @@ const MetricsDashboard: React.FC = () => {
                       })
                     }
                   />
+                   <MetricCard
+                    title="Instituciones Activas"
+                    value={metrics.activeInstitutions.value}
+                    icon="business_center"
+                    description={`Instituciones con PPS lanzadas en ${targetYear}.`}
+                    isLoading={false}
+                    onClick={() => openModal({
+                        title: `Instituciones Activas (${targetYear})`,
+                        students: metrics.activeInstitutions.list,
+                        headers: [
+                            { key: 'nombre', label: 'Institución' },
+                            { key: 'legajo', label: 'Orientaciones' }
+                        ]
+                    })}
+                  />
                   <BarChart
                     data={metrics.topInstitutions}
                     title="Top 5 Instituciones por Cupos"
@@ -1071,23 +1149,22 @@ const MetricsDashboard: React.FC = () => {
                 </div>
               </Card>
 
-              <Card icon="handshake" title="Convenios Estratégicos 2025" description="Principales instituciones con convenio activo para el ciclo actual.">
+              <Card icon="handshake" title="Convenios Con Instituciones Nuevas" description="Instituciones nuevas con PPS lanzadas este año.">
                   <div className="mt-4 space-y-2">
-                      {conveniosEstrategicos.map((convenio) => {
-                          const especialidadVisuals = getEspecialidadClasses(convenio.orientation);
-                          return (
-                              <div
-                                  key={convenio.name}
-                                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200/60 shadow-sm hover:bg-slate-50/50 hover:border-slate-300/70 transition-all duration-200"
-                              >
-                                  <div className="flex items-center gap-3">
-                                      <span className={`material-icons ${especialidadVisuals.headerText}`}>verified</span>
-                                      <span className="font-semibold text-slate-800 text-sm">{convenio.name}</span>
-                                  </div>
-                                  <span className={`${especialidadVisuals.tag} shadow-sm`}>{convenio.orientation}</span>
+                      {metrics.nuevosConvenios.list.length > 0 ? metrics.nuevosConvenios.list.map((convenio) => (
+                          <div
+                              key={convenio.nombre}
+                              className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200/60 shadow-sm"
+                          >
+                              <div className="flex items-center gap-3">
+                                  <span className="material-icons text-emerald-500">verified</span>
+                                  <span className="font-semibold text-slate-800 text-sm">{convenio.nombre}</span>
                               </div>
-                          );
-                      })}
+                              <span className="text-sm font-bold text-slate-700 bg-slate-200/80 px-2 py-1 rounded-md">{convenio.cupos} cupos</span>
+                          </div>
+                      )) : (
+                          <p className="text-center text-sm text-slate-500 py-4">No hay nuevos convenios para mostrar este año.</p>
+                      )}
                   </div>
               </Card>
             </div>

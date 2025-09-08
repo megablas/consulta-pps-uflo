@@ -79,7 +79,7 @@ const AdminView: React.FC = () => {
                     <>
                         <SubTabs tabs={metricsSubTabs} activeTabId={activeMetricsTabId} onTabChange={setActiveMetricsTabId} />
                         <div className="mt-6">
-                            {activeMetricsTabId === 'dashboard' && <MetricsDashboard />}
+                            {activeMetricsTabId === 'dashboard' && <MetricsDashboard onStudentSelect={openStudentPanel} />}
                             {activeMetricsTabId === 'timeline' && <TimelineView />}
                         </div>
                     </>
