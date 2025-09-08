@@ -1,10 +1,9 @@
 import { AIRTABLE_PAT, AIRTABLE_BASE_ID } from '../constants';
 import type { AirtableResponse, AirtableErrorResponse, AirtableRecord } from '../types';
 
-// Use Vite's built-in environment variable to detect development mode.
-// This is more reliable than checking hostname and works correctly with `npm run dev`.
-// FIX: Use optional chaining to safely access Vite's `env` properties to prevent runtime errors.
-const isDevelopment = (import.meta as any)?.env?.DEV;
+// Detect development environment by checking the hostname. This forces API requests
+// to go through the Vite proxy on localhost, resolving CORS issues.
+const isDevelopment = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
 
 const API_BASE = isDevelopment
     ? `/airtable-api/v0/${AIRTABLE_BASE_ID}` // Use the proxy in development
