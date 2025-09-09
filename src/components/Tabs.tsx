@@ -37,7 +37,6 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeTabId, onTabChange, onTabClose,
         <nav ref={tabsRef} className="-mb-px flex space-x-2 sm:space-x-4 overflow-x-auto" aria-label="Tabs">
           {tabs.map(tab => {
              const isActive = activeTabId === tab.id;
-             const isStudentTab = !!tab.isClosable;
 
             return (
               <div key={tab.id} data-tab-id={tab.id} className="relative group flex-shrink-0">
@@ -49,13 +48,12 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeTabId, onTabChange, onTabClose,
                   aria-controls={`tabpanel-${tab.id}`}
                   className={`
                     whitespace-nowrap text-sm transition-colors duration-200 rounded-t-lg
-                    flex items-center gap-2
+                    flex items-center gap-2 py-4 px-6
                     focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 z-10
-                    ${isStudentTab ? 'py-3 px-4' : 'py-4 px-6'}
                     ${
                       isActive
-                        ? `text-blue-600 dark:text-blue-400 ${isStudentTab ? 'font-semibold' : 'font-bold'}`
-                        : `text-slate-500 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/70 hover:text-slate-700 dark:hover:text-slate-200 ${isStudentTab ? 'font-medium' : 'font-semibold'}`
+                        ? 'font-bold text-blue-600 dark:text-blue-400'
+                        : 'font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/70 hover:text-slate-700 dark:hover:text-slate-200'
                     }
                     ${tab.isClosable && onTabClose ? 'pr-9' : ''}
                   `}

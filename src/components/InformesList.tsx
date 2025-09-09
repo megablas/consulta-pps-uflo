@@ -20,21 +20,10 @@ const InformesList: React.FC<InformesListProps> = ({ tasks, onConfirmar }) => {
   }
 
   return (
-    <div>
-        <div className="flex items-start gap-4 mb-6">
-            <div className="flex-shrink-0 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300 rounded-full h-12 w-12 flex items-center justify-center mt-1">
-                <span className="material-icons !text-3xl">assignment_turned_in</span>
-            </div>
-            <div>
-                <h2 className="text-slate-900 dark:text-slate-50 text-2xl font-bold tracking-tight">Entrega de Informes</h2>
-                <p className="text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">Gestiona la entrega de tus informes finales. Sube tu trabajo al campus y luego confirma la entrega aquí para que podamos registrarlo.</p>
-            </div>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {tasks.map(task => (
-            <InformeCard key={task.convocatoriaId} task={task} onConfirmar={onConfirmar} />
-          ))}
-        </div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {tasks.map(task => (
+        <InformeCard key={task.convocatoriaId} task={task} onConfirmar={onConfirmar} />
+      ))}
     </div>
   );
 };
