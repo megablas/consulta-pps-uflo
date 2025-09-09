@@ -185,6 +185,25 @@ export interface GroupedSeleccionados {
   [horario: string]: SelectedStudent[];
 }
 
+// FIX: Added missing 'StudentForReview' type for the SeguroGenerator component.
+export interface StudentForReview {
+    studentId: string;
+    nombre: string;
+    apellido: string;
+    dni: string;
+    legajo: string;
+    correo: string;
+    telefono: string;
+    institucion: string;
+    direccion: string;
+    periodo: string;
+    horario: string;
+    lugar: string;
+    duracion: string;
+    tutor: string;
+    orientacion: string;
+}
+
 // For Airtable API responses
 export interface AirtableResponse<T> {
   records: AirtableRecord<T>[];

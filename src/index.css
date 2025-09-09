@@ -2,6 +2,7 @@
   --color-primary: 37 99 235; /* blue-600 */
   --color-slate-50: 248 250 252;
   --color-slate-100: 241 245 249;
+  --color-slate-200: 226 232 240;
   --color-slate-800: 30 41 59;
   --color-slate-900: 15 23 42;
 
@@ -25,20 +26,14 @@ html {
 }
 body {
   font-family: 'Inter', sans-serif;
-  background-color: #f8fafc; /* slate-50 */
-  color: rgb(var(--color-slate-800));
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* A more sophisticated and subtle background */
-  background-image: radial-gradient(circle at 1% 1%, hsl(210 50% 98%) 0%, transparent 40%),
-                    radial-gradient(circle at 99% 99%, hsl(280 50% 98%) 0%, transparent 40%);
-  transition: background-color 0.3s, color 0.3s;
+  background-color: rgb(var(--color-slate-50));
+  color: rgb(var(--color-slate-800));
 }
-.dark body {
+html.dark body {
   background-color: rgb(var(--color-slate-900));
-  color: #e2e8f0; /* slate-200 */
-  background-image: radial-gradient(circle at 1% 1%, hsl(220 40% 10%) 0%, transparent 40%),
-                    radial-gradient(circle at 99% 99%, hsl(260 40% 10%) 0%, transparent 40%);
+  color: rgb(var(--color-slate-200));
 }
 
 #root {

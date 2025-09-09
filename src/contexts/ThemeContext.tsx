@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useContext, useMemo, ReactNode } from 'react';
 
-type Theme = 'light' | 'dark' | 'system';
+type Theme = 'light' | 'dark';
 
 interface ThemeContextType {
   theme: Theme;
@@ -13,55 +13,46 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 const getInitialTheme = (): Theme => {
   if (typeof window !== 'undefined' && window.localStorage) {
     const storedPrefs = window.localStorage.getItem('theme');
-    if (typeof storedPrefs === 'string' && ['light', 'dark', 'system'].includes(storedPrefs)) {
-      return storedPrefs as Theme;
+    if (storedPrefs === 'dark') {
+      return 'dark';
     }
   }
-  return 'system';
+  return 'light';
 };
-
-const applyTheme = (theme: 'light' | 'dark') => {
-    const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
-    root.classList.add(theme);
-};
-
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<Theme>(getInitialTheme);
 
-  const resolvedTheme = useMemo(() => {
-    if (theme === 'system') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-    return theme;
-  }, [theme]);
-
-  useEffect(() => {
-    applyTheme(resolvedTheme);
-  }, [resolvedTheme]);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = () => {
-      if (theme === 'system') {
-        applyTheme(mediaQuery.matches ? 'dark' : 'light');
-      }
-    };
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [theme]);
-
+  // The setTheme function is now the single source of truth for theme changes.
   const setTheme = (newTheme: Theme) => {
     try {
       window.localStorage.setItem('theme', newTheme);
+      const root = window.document.documentElement;
+      
+      if (newTheme === 'dark') {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+      
+      setThemeState(newTheme);
     } catch (e) {
-      console.error("Could not save theme to localStorage", e);
+      console.error("Could not save theme", e);
     }
-    setThemeState(newTheme);
   };
+  
+  // This effect synchronizes theme changes across browser tabs.
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'theme' && e.newValue && (e.newValue === 'light' || e.newValue === 'dark')) {
+        setTheme(e.newValue as Theme);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
-  const value = useMemo(() => ({ theme, setTheme, resolvedTheme }), [theme, resolvedTheme]);
+  const value = useMemo(() => ({ theme, setTheme, resolvedTheme: theme }), [theme]);
 
   return (
     <ThemeContext.Provider value={value}>
