@@ -127,34 +127,34 @@ const TimelineView: React.FC = () => {
     return (
         <div className="animate-fade-in-up space-y-8">
              <div className="text-center">
-                 <h2 className="text-3xl font-black text-slate-900 tracking-tight">Línea de Tiempo 2025</h2>
-                 <p className="text-slate-600 mt-2 max-w-2xl mx-auto">Resumen mensual de las convocatorias y cupos ofrecidos durante el ciclo lectivo.</p>
+                 <h2 className="text-3xl font-black text-slate-900 dark:text-slate-50 tracking-tight">Línea de Tiempo 2025</h2>
+                 <p className="text-slate-600 dark:text-slate-400 mt-2 max-w-2xl mx-auto">Resumen mensual de las convocatorias y cupos ofrecidos durante el ciclo lectivo.</p>
             </div>
             
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-lg text-center">
-                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Total de PPS Lanzadas en 2025</p>
-                <p className="text-6xl font-black text-blue-600 tracking-tighter mt-2">{totalLaunches2025}</p>
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200/60 dark:border-slate-700 shadow-lg text-center">
+                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total de PPS Lanzadas en 2025</p>
+                <p className="text-6xl font-black text-blue-600 dark:text-blue-400 tracking-tighter mt-2">{totalLaunches2025}</p>
             </div>
 
             <div className="space-y-6">
                 {launches2025ByMonth.map((monthData) => {
                     const isAugust = monthData.monthName === "Agosto";
                     return (
-                        <div key={monthData.monthName} className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-lg shadow-slate-500/5 transition-all duration-300 hover:shadow-blue-500/10 hover:-translate-y-1">
+                        <div key={monthData.monthName} className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200/60 dark:border-slate-700 shadow-lg shadow-slate-500/5 dark:shadow-black/20 transition-all duration-300 hover:shadow-blue-500/10 dark:hover:shadow-blue-400/10 hover:-translate-y-1">
                             {/* Month Header */}
                             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                                <h3 className="text-2xl font-bold text-slate-800 tracking-tight">{monthData.monthName}</h3>
+                                <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">{monthData.monthName}</h3>
                                 <div className="flex items-center gap-4 flex-wrap">
-                                    <div className="flex items-center gap-2 text-sm font-semibold text-blue-700 bg-blue-100 px-3 py-1.5 rounded-full ring-1 ring-blue-200/50">
+                                    <div className="flex items-center gap-2 text-sm font-semibold text-blue-700 dark:text-blue-200 bg-blue-100 dark:bg-blue-900/50 px-3 py-1.5 rounded-full ring-1 ring-blue-200/50 dark:ring-blue-800/50">
                                         <span className="material-icons !text-base">rocket_launch</span>
                                         <span>{monthData.ppsCount} PPS Lanzada{monthData.ppsCount > 1 ? 's' : ''}</span>
                                     </div>
-                                    <div className="flex items-center gap-2 text-sm font-semibold text-indigo-700 bg-indigo-100 px-3 py-1.5 rounded-full ring-1 ring-indigo-200/50">
+                                    <div className="flex items-center gap-2 text-sm font-semibold text-indigo-700 dark:text-indigo-200 bg-indigo-100 dark:bg-indigo-900/50 px-3 py-1.5 rounded-full ring-1 ring-indigo-200/50 dark:ring-indigo-800/50">
                                         <span className="material-icons !text-base">groups</span>
                                         <span>{monthData.cuposTotal} Cupos</span>
                                     </div>
                                     {isAugust && (
-                                        <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700 bg-emerald-100 px-3 py-1.5 rounded-full ring-1 ring-emerald-200/50">
+                                        <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-200 bg-emerald-100 dark:bg-emerald-900/50 px-3 py-1.5 rounded-full ring-1 ring-emerald-200/50 dark:ring-emerald-800/50">
                                             <span className="material-icons !text-base">person_remove</span>
                                             <span>{monthData.cuposSinRelevamiento} Cupos (sin Relev.)</span>
                                         </div>
@@ -164,12 +164,12 @@ const TimelineView: React.FC = () => {
 
                             {/* Institutions List */}
                             {monthData.institutions.length > 0 && (
-                                <div className="mt-5 pt-5 border-t border-slate-200">
-                                    <h4 className="text-sm font-semibold text-slate-500 mb-3">Instituciones con convocatorias:</h4>
+                                <div className="mt-5 pt-5 border-t border-slate-200 dark:border-slate-700">
+                                    <h4 className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-3">Instituciones con convocatorias:</h4>
                                     <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
                                         {monthData.institutions.map(inst => (
-                                            <li key={inst} className="flex items-center gap-2.5 text-slate-700 text-sm">
-                                                <span className="text-blue-400 text-lg leading-none">&bull;</span>
+                                            <li key={inst} className="flex items-center gap-2.5 text-slate-700 dark:text-slate-300 text-sm">
+                                                <span className="text-blue-400 dark:text-blue-500 text-lg leading-none">&bull;</span>
                                                 <span>{inst}</span>
                                             </li>
                                         ))}

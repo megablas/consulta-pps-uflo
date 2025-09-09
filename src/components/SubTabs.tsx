@@ -14,7 +14,7 @@ interface SubTabsProps {
 
 const SubTabs: React.FC<SubTabsProps> = ({ tabs, activeTabId, onTabChange }) => {
   return (
-    <div className="border-b border-slate-200/80">
+    <div className="border-b border-slate-200/80 dark:border-slate-700/60">
       <nav className="-mb-px flex space-x-6" aria-label="Sub-tabs">
         {tabs.map(tab => (
           <button
@@ -22,11 +22,11 @@ const SubTabs: React.FC<SubTabsProps> = ({ tabs, activeTabId, onTabChange }) => 
             onClick={() => onTabChange(tab.id)}
             className={`
               whitespace-nowrap pb-3 px-1 border-b-2 text-sm transition-colors duration-200 flex items-center gap-2
-              focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-t-sm
+              focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-offset-slate-900 rounded-t-sm
               ${
                 activeTabId === tab.id
-                  ? 'border-blue-500 text-blue-600 font-semibold'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 font-medium'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400 font-semibold'
+                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600 font-medium'
               }
             `}
             aria-current={activeTabId === tab.id ? 'page' : undefined}

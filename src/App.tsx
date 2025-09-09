@@ -1,12 +1,18 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import Loader from './components/Loader';
 import Auth from './components/Auth';
-import StudentView from './views/StudentView';
 import Layout from './components/Layout';
 import { useAuth } from './contexts/AuthContext';
 import { ModalProvider } from './contexts/ModalContext';
-import AdminView from './views/AdminView';
-import JefeView from './views/JefeView';
+import { ThemeProvider } from './contexts/ThemeContext';
+import ErrorBoundary from './components/ErrorBoundary';
+
+// Carga diferida (lazy loading) de las vistas principales para optimizar el rendimiento.
+// Cada vista se cargará en un "chunk" de JavaScript separado solo cuando sea necesario.
+const AdminView = lazy(() => import('./views/AdminView'));
+const JefeView = lazy(() => import('./views/JefeView'));
+const StudentView = lazy(() => import('./views/StudentView'));
+
 
 const App: React.FC = () => {
   const { authenticatedUser, isAuthLoading, isSuperUserMode, isJefeMode } = useAuth();
@@ -19,23 +25,31 @@ const App: React.FC = () => {
     );
   }
 
-  // ModalProvider envuelve toda la aplicación para que los modales estén disponibles globalmente.
-  // La lógica de datos y acciones se gestiona ahora dentro de cada vista (StudentView, AdminView),
-  // eliminando la necesidad de un DataProvider global.
+  // ModalProvider y ThemeProvider envuelven la aplicación para que sus contextos estén disponibles globalmente.
   return (
-    <ModalProvider>
-      <Layout>
-        {!authenticatedUser ? (
-          <Auth />
-        ) : isSuperUserMode ? (
-          <AdminView />
-        ) : isJefeMode ? (
-          <JefeView />
-        ) : (
-          <StudentView />
-        )}
-      </Layout>
-    </ModalProvider>
+    <ThemeProvider>
+      <ModalProvider>
+        <Layout>
+          <ErrorBoundary>
+            <Suspense fallback={
+              <div className="flex justify-center items-center min-h-[60vh]">
+                <Loader />
+              </div>
+            }>
+              {!authenticatedUser ? (
+                <Auth />
+              ) : isSuperUserMode ? (
+                <AdminView />
+              ) : isJefeMode ? (
+                <JefeView />
+              ) : (
+                <StudentView />
+              )}
+            </Suspense>
+          </ErrorBoundary>
+        </Layout>
+      </ModalProvider>
+    </ThemeProvider>
   );
 };
 

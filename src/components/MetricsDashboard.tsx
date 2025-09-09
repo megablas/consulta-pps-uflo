@@ -596,26 +596,26 @@ const HeroMetric: React.FC<{
   color: 'blue' | 'indigo' | 'emerald';
 }> = ({ title, value, icon, description, onClick, color }) => {
   const colorClasses = {
-    blue: 'from-blue-50 to-sky-100/50 border-blue-200/60 text-blue-700 hover:border-blue-300 hover:shadow-blue-500/10',
+    blue: 'from-blue-50 to-sky-100/50 border-blue-200/60 text-blue-700 hover:border-blue-300 hover:shadow-blue-500/10 dark:from-blue-900/20 dark:to-sky-900/20 dark:border-blue-800/60 dark:text-blue-300 dark:hover:border-blue-700 dark:hover:shadow-blue-500/10',
     indigo:
-      'from-indigo-50 to-purple-100/50 border-indigo-200/60 text-indigo-700 hover:border-indigo-300 hover:shadow-indigo-500/10',
+      'from-indigo-50 to-purple-100/50 border-indigo-200/60 text-indigo-700 hover:border-indigo-300 hover:shadow-indigo-500/10 dark:from-indigo-900/20 dark:to-purple-900/20 dark:border-indigo-800/60 dark:text-indigo-300 dark:hover:border-indigo-700 dark:hover:shadow-indigo-500/10',
     emerald:
-      'from-emerald-50 to-teal-100/50 border-emerald-200/60 text-emerald-700 hover:border-emerald-300 hover:shadow-emerald-500/10',
+      'from-emerald-50 to-teal-100/50 border-emerald-200/60 text-emerald-700 hover:border-emerald-300 hover:shadow-emerald-500/10 dark:from-emerald-900/20 dark:to-teal-900/20 dark:border-emerald-800/60 dark:text-emerald-300 dark:hover:border-emerald-700 dark:hover:shadow-emerald-500/10',
   };
   return (
     <button
       onClick={onClick}
-      className={`group relative text-left w-full p-6 rounded-2xl border bg-gradient-to-br transition-all duration-300 hover:-translate-y-1 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-400 ${colorClasses[color]}`}
+      className={`group relative text-left w-full p-6 rounded-2xl border bg-gradient-to-br transition-all duration-300 hover:-translate-y-1 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-400 dark:focus-visible:ring-offset-slate-900 ${colorClasses[color]}`}
       aria-label={title}
     >
       <div className="flex justify-between items-start">
         <div className="flex flex-col">
           <p className="text-sm font-bold opacity-80">{title}</p>
-          <p className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter mt-2">{value}</p>
+          <p className="text-5xl md:text-6xl font-black text-slate-900 dark:text-slate-50 tracking-tighter mt-2">{value}</p>
         </div>
         <div
-          className={`p-3 rounded-xl bg-white/50 shadow-sm border border-black/5 ${
-            color === 'blue' ? 'text-blue-600' : color === 'indigo' ? 'text-indigo-600' : 'text-emerald-600'
+          className={`p-3 rounded-xl bg-white/50 dark:bg-slate-900/30 shadow-sm border border-black/5 dark:border-white/5 ${
+            color === 'blue' ? 'text-blue-600 dark:text-blue-400' : color === 'indigo' ? 'text-indigo-600 dark:text-indigo-400' : 'text-emerald-600 dark:text-emerald-400'
           }`}
         >
           <span className="material-icons !text-3xl" aria-hidden="true">
@@ -623,7 +623,7 @@ const HeroMetric: React.FC<{
           </span>
         </div>
       </div>
-      <p className="text-xs opacity-70 mt-4">{description}</p>
+      <p className="text-xs opacity-70 mt-4 dark:text-current dark:opacity-60">{description}</p>
     </button>
   );
 };
@@ -640,21 +640,21 @@ const FunnelRow: React.FC<{
   return (
     <button
       onClick={onClick}
-      className="w-full text-left p-4 rounded-xl transition-all duration-200 hover:bg-slate-100/70 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-300"
+      className="w-full text-left p-4 rounded-xl transition-all duration-200 hover:bg-slate-100/70 dark:hover:bg-slate-800/50 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-300 dark:focus-visible:ring-slate-600"
       aria-label={`${label}: ${value} (${total > 0 ? Math.round(percentage) : 'N/A'}%)`}
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex-1">
-          <p className="font-semibold text-slate-800">{label}</p>
-          <p className="text-xs text-slate-500 mt-1">{description}</p>
+          <p className="font-semibold text-slate-800 dark:text-slate-100">{label}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{description}</p>
         </div>
         <div className="flex-shrink-0 w-full sm:w-64 flex items-center gap-4">
-          <div className="w-full bg-slate-200/70 rounded-full h-2.5 shadow-inner" aria-hidden="true">
+          <div className="w-full bg-slate-200/70 dark:bg-slate-700 rounded-full h-2.5 shadow-inner" aria-hidden="true">
             <div className={`h-2.5 rounded-full transition-all duration-700 ease-out ${color}`} style={{ width: `${percentage}%` }} />
           </div>
           <div className="text-right">
-            <p className="font-black text-lg text-slate-900 leading-none">{value}</p>
-            <p className="text-xs text-slate-500 leading-none">{total > 0 ? `${Math.round(percentage)}%` : 'N/A'}</p>
+            <p className="font-black text-lg text-slate-900 dark:text-slate-50 leading-none">{value}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-none">{total > 0 ? `${Math.round(percentage)}%` : 'N/A'}</p>
           </div>
         </div>
       </div>
@@ -664,7 +664,7 @@ const FunnelRow: React.FC<{
 
 // Skeletons
 const SkeletonBlock = ({ className = '' }: { className?: string }) => (
-  <div className={`animate-pulse bg-slate-200 rounded-lg ${className}`} />
+  <div className={`animate-pulse bg-slate-200 dark:bg-slate-800 rounded-lg ${className}`} />
 );
 
 const Tabs: React.FC<{ active: string; onChange: (t: string) => void }> = ({ active, onChange }) => {
@@ -675,13 +675,13 @@ const Tabs: React.FC<{ active: string; onChange: (t: string) => void }> = ({ act
   ];
   return (
     <div className="mt-4">
-      <div className="inline-flex p-1 rounded-xl border bg-white">
+      <div className="inline-flex p-1 rounded-xl border bg-white dark:bg-slate-800/50 dark:border-slate-700">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => onChange(t.key)}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-300 ${
-              active === t.key ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-300 dark:focus-visible:ring-offset-slate-800 ${
+              active === t.key ? 'bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
             }`}
             aria-pressed={active === t.key}
           >
@@ -725,7 +725,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSelect }) 
           action={
             <button
               onClick={() => refetch()}
-              className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg border bg-white text-slate-700 hover:bg-slate-50"
+              className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg border bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700"
             >
               <span className="material-icons">refresh</span>
               Reintentar
@@ -768,11 +768,11 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSelect }) 
       )}
 
       <div className="flex items-center justify-between gap-3">
-          <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+          <h2 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-slate-50 tracking-tight">
             Dashboard de Resumen
           </h2>
           {isFetching && (
-            <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600">
+            <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
               <span className="material-icons !text-base animate-spin-slow">autorenew</span>
               Actualizando
             </span>
@@ -785,9 +785,9 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSelect }) 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
         {isLoading || !metrics ? (
           <>
-            <SkeletonBlock className="h-36" />
-            <SkeletonBlock className="h-36" />
-            <SkeletonBlock className="h-36" />
+            <SkeletonBlock className="h-44" />
+            <SkeletonBlock className="h-44" />
+            <SkeletonBlock className="h-44" />
           </>
         ) : (
           <>
@@ -840,7 +840,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSelect }) 
           {activeTab === 'overview' && (
             <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
               <Card icon="filter_alt" title="Embudo de Estudiantes" description="Desglose de los estudiantes activos.">
-                <div className="mt-4 space-y-2 divide-y divide-slate-200/60">
+                <div className="mt-4 space-y-2 divide-y divide-slate-200/60 dark:divide-slate-700/60">
                   <FunnelRow
                     label="Con PPS Activa"
                     value={metrics.alumnosEnPPS.value}
@@ -905,7 +905,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSelect }) 
                     icon="handshake"
                     description={`Instituciones nuevas con PPS lanzadas en ${targetYear}.`}
                     isLoading={false}
-                    className="bg-slate-50/50"
+                    className="bg-slate-50/50 dark:bg-slate-800/50"
                     onClick={() =>
                       openModal({
                         title: 'Convenios Con Instituciones Nuevas (2025)',
@@ -917,20 +917,20 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSelect }) 
                       })
                     }
                   />
-                  <div className="mt-6 pt-6 border-t border-slate-200/60">
-                    <h3 className="font-bold text-slate-800 text-center mb-4">Últimas 5 PPS Lanzadas</h3>
+                  <div className="mt-6 pt-6 border-t border-slate-200/60 dark:border-slate-700">
+                    <h3 className="font-bold text-slate-800 dark:text-slate-100 text-center mb-4">Últimas 5 PPS Lanzadas</h3>
                     <div className="space-y-3">
                         {(metrics.ultimas5Lanzadas as any[]).map((launch) => {
                             const especialidadVisuals = getEspecialidadClasses(launch[FIELD_ORIENTACION_LANZAMIENTOS]);
                             return (
-                                <div key={launch.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200/60 shadow-sm">
+                                <div key={launch.id} className="flex items-center justify-between p-3 bg-white dark:bg-slate-800/50 rounded-lg border border-slate-200/60 dark:border-slate-700 shadow-sm">
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-semibold text-slate-800 text-sm truncate">{launch[FIELD_NOMBRE_PPS_LANZAMIENTOS]}</p>
-                                        <p className="text-xs text-slate-500">{formatDate(launch[FIELD_FECHA_INICIO_LANZAMIENTOS])}</p>
+                                        <p className="font-semibold text-slate-800 dark:text-slate-100 text-sm truncate">{launch[FIELD_NOMBRE_PPS_LANZAMIENTOS]}</p>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400">{formatDate(launch[FIELD_FECHA_INICIO_LANZAMIENTOS])}</p>
                                     </div>
                                     <div className="flex items-center gap-3 flex-shrink-0 ml-4">
                                         <span className={`${especialidadVisuals.tag} shadow-sm`}>{launch[FIELD_ORIENTACION_LANZAMIENTOS]}</span>
-                                        <span className="text-sm font-bold text-slate-700 bg-slate-200/80 px-2 py-1 rounded-md">{launch[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS]} cupos</span>
+                                        <span className="text-sm font-bold text-slate-700 dark:text-slate-200 bg-slate-200/80 dark:bg-slate-700 px-2 py-1 rounded-md">{launch[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS]} cupos</span>
                                     </div>
                                 </div>
                             );
@@ -960,23 +960,23 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSelect }) 
                   </div>
               </Card>
               <Card icon="groups" title="Población Estudiantil" description="Movimiento de la cohorte durante el ciclo.">
-                  <div className="mt-4 p-4 bg-white rounded-xl">
+                  <div className="mt-4 p-4 bg-white dark:bg-slate-800/50 rounded-xl">
                     <div className="space-y-2">
                       <button
                         onClick={() =>
                           openModal({ title: `Alumnos al Inicio (${targetYear})`, students: metrics.alumnosInicioCiclo.list })
                         }
-                        className="w-full p-2 rounded-lg hover:bg-slate-100/70 text-left transition-colors flex justify-between items-baseline group focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-300"
+                        className="w-full p-2 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-700/50 text-left transition-colors flex justify-between items-baseline group focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-300"
                       >
-                        <span className="text-sm text-slate-600 font-medium group-hover:text-slate-800">
+                        <span className="text-sm text-slate-600 dark:text-slate-300 font-medium group-hover:text-slate-800 dark:group-hover:text-slate-100">
                           Alumnos al inicio del ciclo
                         </span>
-                        <span className="text-2xl font-black text-slate-800 tracking-tighter">
+                        <span className="text-2xl font-black text-slate-800 dark:text-slate-50 tracking-tighter">
                           {metrics.alumnosInicioCiclo.value}
                         </span>
                       </button>
 
-                      <div className="border-t border-slate-200/70 mx-2" />
+                      <div className="border-t border-slate-200/70 dark:border-slate-700 mx-2" />
 
                       <button
                         onClick={() =>
@@ -990,22 +990,22 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSelect }) 
                             ],
                           })
                         }
-                        className="w-full p-2 rounded-lg hover:bg-slate-100/70 text-left transition-colors flex justify-between items-baseline group focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-300"
+                        className="w-full p-2 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-700/50 text-left transition-colors flex justify-between items-baseline group focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-300"
                       >
-                        <span className="text-sm text-slate-600 font-medium group-hover:text-slate-800">
+                        <span className="text-sm text-slate-600 dark:text-slate-300 font-medium group-hover:text-slate-800 dark:group-hover:text-slate-100">
                           Nuevos ingresos en el ciclo
                         </span>
-                        <span className="text-2xl font-black text-slate-800 tracking-tighter">{metrics.nuevosAlumnos.value}</span>
+                        <span className="text-2xl font-black text-slate-800 dark:text-slate-50 tracking-tighter">{metrics.nuevosAlumnos.value}</span>
                       </button>
 
-                      <div className="border-t border-slate-200/70 mx-2" />
+                      <div className="border-t border-slate-200/70 dark:border-slate-700 mx-2" />
 
                       <div
                         className="w-full p-2 text-left flex justify-between items-baseline"
                         title="Máximo de estudiantes activos simultáneamente durante el ciclo."
                       >
-                        <span className="text-sm text-slate-600 font-medium">Pico de alumnos en el ciclo</span>
-                        <span className="text-2xl font-black text-slate-800 tracking-tighter">{metrics.picoAlumnos.value}</span>
+                        <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">Pico de alumnos en el ciclo</span>
+                        <span className="text-2xl font-black text-slate-800 dark:text-slate-50 tracking-tighter">{metrics.picoAlumnos.value}</span>
                       </div>
                     </div>
                   </div>
@@ -1154,16 +1154,16 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSelect }) 
                       {metrics.nuevosConvenios.list.length > 0 ? metrics.nuevosConvenios.list.map((convenio) => (
                           <div
                               key={convenio.nombre}
-                              className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200/60 shadow-sm"
+                              className="flex items-center justify-between p-3 bg-white dark:bg-slate-800/50 rounded-lg border border-slate-200/60 dark:border-slate-700 shadow-sm"
                           >
                               <div className="flex items-center gap-3">
                                   <span className="material-icons text-emerald-500">verified</span>
-                                  <span className="font-semibold text-slate-800 text-sm">{convenio.nombre}</span>
+                                  <span className="font-semibold text-slate-800 dark:text-slate-100 text-sm">{convenio.nombre}</span>
                               </div>
-                              <span className="text-sm font-bold text-slate-700 bg-slate-200/80 px-2 py-1 rounded-md">{convenio.cupos} cupos</span>
+                              <span className="text-sm font-bold text-slate-700 dark:text-slate-200 bg-slate-200/80 dark:bg-slate-700 px-2 py-1 rounded-md">{convenio.cupos} cupos</span>
                           </div>
                       )) : (
-                          <p className="text-center text-sm text-slate-500 py-4">No hay nuevos convenios para mostrar este año.</p>
+                          <p className="text-center text-sm text-slate-500 dark:text-slate-400 py-4">No hay nuevos convenios para mostrar este año.</p>
                       )}
                   </div>
               </Card>

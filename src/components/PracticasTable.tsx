@@ -20,17 +20,17 @@ import EmptyState from './EmptyState';
 const NOTA_OPTIONS = ['Sin calificar', 'Entregado (sin corregir)', 'No Entregado', 'Desaprobado', '4', '5', '6', '7', '8', '9', '10'];
 
 const notaColors: Record<string, string> = {
-  '10': 'bg-gradient-to-r from-emerald-400 to-teal-400 text-white shadow-lg shadow-emerald-500/20',
-  '9': 'bg-gradient-to-r from-emerald-300 to-teal-300 text-emerald-900 font-bold',
-  '8': 'bg-blue-100 text-blue-800',
-  '7': 'bg-sky-100 text-sky-800',
-  '6': 'bg-yellow-100 text-yellow-800',
-  '5': 'bg-orange-100 text-orange-800',
-  '4': 'bg-red-100 text-red-800',
-  'Desaprobado': 'bg-red-200 text-red-900 font-bold',
-  'No Entregado': 'bg-rose-100 text-rose-800',
-  'Entregado (sin corregir)': 'bg-sky-100 text-sky-800',
-  'Sin calificar': 'bg-slate-100 text-slate-700'
+  '10': 'bg-gradient-to-r from-emerald-400 to-teal-400 text-white dark:from-emerald-500 dark:to-teal-500 shadow-lg shadow-emerald-500/20',
+  '9': 'bg-gradient-to-r from-emerald-300 to-teal-300 text-emerald-900 font-bold dark:from-emerald-400 dark:to-teal-400 dark:text-emerald-900',
+  '8': 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200',
+  '7': 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-200',
+  '6': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200',
+  '5': 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200',
+  '4': 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200',
+  'Desaprobado': 'bg-red-200 text-red-900 font-bold dark:bg-red-800/50 dark:text-red-100',
+  'No Entregado': 'bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-200',
+  'Entregado (sin corregir)': 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-200',
+  'Sin calificar': 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
 };
 
 interface PracticasTableProps {
@@ -56,12 +56,12 @@ const SortableHeader: React.FC<{
       <button
         type="button"
         onClick={() => requestSort(sortKey)}
-        className="w-full h-full p-4 flex items-center gap-2 cursor-pointer select-none group transition-colors hover:bg-slate-200/50"
+        className="w-full h-full p-4 flex items-center gap-2 cursor-pointer select-none group transition-colors hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
         aria-label={`Ordenar por ${label} en orden ${isActive && sortConfig.direction === 'ascending' ? 'descendiente' : 'ascendiente'}`}
       >
         <div className={`flex items-center gap-2 w-full ${className.includes('text-left') ? 'justify-start' : 'justify-center'}`}>
-            <span className="font-bold text-slate-600 text-xs uppercase tracking-wider">{label}</span>
-            <span className={`material-icons !text-base transition-opacity ${isActive ? 'opacity-100 text-slate-900' : 'opacity-50 group-hover:opacity-80'}`}>{icon}</span>
+            <span className="font-bold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">{label}</span>
+            <span className={`material-icons !text-base transition-opacity ${isActive ? 'opacity-100 text-slate-900 dark:text-slate-50' : 'opacity-50 group-hover:opacity-80'}`}>{icon}</span>
         </div>
       </button>
     </th>
@@ -144,25 +144,25 @@ const PracticasTable: React.FC<PracticasTableProps> = ({ practicas, handleNotaCh
   return (
     <div>
       <div className="flex items-start gap-4 mb-6">
-        <div className="flex-shrink-0 bg-blue-100 text-blue-600 rounded-full h-12 w-12 flex items-center justify-center mt-1">
+        <div className="flex-shrink-0 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300 rounded-full h-12 w-12 flex items-center justify-center mt-1">
           <span className="material-icons !text-3xl">work_history</span>
         </div>
         <div>
-          <h2 className="text-slate-900 text-2xl font-bold tracking-tight">Historial de Prácticas</h2>
-          <p className="text-slate-600 mt-1 max-w-2xl">Aquí se detallan todas las prácticas que has realizado, junto con sus horas, fechas y estado.</p>
+          <h2 className="text-slate-900 dark:text-slate-50 text-2xl font-bold tracking-tight">Historial de Prácticas</h2>
+          <p className="text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">Aquí se detallan todas las prácticas que has realizado, junto con sus horas, fechas y estado.</p>
         </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[800px] text-sm">
           <caption className="sr-only">Historial de Prácticas Profesionales Supervisadas</caption>
-          <thead className="bg-slate-100/70">
-            <tr className="border-b-2 border-slate-200">
+          <thead className="bg-slate-100/70 dark:bg-slate-800/70">
+            <tr className="border-b-2 border-slate-200 dark:border-slate-700">
               <SortableHeader label="Institución" sortKey="institucion" sortConfig={sortConfig} requestSort={requestSort} className="text-left w-2/5" />
               <SortableHeader label="Especialidad" sortKey="especialidad" sortConfig={sortConfig} requestSort={requestSort} />
               <SortableHeader label="Horas" sortKey="horas" sortConfig={sortConfig} requestSort={requestSort} />
               <SortableHeader label="Periodo" sortKey="fechaInicio" sortConfig={sortConfig} requestSort={requestSort} />
               <SortableHeader label="Estado" sortKey="estado" sortConfig={sortConfig} requestSort={requestSort} />
-              <th scope="col" className="p-4 text-center font-bold text-slate-600 text-xs uppercase tracking-wider">Nota</th>
+              <th scope="col" className="p-4 text-center font-bold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Nota</th>
             </tr>
           </thead>
           <tbody>
@@ -179,21 +179,21 @@ const PracticasTable: React.FC<PracticasTableProps> = ({ practicas, handleNotaCh
               return (
                 <tr 
                   key={practica.id} 
-                  className={`transition-all duration-300 odd:bg-white even:bg-slate-50/70 hover:bg-blue-50 hover:shadow-lg hover:ring-2 hover:ring-blue-200/50 hover:relative hover:z-10 ${
+                  className={`transition-all duration-300 odd:bg-white even:bg-slate-50/70 dark:odd:bg-slate-800/50 dark:even:bg-slate-900/50 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:shadow-lg hover:ring-2 hover:ring-blue-200/50 dark:hover:ring-blue-800/50 hover:relative hover:z-10 ${
                     justUpdatedPracticaId === practica.id ? 'animate-flash-green' : ''
                   }`}
                 >
-                  <td className="p-4 align-middle text-slate-900 font-semibold break-words text-left">{institucion || 'N/A'}</td>
+                  <td className="p-4 align-middle text-slate-900 dark:text-slate-100 font-semibold break-words text-left">{institucion || 'N/A'}</td>
                   <td className="p-4 align-middle text-center">
                     <span className={`${getEspecialidadClasses(practica[FIELD_ESPECIALIDAD_PRACTICAS]).tag} shadow-sm`}>
                       {practica[FIELD_ESPECIALIDAD_PRACTICAS] || 'N/A'}
                     </span>
                   </td>
-                  <td className="p-4 text-center align-middle text-slate-800 font-medium">{practica[FIELD_HORAS_PRACTICAS] || 0}</td>
-                  <td className="p-4 text-center align-middle text-slate-700">
+                  <td className="p-4 text-center align-middle text-slate-800 dark:text-slate-200 font-medium">{practica[FIELD_HORAS_PRACTICAS] || 0}</td>
+                  <td className="p-4 text-center align-middle text-slate-700 dark:text-slate-300">
                     <div className="flex flex-col items-center">
                       <span>{formatDate(practica[FIELD_FECHA_INICIO_PRACTICAS])}</span>
-                      <span className="text-xs text-slate-500">a</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">a</span>
                       <span>{formatDate(practica[FIELD_FECHA_FIN_PRACTICAS])}</span>
                     </div>
                   </td>
@@ -210,8 +210,8 @@ const PracticasTable: React.FC<PracticasTableProps> = ({ practicas, handleNotaCh
                             <select
                               value={nota}
                               onChange={(e) => handleLocalNotaChange(practica.id, e.target.value)}
-                              className={`appearance-none w-full text-sm font-semibold rounded-lg border border-slate-300 p-2.5 bg-white shadow-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 hover:border-blue-400 hover:bg-slate-50
-                                ${savingNotaId === practica.id ? 'ring-2 ring-blue-500 border-blue-500 shadow-blue-100 animate-pulse' : ''}`}
+                              className={`appearance-none w-full text-sm font-semibold rounded-lg border border-slate-300 dark:border-slate-600 p-2.5 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 hover:border-blue-400 dark:hover:border-blue-500 dark:focus:border-blue-500 dark:focus:ring-blue-500/30
+                                ${savingNotaId === practica.id ? 'ring-2 ring-blue-500 border-blue-500 shadow-blue-100 dark:ring-blue-600 dark:border-blue-600 dark:shadow-blue-900/50 animate-pulse' : ''}`}
                               aria-label={`Calificación para ${institucion}`}
                             >
                               {NOTA_OPTIONS.map(option => (
@@ -219,11 +219,11 @@ const PracticasTable: React.FC<PracticasTableProps> = ({ practicas, handleNotaCh
                               ))}
                             </select>
                             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3">
-                              <span className="material-icons !text-base text-slate-500">expand_more</span>
+                              <span className="material-icons !text-base text-slate-500 dark:text-slate-400">expand_more</span>
                             </div>
                         </div>
                         {justUpdatedPracticaId === practica.id && (
-                            <span className="text-xs font-bold text-emerald-600 animate-fade-in-up whitespace-nowrap" style={{ animationDuration: '300ms' }}>
+                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 animate-fade-in-up whitespace-nowrap" style={{ animationDuration: '300ms' }}>
                                 Guardado ✓
                             </span>
                         )}

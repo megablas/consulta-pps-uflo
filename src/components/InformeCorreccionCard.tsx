@@ -30,7 +30,7 @@ const HighlightedName: React.FC<{ text: string; highlight: string }> = ({ text, 
     <span>
       {parts.map((part, i) =>
         part.toLowerCase() === highlight.toLowerCase() ? (
-          <mark key={i} className="bg-yellow-200 rounded px-1">
+          <mark key={i} className="bg-yellow-200 dark:bg-yellow-400/50 dark:text-yellow-900 rounded px-1">
             {part}
           </mark>
         ) : (
@@ -86,11 +86,11 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
     today.setHours(0, 0, 0, 0);
     const diffDays = Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 3600 * 24));
 
-    let className = 'bg-slate-100 text-slate-600';
+    let className = 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300';
     if (diffDays < 0) {
-      className = 'bg-red-100 text-red-700';
+      className = 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-200';
     } else if (diffDays <= 7) {
-      className = 'bg-amber-100 text-amber-700';
+      className = 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-200';
     }
     return { date: deadline, className, icon: 'alarm' };
   }, [students]);
@@ -116,11 +116,11 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
   };
 
   return (
-    <details className="bg-white rounded-xl border border-slate-200/80 shadow-sm transition-all duration-300 open:shadow-lg open:border-blue-200 group" open>
+    <details className="bg-white dark:bg-slate-800/50 rounded-xl border border-slate-200/80 dark:border-slate-700 shadow-sm transition-all duration-300 open:shadow-lg open:border-blue-200 dark:open:border-blue-700 group" open>
       <summary className="p-4 cursor-pointer flex justify-between items-center list-none">
         <div className="flex-grow">
-          <h4 className="font-bold text-slate-800 group-open:text-blue-700">{ppsName}</h4>
-          <p className="text-sm text-slate-500">{orientacion}</p>
+          <h4 className="font-bold text-slate-800 dark:text-slate-100 group-open:text-blue-700 dark:group-open:text-blue-300">{ppsName}</h4>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{orientacion}</p>
           {correctionDeadlineInfo && (
             <p className={`text-xs font-semibold px-2 py-1 rounded-md inline-flex items-center gap-1 mt-2 ${correctionDeadlineInfo.className}`}>
                 <span className="material-icons !text-sm">{correctionDeadlineInfo.icon}</span>
@@ -137,17 +137,17 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()} 
-              className="hidden sm:inline-flex items-center gap-2 bg-blue-100 text-blue-700 font-semibold text-xs py-2 px-3 rounded-lg hover:bg-blue-200 transition-colors"
+              className="hidden sm:inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-semibold text-xs py-2 px-3 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
               aria-label={`Ir a la tarea del campus para ${ppsName}`}
             >
               <span className="material-icons !text-base">launch</span>
               <span>Ir al Campus</span>
             </a>
           )}
-          <div className="text-sm font-semibold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full">
+          <div className="text-sm font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-full">
             {stats.corregidos} / {stats.totalStudents} Corregidos
           </div>
-          <div className="text-slate-400 transition-transform duration-300 group-open:rotate-180">
+          <div className="text-slate-400 dark:text-slate-500 transition-transform duration-300 group-open:rotate-180">
             <span className="material-icons">expand_more</span>
           </div>
         </div>
@@ -155,15 +155,15 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
       
       {/* Batch Actions */}
       {selectedStudents.size > 0 && (
-          <div className="border-t border-b border-slate-200 bg-blue-50/50 p-3 flex flex-col sm:flex-row items-center justify-between gap-3 animate-fade-in-up">
-              <p className="text-sm font-semibold text-blue-800">
+          <div className="border-t border-b border-slate-200 dark:border-slate-700 bg-blue-50/50 dark:bg-blue-900/20 p-3 flex flex-col sm:flex-row items-center justify-between gap-3 animate-fade-in-up">
+              <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">
                   {selectedStudents.size} alumno{selectedStudents.size > 1 ? 's' : ''} seleccionado{selectedStudents.size > 1 ? 's' : ''}
               </p>
               <div className="flex items-center gap-2">
                   <select
                       value={batchNota}
                       onChange={(e) => setBatchNota(e.target.value)}
-                      className="text-sm rounded-lg border border-slate-300/80 p-2 bg-white shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus-ring-blue-500/20"
+                      className="text-sm rounded-lg border border-slate-300/80 dark:border-slate-600 p-2 bg-white dark:bg-slate-700 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus-ring-blue-500/20"
                       aria-label="Seleccionar nota para el lote"
                   >
                       {NOTA_OPTIONS.filter(o => o !== 'Sin calificar' && o !== 'No Entregado' && o !== 'Entregado (sin corregir)').map(option => (
@@ -186,10 +186,10 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
           </div>
       )}
 
-      <div className="border-t border-slate-200">
+      <div className="border-t border-slate-200 dark:border-slate-700">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50/70">
+            <thead className="bg-slate-50/70 dark:bg-slate-900/50">
               <tr>
                 <th className="p-3 w-12 text-center">
                    <Checkbox
@@ -201,17 +201,17 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
                         disabled={stats.qualifiableStudents.length === 0}
                     />
                 </th>
-                <th className="p-3 text-left font-semibold text-slate-500">Alumno</th>
-                <th className="p-3 text-left font-semibold text-slate-500 w-56">Nota</th>
-                <th className="p-3 text-center font-semibold text-slate-500">Informe Subido</th>
+                <th className="p-3 text-left font-semibold text-slate-500 dark:text-slate-400">Alumno</th>
+                <th className="p-3 text-left font-semibold text-slate-500 dark:text-slate-400 w-56">Nota</th>
+                <th className="p-3 text-center font-semibold text-slate-500 dark:text-slate-400">Informe Subido</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200/60">
+            <tbody className="divide-y divide-slate-200/60 dark:divide-slate-700">
               {students.map(student => {
                 const isSelected = student.practicaId ? selectedStudents.has(student.practicaId) : false;
                 const isSaving = updatingNotaId === student.practicaId || (!student.practicaId && updatingNotaId === `creating-${student.studentId}`);
                 return (
-                  <tr key={student.studentId} className={`transition-colors duration-1000 ${justUpdatedPracticaId === student.practicaId ? 'bg-green-100' : (isSelected ? 'bg-blue-50/50' : 'hover:bg-slate-50/50')}`}>
+                  <tr key={student.studentId} className={`transition-colors duration-1000 ${justUpdatedPracticaId === student.practicaId ? 'bg-green-100 dark:bg-green-900/30' : (isSelected ? 'bg-blue-50/50 dark:bg-blue-900/30' : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/50')}`}>
                     <td className="p-3 text-center">
                        {student.practicaId && (
                            <Checkbox
@@ -223,7 +223,7 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
                            />
                        )}
                     </td>
-                    <td className="p-3 font-medium text-slate-800">
+                    <td className="p-3 font-medium text-slate-800 dark:text-slate-100">
                       <HighlightedName text={student.studentName} highlight={searchTerm} />
                     </td>
                     <td className="p-3">
@@ -236,7 +236,7 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
                           ariaLabel={`Nota para ${student.studentName}`}
                         />
                          {justUpdatedPracticaId === student.practicaId && (
-                            <span className="text-xs font-bold text-emerald-600 animate-fade-in-up" style={{ animationDuration: '300ms' }}>
+                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 animate-fade-in-up" style={{ animationDuration: '300ms' }}>
                                 Guardado ✓
                             </span>
                          )}
@@ -244,12 +244,12 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
                     </td>
                     <td className="p-3 text-center">
                       {student.informeSubido ? (
-                        <span className="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-800 text-xs font-semibold px-2.5 py-1 rounded-full" title="Informe subido por el alumno">
+                        <span className="inline-flex items-center gap-1.5 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200 text-xs font-semibold px-2.5 py-1 rounded-full" title="Informe subido por el alumno">
                           <span className="material-icons !text-sm">check</span>
                           <span>Sí</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 bg-rose-100 text-rose-800 text-xs font-semibold px-2.5 py-1 rounded-full" title="Informe no subido o marcado como 'No Entregado'">
+                        <span className="inline-flex items-center gap-1.5 bg-rose-100 dark:bg-rose-900/50 text-rose-800 dark:text-rose-200 text-xs font-semibold px-2.5 py-1 rounded-full" title="Informe no subido o marcado como 'No Entregado'">
                            <span className="material-icons !text-sm">close</span>
                            <span>No</span>
                         </span>

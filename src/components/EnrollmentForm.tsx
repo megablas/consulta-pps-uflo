@@ -34,12 +34,12 @@ const RadioButton: React.FC<{
     htmlFor={id} 
     className={`flex items-center p-3.5 border rounded-lg cursor-pointer transition-all duration-200 group relative ${
       checked 
-        ? 'bg-blue-50 border-blue-500 shadow-sm' 
-        : 'bg-white border-slate-300/80 hover:border-blue-400'
+        ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-500 dark:border-blue-600 shadow-sm' 
+        : 'bg-white dark:bg-slate-700 border-slate-300/80 dark:border-slate-600 hover:border-blue-400 dark:hover:border-blue-500'
     } ${
       disabled ? 'cursor-not-allowed opacity-60' : ''
     } ${
-      error ? 'border-red-400 bg-red-50' : ''
+      error ? 'border-red-400 bg-red-50 dark:bg-red-900/20' : ''
     }`}
   >
     <div className="flex-shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 "
@@ -62,9 +62,9 @@ const RadioButton: React.FC<{
       className="opacity-0 absolute"
     />
     <span className={`ml-3 text-sm font-medium transition-colors ${
-      checked ? 'text-blue-900' : 'text-slate-700 group-hover:text-slate-900'
+      checked ? 'text-blue-900 dark:text-blue-100' : 'text-slate-700 dark:text-slate-200 group-hover:text-slate-900 dark:group-hover:text-white'
     } ${
-      disabled ? 'text-slate-500' : ''
+      disabled ? 'text-slate-500 dark:text-slate-400' : ''
     }`}>
       {label}
     </span>
@@ -76,14 +76,14 @@ const ProgressIndicator = ({ currentStep, totalSteps }: { currentStep: number; t
   <div className="mb-6 animate-fade-in-up">
     <div className="flex items-center justify-between mb-2">
       <div className="flex items-center gap-2">
-        <span className="material-icons text-slate-600 !text-base">dynamic_form</span>
-        <span className="text-sm font-medium text-slate-700">Progreso del formulario</span>
+        <span className="material-icons text-slate-600 dark:text-slate-400 !text-base">dynamic_form</span>
+        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Progreso del formulario</span>
       </div>
-      <span className="text-sm font-semibold text-slate-900 bg-slate-100 px-2 py-1 rounded-md">
+      <span className="text-sm font-semibold text-slate-900 dark:text-slate-50 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-md">
         {currentStep}/{totalSteps}
       </span>
     </div>
-    <div className="w-full bg-slate-200/70 rounded-full h-2.5 overflow-hidden">
+    <div className="w-full bg-slate-200/70 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
       <div 
         className="bg-gradient-to-r from-sky-400 to-blue-500 h-2.5 rounded-full transition-all duration-500 ease-out"
         style={{ width: `${(currentStep / totalSteps) * 100}%` }}
@@ -93,7 +93,7 @@ const ProgressIndicator = ({ currentStep, totalSteps }: { currentStep: number; t
 );
 
 const ErrorMessage = ({ message, onDismiss }: { message: string; onDismiss?: () => void }) => (
-  <div className="flex items-start gap-3 bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg animate-fade-in-up">
+  <div className="flex items-start gap-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-800 dark:text-red-200 p-4 rounded-lg animate-fade-in-up">
     <div className="flex-shrink-0 mt-0.5">
       <span className="material-icons text-red-500 !text-base">error_outline</span>
     </div>
@@ -113,7 +113,7 @@ const ErrorMessage = ({ message, onDismiss }: { message: string; onDismiss?: () 
 );
 
 const SuccessMessage = ({ message }: { message: string }) => (
-  <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-lg animate-fade-in-up">
+  <div className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-200 p-4 rounded-lg animate-fade-in-up">
     <span className="material-icons text-emerald-600 !text-base">check_circle</span>
     <p className="text-sm font-medium">{message}</p>
   </div>
@@ -333,27 +333,27 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
         onSubmit={handleSubmit}
         noValidate
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-2xl shadow-lg w-full max-w-2xl transform transition-all duration-300 flex flex-col max-h-[90vh] overflow-hidden border border-slate-200/70"
+        className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg w-full max-w-2xl transform transition-all duration-300 flex flex-col max-h-[90vh] overflow-hidden border border-slate-200/70 dark:border-slate-700/80"
       >
         {/* Header */}
-        <div className="p-6 sm:p-8 flex-shrink-0 bg-white">
+        <div className="p-6 sm:p-8 flex-shrink-0 bg-white dark:bg-slate-800">
           <div className="flex items-start gap-3 mb-6">
-            <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
+            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300">
               <span className="material-icons !text-xl">assignment</span>
             </div>
             <div className="flex-1">
-              <h2 id="enrollment-modal-title" className="text-2xl font-bold text-slate-800 tracking-tight">
+              <h2 id="enrollment-modal-title" className="text-2xl font-bold text-slate-800 dark:text-slate-50 tracking-tight">
                 Formulario de Inscripción
               </h2>
-              <p className="text-slate-600 text-sm mt-1 leading-relaxed">
-                Convocatoria: <span className="font-semibold text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded">{convocatoriaName}</span>
+              <p className="text-slate-600 dark:text-slate-400 text-sm mt-1 leading-relaxed">
+                Convocatoria: <span className="font-semibold text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">{convocatoriaName}</span>
               </p>
             </div>
             <button 
               type="button" 
               onClick={onClose} 
               disabled={isSubmitting} 
-              className="p-2 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-all duration-200 disabled:opacity-50"
+              className="p-2 rounded-lg text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300 transition-all duration-200 disabled:opacity-50"
               aria-label="Cerrar formulario"
             >
               <span className="material-icons !text-xl">close</span>
@@ -363,7 +363,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
         </div>
 
         {/* Content */}
-        <div className="px-6 sm:px-8 py-6 overflow-y-auto flex-grow min-h-0 bg-slate-50/30">
+        <div className="px-6 sm:px-8 py-6 overflow-y-auto flex-grow min-h-0 bg-slate-50/30 dark:bg-slate-900/40">
           <div className="space-y-8">
             {/* Success Message */}
             {isFormValid && (
@@ -380,14 +380,14 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
 
             {/* Horarios Selection */}
             {showHorarios && (
-              <div className="bg-white p-6 rounded-2xl border border-slate-200/70 shadow-sm transition-all duration-300 hover:shadow-lg hover:border-slate-300/80">
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200/70 dark:border-slate-700 shadow-sm transition-all duration-300 hover:shadow-lg hover:border-slate-300/80 dark:hover:border-slate-600">
                 <div className="flex items-center gap-2 mb-3">
                   <span className="material-icons text-blue-500 !text-xl">schedule</span>
-                  <h3 className="text-slate-800 font-semibold text-base leading-tight">
+                  <h3 className="text-slate-800 dark:text-slate-100 font-semibold text-base leading-tight">
                     Disponibilidad Horaria
                   </h3>
                 </div>
-                <p className="text-sm text-slate-600 mb-6 leading-relaxed">
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
                   Selecciona los horarios en los que puedes participar. Puedes elegir múltiples opciones.
                 </p>
                 <div role="group" aria-labelledby="horarios-group" aria-describedby={errors.horarios ? "horarios-error" : undefined}>
@@ -409,7 +409,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                   </div>
                 </div>
                 {touched.horarios && errors.horarios && (
-                  <p id="horarios-error" className="mt-3 text-sm text-red-600 font-medium" role="alert">
+                  <p id="horarios-error" className="mt-3 text-sm text-red-600 dark:text-red-400 font-medium" role="alert">
                     {errors.horarios}
                   </p>
                 )}
@@ -417,21 +417,21 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
             )}
 
             {/* Academic Status */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/70 shadow-sm transition-all duration-300 hover:shadow-lg hover:border-slate-300/80">
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200/70 dark:border-slate-700 shadow-sm transition-all duration-300 hover:shadow-lg hover:border-slate-300/80 dark:hover:border-slate-600">
               <div className="flex items-center gap-2 mb-3">
                 <span className="material-icons text-blue-500 !text-xl">school</span>
-                <h3 className="text-slate-800 font-semibold text-base leading-tight">
+                <h3 className="text-slate-800 dark:text-slate-100 font-semibold text-base leading-tight">
                   Situación Académica
                 </h3>
               </div>
-              <p className="text-sm text-slate-600 mb-6 leading-relaxed">
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
                 Información sobre tu estado actual en la carrera.
               </p>
               
               <div className="space-y-6">
                 {/* Question 1 */}
                 <div>
-                  <h4 className="text-sm font-medium text-slate-800 mb-4">
+                  <h4 className="text-sm font-medium text-slate-800 dark:text-slate-200 mb-4">
                     ¿Terminaste de cursar todas las materias de la carrera?
                   </h4>
                   <div role="radiogroup" aria-describedby={errors.terminoDeCursar ? "termino-cursar-error" : undefined} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -463,7 +463,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                     />
                   </div>
                   {touched.terminoDeCursar && errors.terminoDeCursar && (
-                    <p id="termino-cursar-error" className="mt-3 text-sm text-red-600 font-medium" role="alert">
+                    <p id="termino-cursar-error" className="mt-3 text-sm text-red-600 dark:text-red-400 font-medium" role="alert">
                       {errors.terminoDeCursar}
                     </p>
                   )}
@@ -472,7 +472,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                 {/* Question 2 (Conditional) */}
                 {terminoDeCursar === true && (
                   <div className="animate-fade-in-up">
-                    <h4 className="text-sm font-medium text-slate-800 mb-4">
+                    <h4 className="text-sm font-medium text-slate-800 dark:text-slate-200 mb-4">
                       ¿Cuántos finales adeudas?
                     </h4>
                     <div role="radiogroup" aria-describedby={errors.finalesAdeudados ? "finales-error" : undefined} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -494,7 +494,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                       ))}
                     </div>
                     {touched.finalesAdeudados && errors.finalesAdeudados && (
-                      <p id="finales-error" className="mt-3 text-sm text-red-600 font-medium" role="alert">
+                      <p id="finales-error" className="mt-3 text-sm text-red-600 dark:text-red-400 font-medium" role="alert">
                         {errors.finalesAdeudados}
                       </p>
                     )}
@@ -503,7 +503,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                 
                 {terminoDeCursar === false && (
                   <div className="animate-fade-in-up">
-                    <h4 className="text-sm font-medium text-slate-800 mb-4">
+                    <h4 className="text-sm font-medium text-slate-800 dark:text-slate-200 mb-4">
                       ¿Estás cursando actualmente materias electivas?
                     </h4>
                     <div role="radiogroup" aria-describedby={errors.cursandoElectivas ? "electivas-error" : undefined} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -535,7 +535,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                       />
                     </div>
                     {touched.cursandoElectivas && errors.cursandoElectivas && (
-                      <p id="electivas-error" className="mt-3 text-sm text-red-600 font-medium" role="alert">
+                      <p id="electivas-error" className="mt-3 text-sm text-red-600 dark:text-red-400 font-medium" role="alert">
                         {errors.cursandoElectivas}
                       </p>
                     )}
@@ -545,14 +545,14 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
             </div>
 
             {/* Other Academic Situation */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/70 shadow-sm transition-all duration-300 hover:shadow-lg hover:border-slate-300/80">
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200/70 dark:border-slate-700 shadow-sm transition-all duration-300 hover:shadow-lg hover:border-slate-300/80 dark:hover:border-slate-600">
               <div className="flex items-center gap-2 mb-3">
                 <span className="material-icons text-blue-500 !text-xl">edit_note</span>
-                <h3 className="text-slate-800 font-semibold text-base leading-tight">
+                <h3 className="text-slate-800 dark:text-slate-100 font-semibold text-base leading-tight">
                   Aclaraciones Adicionales
                 </h3>
               </div>
-              <p className="text-sm text-slate-600 mb-4 leading-relaxed">
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
                 Utiliza este espacio para cualquier otra aclaración sobre tu situación académica (ej: "Cursando el TIF", "Realizando la Práctica Clínica de Adultos", etc.). Mínimo 10 caracteres.
               </p>
               <textarea
@@ -563,16 +563,16 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                 onChange={(e) => setOtraSituacionAcademica(e.target.value)}
                 onBlur={() => handleFieldBlur('otraSituacionAcademica')}
                 disabled={isSubmitting}
-                className={`w-full text-sm rounded-lg border p-3 bg-white/50 shadow-sm outline-none transition-all duration-200 ${
+                className={`w-full text-sm rounded-lg border p-3 bg-white/50 dark:bg-slate-700/50 shadow-sm outline-none transition-all duration-200 ${
                   touched.otraSituacionAcademica && errors.otraSituacionAcademica 
-                    ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20' 
-                    : 'border-slate-300/80 focus:border-blue-500 focus:ring-blue-500/20 hover:border-blue-400'
+                    ? 'border-red-400 dark:border-red-500/80 focus:border-red-500 focus:ring-red-500/20' 
+                    : 'border-slate-300/80 dark:border-slate-600 focus:border-blue-500 focus:ring-blue-500/20 dark:focus:border-blue-500 dark:focus:ring-blue-500/30 hover:border-blue-400 dark:hover:border-blue-500'
                 }`}
                 aria-invalid={!!errors.otraSituacionAcademica}
                 aria-describedby={errors.otraSituacionAcademica ? "otra-situacion-error" : undefined}
               />
               {touched.otraSituacionAcademica && errors.otraSituacionAcademica && (
-                <p id="otra-situacion-error" className="mt-2 text-sm text-red-600 font-medium" role="alert">
+                <p id="otra-situacion-error" className="mt-2 text-sm text-red-600 dark:text-red-400 font-medium" role="alert">
                   {errors.otraSituacionAcademica}
                 </p>
               )}
@@ -581,20 +581,20 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-6 flex-shrink-0 bg-white/50 backdrop-blur-sm border-t border-slate-200/60">
+        <div className="p-6 flex-shrink-0 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border-t border-slate-200/60 dark:border-slate-700/60">
           <div className="flex flex-col sm:flex-row justify-end items-center gap-3">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="w-full sm:w-auto px-6 py-2.5 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-50 transition-colors disabled:opacity-50"
+              className="w-full sm:w-auto px-6 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSubmitting || !isFormValid}
-              className="w-full sm:w-auto px-6 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-6 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-800 focus:ring-blue-500 disabled:bg-slate-400 dark:disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isSubmitting ? (
                 <>

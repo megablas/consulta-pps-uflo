@@ -28,7 +28,7 @@ const Card: React.FC<CardProps> = ({
 
   return (
     <div
-      className={`bg-white rounded-2xl shadow-lg shadow-slate-200/40 p-6 sm:p-8 border border-slate-200/60 transition-all duration-300 ${className}`}
+      className={`bg-white dark:bg-slate-800/50 dark:backdrop-blur-sm rounded-2xl shadow-lg shadow-slate-200/40 dark:shadow-black/20 p-6 sm:p-8 border border-slate-200/60 dark:border-slate-700/80 transition-all duration-300 ${className}`}
       style={style}
     >
       {(title || description || actions) && (
@@ -36,18 +36,18 @@ const Card: React.FC<CardProps> = ({
           {(title || description) && (
             <div className="flex items-start gap-4 flex-grow">
               {icon && (
-                <div className="flex-shrink-0 bg-blue-100 text-blue-600 rounded-full h-12 w-12 flex items-center justify-center mt-1">
+                <div className="flex-shrink-0 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300 rounded-full h-12 w-12 flex items-center justify-center mt-1">
                   <span className="material-icons !text-3xl">{icon}</span>
                 </div>
               )}
               <div>
                 {title && (
-                  <TitleTag className={`text-slate-900 text-2xl font-bold tracking-tight ${titleClassName}`}>
+                  <TitleTag className={`text-slate-900 dark:text-slate-50 text-2xl font-bold tracking-tight ${titleClassName}`}>
                     {title}
                   </TitleTag>
                 )}
                 {description && (
-                  <p className="text-slate-600 mt-1 max-w-2xl">{description}</p>
+                  <p className="text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">{description}</p>
                 )}
               </div>
             </div>

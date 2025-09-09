@@ -90,9 +90,9 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
     }
   };
   
-  const headerBg = isJustSaved ? 'bg-emerald-100' : especialidadVisuals.headerBg;
-  const headerIconColor = isJustSaved ? 'text-emerald-700' : especialidadVisuals.headerText;
-  const headerTextColor = isJustSaved ? 'text-emerald-900' : especialidadVisuals.headerText;
+  const headerBg = isJustSaved ? 'bg-emerald-100 dark:bg-emerald-900/30' : especialidadVisuals.headerBg;
+  const headerIconColor = isJustSaved ? 'text-emerald-700 dark:text-emerald-300' : especialidadVisuals.headerText;
+  const headerTextColor = isJustSaved ? 'text-emerald-900 dark:text-emerald-200' : especialidadVisuals.headerText;
   
   const cardIcon = useMemo(() => {
     if (cardType === 'activasIndefinidas') return 'hourglass_empty';
@@ -106,7 +106,7 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
     today.setHours(0, 0, 0, 0);
 
     if (cardType === 'activasIndefinidas') {
-        return { text: 'Sin fecha de fin', color: 'bg-slate-100 text-slate-600 ring-slate-200', icon: 'date_range' };
+        return { text: 'Sin fecha de fin', color: 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 ring-slate-200 dark:ring-slate-600', icon: 'date_range' };
     }
 
     if (cardType === 'activasYPorFinalizar') {
@@ -121,28 +121,28 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
         if (diffDays < 0) return null;
 
         if (diffDays === 0) {
-            return { text: 'Finaliza hoy', color: 'bg-red-100 text-red-800 ring-red-200', icon: 'event_busy' };
+            return { text: 'Finaliza hoy', color: 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200 ring-red-200 dark:ring-red-700', icon: 'event_busy' };
         }
         
         const text = `Finaliza en ${diffDays} día${diffDays !== 1 ? 's' : ''}`;
         
         // Use amber for anything ending in the next 30 days
         if (diffDays <= 30) {
-             return { text, color: 'bg-amber-100 text-amber-800 ring-amber-200', icon: 'hourglass_top' };
+             return { text, color: 'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 ring-amber-200 dark:ring-amber-700', icon: 'hourglass_top' };
         }
 
         // Use green for practices ending further out
-        return { text, color: 'bg-green-100 text-green-800 ring-green-200', icon: 'event_available' };
+        return { text, color: 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 ring-green-200 dark:ring-green-700', icon: 'event_available' };
     }
 
     if (cardType === 'finalizadasParaReactivar') {
-        return { text: `Finalizó ${formatDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS])}`, color: 'bg-slate-100 text-slate-600 ring-slate-200', icon: 'history_toggle_off' };
+        return { text: `Finalizó ${formatDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS])}`, color: 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 ring-slate-200 dark:ring-slate-600', icon: 'history_toggle_off' };
     }
     
     if (cardType === 'relanzamientosConfirmados') {
         const relaunchDateValue = pps[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS];
         const text = relaunchDateValue ? `Relanza ${formatDate(relaunchDateValue)}` : 'Relanzamiento Confirmado';
-        return { text, color: 'bg-indigo-100 text-indigo-800 ring-indigo-200', icon: 'flight_takeoff' };
+        return { text, color: 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 ring-indigo-200 dark:ring-indigo-700', icon: 'flight_takeoff' };
     }
     
     return null;
@@ -152,8 +152,8 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
   const actionButtonClass = "font-bold py-2 px-4 rounded-lg text-sm transition-all duration-300 shadow-md flex items-center justify-center gap-2 w-44";
 
   return (
-    <div className={`relative bg-white rounded-xl border shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-px group overflow-hidden ${isEnConversacion ? 'border-sky-300 ring-2 ring-sky-50' : 'border-slate-200/60'}`}>
-        <div className={`p-4 border-b border-slate-200/60 flex justify-between items-start gap-3 transition-colors duration-500 ${headerBg}`}>
+    <div className={`relative bg-white dark:bg-slate-800/50 rounded-xl border shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-px group overflow-hidden ${isEnConversacion ? 'border-sky-300 dark:border-sky-500 ring-2 ring-sky-50 dark:ring-sky-900/50' : 'border-slate-200/60 dark:border-slate-700/60'}`}>
+        <div className={`p-4 border-b border-slate-200/60 dark:border-slate-700 flex justify-between items-start gap-3 transition-colors duration-500 ${headerBg}`}>
             <div className="flex-grow">
                 <div className="flex items-center gap-2.5">
                     <span className={`material-icons !text-lg ${headerIconColor}`}>{cardIcon}</span>
@@ -173,32 +173,32 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
             )}
         </div>
         
-        <div className="p-4 bg-gradient-to-br from-white to-slate-50/50 space-y-4">
+        <div className="p-4 bg-gradient-to-br from-white to-slate-50/50 dark:from-slate-800/50 dark:to-slate-800/20 space-y-4">
             <div className="space-y-3">
                 <div>
-                    <label htmlFor={`status-${pps.id}`} className="text-xs font-semibold text-slate-600 mb-1 block">Estado de Gestión</label>
+                    <label htmlFor={`status-${pps.id}`} className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1 block">Estado de Gestión</label>
                     <div className="relative">
                         <select 
                             id={`status-${pps.id}`} 
                             value={status}
                             onChange={(e) => setStatus(e.target.value)}
-                            className="w-full text-sm rounded-lg border border-slate-300 p-2.5 bg-white shadow-sm outline-none appearance-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 transition"
+                            className="w-full text-sm rounded-lg border border-slate-300 dark:border-slate-600 p-2.5 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm outline-none appearance-none focus:border-slate-500 dark:focus:border-blue-400 focus:ring-1 focus:ring-slate-500 dark:focus:ring-blue-400 transition"
                         >
                             {GESTION_STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                         </select>
                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3">
-                            <span className="material-icons !text-base text-slate-500">expand_more</span>
+                            <span className="material-icons !text-base text-slate-500 dark:text-slate-400">expand_more</span>
                         </div>
                     </div>
                 </div>
                 <div>
-                    <label htmlFor={`notes-${pps.id}`} className="text-xs font-semibold text-slate-600 mb-1 block">Notas de Gestión</label>
+                    <label htmlFor={`notes-${pps.id}`} className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1 block">Notas de Gestión</label>
                     <textarea 
                         id={`notes-${pps.id}`}
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
                         rows={3} 
-                        className="w-full text-sm rounded-lg border border-slate-300 p-2 bg-white shadow-sm outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 transition" 
+                        className="w-full text-sm rounded-lg border border-slate-300 dark:border-slate-600 p-2 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm outline-none focus:border-slate-500 dark:focus:border-blue-400 focus:ring-1 focus:ring-slate-500 dark:focus:ring-blue-400 transition" 
                         placeholder="Conversaciones, próximos pasos..."
                     />
                 </div>
@@ -212,17 +212,17 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
                             value={newPhone}
                             onChange={(e) => setNewPhone(e.target.value)}
                             placeholder="Nº de teléfono"
-                            className="flex-grow w-full text-sm rounded-lg border border-slate-300 p-2 bg-white shadow-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+                            className="flex-grow w-full text-sm rounded-lg border border-slate-300 dark:border-slate-600 p-2 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
                             autoFocus
                         />
-                        <button onClick={handleSavePhone} className="p-2 rounded-full bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors" aria-label="Guardar teléfono"><span className="material-icons !text-base">check</span></button>
-                        <button onClick={() => setIsEditingPhone(false)} className="p-2 rounded-full bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors" aria-label="Cancelar"><span className="material-icons !text-base">close</span></button>
+                        <button onClick={handleSavePhone} className="p-2 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-800/50 transition-colors" aria-label="Guardar teléfono"><span className="material-icons !text-base">check</span></button>
+                        <button onClick={() => setIsEditingPhone(false)} className="p-2 rounded-full bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-300 hover:bg-rose-200 dark:hover:bg-rose-800/50 transition-colors" aria-label="Cancelar"><span className="material-icons !text-base">close</span></button>
                     </div>
                  ) : institution?.phone ? (
                     <button
                         onClick={handleWhatsAppClick}
                         type="button"
-                        className={`${actionButtonClass} bg-green-600 text-white hover:bg-green-700 hover:-translate-y-px transform active:scale-95`}
+                        className={`${actionButtonClass} bg-green-600 text-white hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 hover:-translate-y-px transform active:scale-95`}
                         title={`Contactar a ${institution.phone}`}
                     >
                         <span className="material-icons !text-base">chat</span>
@@ -232,7 +232,7 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
                      <button
                         onClick={() => setIsEditingPhone(true)}
                         type="button"
-                        className={`${actionButtonClass} bg-sky-100 text-sky-800 hover:bg-sky-200 hover:-translate-y-px transform active:scale-95`}
+                        className={`${actionButtonClass} bg-sky-100 dark:bg-sky-900/50 text-sky-800 dark:text-sky-200 hover:bg-sky-200 dark:hover:bg-sky-800/50 hover:-translate-y-px transform active:scale-95`}
                         disabled={!institution}
                      >
                          <span className="material-icons !text-base">add_call</span>
@@ -249,8 +249,8 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
                         : isUpdating
                             ? 'bg-slate-500 text-white cursor-wait'
                             : hasChanges
-                                ? 'bg-slate-800 text-white hover:bg-slate-700 hover:-translate-y-px transform active:scale-95'
-                                : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                                ? 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 hover:bg-slate-700 dark:hover:bg-slate-100 hover:-translate-y-px transform active:scale-95'
+                                : 'bg-slate-300 dark:bg-slate-600 text-slate-500 dark:text-slate-400 cursor-not-allowed'
                     }
                 `}
                 >
@@ -265,15 +265,15 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
 
 const CollapsibleSection: React.FC<{ title: string; count: number; children: React.ReactNode; defaultOpen?: boolean; icon: string; iconBgColor: string; iconColor: string; borderColor: string; }> = ({ title, count, children, defaultOpen = true, icon, iconBgColor, iconColor, borderColor }) => (
     <details className="group/details" open={defaultOpen}>
-        <summary className="list-none flex items-center gap-4 cursor-pointer mb-4 p-2 rounded-lg transition-colors hover:bg-slate-50">
+        <summary className="list-none flex items-center gap-4 cursor-pointer mb-4 p-2 rounded-lg transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50">
             <div className={`flex-shrink-0 size-10 rounded-lg flex items-center justify-center ${iconBgColor}`}>
                 <span className={`material-icons ${iconColor}`}>{icon}</span>
             </div>
             <div className="flex-grow">
-                <h3 className="text-xl font-black text-slate-800 tracking-tight">{title}</h3>
+                <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">{title}</h3>
             </div>
-            <span className="text-base font-bold text-slate-700 bg-slate-200 h-8 w-8 flex items-center justify-center rounded-full">{count}</span>
-            <span className="material-icons text-slate-400 transition-transform duration-300 group-open/details:rotate-90">chevron_right</span>
+            <span className="text-base font-bold text-slate-700 dark:text-slate-200 bg-slate-200 dark:bg-slate-700 h-8 w-8 flex items-center justify-center rounded-full">{count}</span>
+            <span className="material-icons text-slate-400 dark:text-slate-500 transition-transform duration-300 group-open/details:rotate-90">chevron_right</span>
         </summary>
         <div className={`pl-4 ml-5 border-l-2 ${borderColor}`}>
             {children}
@@ -651,9 +651,9 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                         title="Finalizadas (Para Reactivar)"
                         count={finalizadasParaReactivar.length}
                         icon="history"
-                        iconBgColor="bg-sky-100"
-                        iconColor="text-sky-600"
-                        borderColor="border-sky-300"
+                        iconBgColor="bg-sky-100 dark:bg-sky-900/50"
+                        iconColor="text-sky-600 dark:text-sky-300"
+                        borderColor="border-sky-300 dark:border-sky-700"
                     >
                         {hasFinalizadas ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-4">
@@ -662,7 +662,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-slate-500 text-sm p-4 bg-white rounded-lg border border-slate-200/70">No hay prácticas finalizadas este año pendientes de gestión.</p>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm p-4 bg-white dark:bg-slate-800/50 rounded-lg border border-slate-200/70 dark:border-slate-700">No hay prácticas finalizadas este año pendientes de gestión.</p>
                         )}
                     </CollapsibleSection>
                 </section>
@@ -672,9 +672,9 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                         title="Relanzamientos Confirmados"
                         count={relanzamientosConfirmados.length}
                         icon="event_repeat"
-                        iconBgColor="bg-indigo-100"
-                        iconColor="text-indigo-600"
-                        borderColor="border-indigo-300"
+                        iconBgColor="bg-indigo-100 dark:bg-indigo-900/50"
+                        iconColor="text-indigo-600 dark:text-indigo-300"
+                        borderColor="border-indigo-300 dark:border-indigo-700"
                     >
                         {hasConfirmados ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-4">
@@ -683,7 +683,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                                ))}
                             </div>
                         ) : (
-                            <p className="text-slate-500 text-sm p-4 bg-white rounded-lg border border-slate-200/70">No hay prácticas con relanzamiento confirmado.</p>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm p-4 bg-white dark:bg-slate-800/50 rounded-lg border border-slate-200/70 dark:border-slate-700">No hay prácticas con relanzamiento confirmado.</p>
                         )}
                     </CollapsibleSection>
                 </section>
@@ -693,9 +693,9 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                         title="Activas (Sin Fecha de Fin)"
                         count={activasIndefinidas.length}
                         icon="hourglass_empty"
-                        iconBgColor="bg-slate-100"
-                        iconColor="text-slate-600"
-                        borderColor="border-slate-300"
+                        iconBgColor="bg-slate-100 dark:bg-slate-700/80"
+                        iconColor="text-slate-600 dark:text-slate-300"
+                        borderColor="border-slate-300 dark:border-slate-600"
                     >
                         {hasActivasIndefinidas ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-4">
@@ -704,7 +704,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-slate-500 text-sm p-4 bg-white rounded-lg border border-slate-200/70">No hay prácticas activas sin una fecha de finalización definida.</p>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm p-4 bg-white dark:bg-slate-800/50 rounded-lg border border-slate-200/70 dark:border-slate-700">No hay prácticas activas sin una fecha de finalización definida.</p>
                         )}
                     </CollapsibleSection>
                 </section>
@@ -714,9 +714,9 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                         title="Activas y Próximas a Finalizar"
                         count={activasYPorFinalizar.length}
                         icon="pending_actions"
-                        iconBgColor="bg-amber-100"
-                        iconColor="text-amber-600"
-                        borderColor="border-amber-300"
+                        iconBgColor="bg-amber-100 dark:bg-amber-900/50"
+                        iconColor="text-amber-600 dark:text-amber-300"
+                        borderColor="border-amber-300 dark:border-amber-700"
                     >
                         {hasActivas ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-4">
@@ -725,7 +725,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                                ))}
                             </div>
                         ) : (
-                            <p className="text-slate-500 text-sm p-4 bg-white rounded-lg border border-slate-200/70">No hay prácticas activas o finalizando en los próximos 30 días.</p>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm p-4 bg-white dark:bg-slate-800/50 rounded-lg border border-slate-200/70 dark:border-slate-700">No hay prácticas activas o finalizando en los próximos 30 días.</p>
                         )}
                     </CollapsibleSection>
                 </section>
@@ -737,7 +737,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
         <div className="animate-fade-in-up space-y-6">
             {toastInfo && <Toast message={toastInfo.message} type={toastInfo.type} onClose={() => setToastInfo(null)} />}
             
-            <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/60">
+            <div className="bg-slate-50/70 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200/60 dark:border-slate-700">
                 <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
                     <div className="flex-grow flex flex-col sm:flex-row gap-4">
                         <div className="relative w-full sm:w-80">
@@ -746,9 +746,9 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                                 placeholder="Buscar por institución..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors"
+                                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors"
                             />
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 material-icons text-slate-400">search</span>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 material-icons text-slate-400 dark:text-slate-500">search</span>
                         </div>
                         
                         {!forcedOrientations ? (
@@ -756,15 +756,15 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                                 <select 
                                 value={orientationFilter} 
                                 onChange={(e) => setOrientationFilter(e.target.value)}
-                                className="w-full appearance-none pl-4 pr-10 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors"
+                                className="w-full appearance-none pl-4 pr-10 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors"
                                 >
                                     <option value="all">Todas las Orientaciones</option>
                                     {ALL_ORIENTACIONES.map(o => <option key={o} value={o}>{o}</option>)}
                                 </select>
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 material-icons text-slate-400 pointer-events-none">expand_more</span>
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 material-icons text-slate-400 dark:text-slate-500 pointer-events-none">expand_more</span>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-2 bg-blue-100 text-blue-800 text-sm font-semibold px-3 py-2 rounded-lg border border-blue-200/80">
+                            <div className="flex items-center gap-2 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 text-sm font-semibold px-3 py-2 rounded-lg border border-blue-200/80 dark:border-blue-800/50">
                                 <span className="material-icons !text-base">filter_alt</span>
                                 <span>Mostrando: {forcedOrientations.join(' & ')}</span>
                             </div>

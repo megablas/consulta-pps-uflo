@@ -492,7 +492,7 @@ const CorreccionPanel: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-slate-500 text-sm">¡Excelente! No hay informes pendientes de corrección.</p>
+                <p className="text-slate-500 dark:text-slate-400 text-sm">¡Excelente! No hay informes pendientes de corrección.</p>
               )}
             </CollapsibleSection>
 
@@ -515,7 +515,7 @@ const CorreccionPanel: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                 <p className="text-slate-500 text-sm">Aún no se ha finalizado la corrección de ninguna PPS.</p>
+                 <p className="text-slate-500 dark:text-slate-400 text-sm">Aún no se ha finalizado la corrección de ninguna PPS.</p>
               )}
             </CollapsibleSection>
           </>
@@ -527,9 +527,9 @@ const CorreccionPanel: React.FC = () => {
   const CollapsibleSection: React.FC<{ title: string; count: number; children: React.ReactNode; defaultOpen?: boolean; }> = ({ title, count, children, defaultOpen = false }) => (
     <details className="group" open={defaultOpen}>
       <summary className="list-none flex items-center gap-3 cursor-pointer mb-4">
-        <span className="material-icons text-slate-400 transition-transform duration-300 group-open:rotate-90">chevron_right</span>
-        <h3 className="text-xl font-bold text-slate-800">{title}</h3>
-        <span className="bg-slate-200 text-slate-700 text-xs font-bold px-2.5 py-1 rounded-full">{count}</span>
+        <span className="material-icons text-slate-400 dark:text-slate-500 transition-transform duration-300 group-open:rotate-90">chevron_right</span>
+        <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{title}</h3>
+        <span className="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold px-2.5 py-1 rounded-full">{count}</span>
       </summary>
       <div className="pl-8">
         {children}
@@ -542,7 +542,7 @@ const CorreccionPanel: React.FC = () => {
       {toastInfo && <Toast message={toastInfo.message} type={toastInfo.type} onClose={() => setToastInfo(null)} />}
       
       {!isJefeMode && (
-        <div className="border-b border-slate-200">
+        <div className="border-b border-slate-200 dark:border-slate-700">
             <nav className="-mb-px flex space-x-4" aria-label="Managers">
             {(Object.keys(managerConfig) as Manager[]).map(manager => (
                 <button
@@ -550,8 +550,8 @@ const CorreccionPanel: React.FC = () => {
                 onClick={() => setActiveManager(manager)}
                 className={`whitespace-nowrap py-3 px-1 border-b-2 text-sm font-medium transition-colors duration-200 ${
                     activeManager === manager
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                    ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600'
                 }`}
                 >
                 {managerConfig[manager].label}
@@ -562,20 +562,20 @@ const CorreccionPanel: React.FC = () => {
       )}
 
        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-           <div className="p-1 bg-slate-100 rounded-lg flex items-center ring-1 ring-slate-200/50">
+           <div className="p-1 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center ring-1 ring-slate-200/50 dark:ring-slate-700">
                <button 
                   onClick={() => setViewMode('byPps')}
-                  className={`w-full px-4 py-1.5 text-sm font-semibold rounded-md transition-all duration-300 ${viewMode === 'byPps' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700'}`}
+                  className={`w-full px-4 py-1.5 text-sm font-semibold rounded-md transition-all duration-300 ${viewMode === 'byPps' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 hover:text-slate-700 dark:hover:text-slate-100'}`}
                 >
                   Vista por PPS
                 </button>
                 <button 
                   onClick={() => setViewMode('flatList')}
-                  className={`w-full px-4 py-1.5 text-sm font-semibold rounded-md transition-all duration-300 flex items-center gap-2 ${viewMode === 'flatList' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700'}`}
+                  className={`w-full px-4 py-1.5 text-sm font-semibold rounded-md transition-all duration-300 flex items-center gap-2 ${viewMode === 'flatList' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 hover:text-slate-700 dark:hover:text-slate-100'}`}
                 >
                   <span>Corrección Rápida</span>
                   {managerData.totalSinCorregir > 0 && (
-                     <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full">{managerData.totalSinCorregir}</span>
+                     <span className="bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 text-xs font-bold px-2 py-0.5 rounded-full">{managerData.totalSinCorregir}</span>
                   )}
                 </button>
            </div>
@@ -585,9 +585,9 @@ const CorreccionPanel: React.FC = () => {
                 placeholder="Buscar por PPS o Alumno..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-300/80 rounded-lg text-sm bg-white text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all hover:border-slate-400"
+                className="w-full pl-10 pr-4 py-2 border border-slate-300/80 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all hover:border-slate-400 dark:focus:border-blue-400 dark:hover:border-slate-500"
               />
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 material-icons text-slate-400 !text-lg">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 material-icons text-slate-400 dark:text-slate-500 !text-lg">
                 search
               </span>
             </div>

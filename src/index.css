@@ -11,19 +11,36 @@
   --gradient-complete-from: #10b981; /* emerald-500 */
   --gradient-complete-to: #2dd4bf;   /* teal-400 */
 }
+
+html.dark {
+  color-scheme: dark;
+  --gradient-progress-from: #38bdf8;
+  --gradient-progress-to: #818cf8; /* indigo-400 */
+  --gradient-complete-from: #34d399; /* emerald-400 */
+  --gradient-complete-to: #2dd4bf; /* teal-400 */
+}
+
 html {
   scroll-behavior: smooth;
 }
 body {
   font-family: 'Inter', sans-serif;
   background-color: #f8fafc; /* slate-50 */
-  color: rgb(var(--color-slate-900));
+  color: rgb(var(--color-slate-800));
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   /* A more sophisticated and subtle background */
   background-image: radial-gradient(circle at 1% 1%, hsl(210 50% 98%) 0%, transparent 40%),
                     radial-gradient(circle at 99% 99%, hsl(280 50% 98%) 0%, transparent 40%);
+  transition: background-color 0.3s, color 0.3s;
 }
+.dark body {
+  background-color: rgb(var(--color-slate-900));
+  color: #e2e8f0; /* slate-200 */
+  background-image: radial-gradient(circle at 1% 1%, hsl(220 40% 10%) 0%, transparent 40%),
+                    radial-gradient(circle at 99% 99%, hsl(260 40% 10%) 0%, transparent 40%);
+}
+
 #root {
   min-height: 100vh;
   width: 100%;
@@ -78,6 +95,11 @@ body {
   background-size: 200% 100%;
   will-change: background-position;
 }
+.dark .animate-background-shine {
+  background: linear-gradient(110deg, #334155 8%, #475569 18%, #334155 33%);
+  background-size: 200% 100%;
+}
+
 
 @keyframes pulse-glow-emerald {
   0%, 100% { box-shadow: 0 0 20px -3px rgba(16, 185, 129, 0.4); } /* emerald-500 */
@@ -85,6 +107,13 @@ body {
 }
 .animate-pulse-glow-emerald {
   animation: pulse-glow-emerald 2.5s infinite ease-in-out;
+}
+.dark .animate-pulse-glow-emerald {
+  animation-name: pulse-glow-emerald-dark;
+}
+@keyframes pulse-glow-emerald-dark {
+  0%, 100% { box-shadow: 0 0 25px -3px rgba(52, 211, 153, 0.4); } /* emerald-400 */
+  50% { box-shadow: 0 0 45px 8px rgba(52, 211, 153, 0.4); }
 }
 
 @keyframes particle-fade {
@@ -103,6 +132,15 @@ body {
 .animate-flash-green {
   animation: flash-green 1.5s ease-out;
 }
+.dark .animate-flash-green {
+  animation-name: flash-green-dark;
+}
+@keyframes flash-green-dark {
+  0% { background-color: transparent; }
+  25% { background-color: rgba(5, 150, 105, 0.2); } /* emerald-600 with alpha */
+  100% { background-color: transparent; }
+}
+
 
 .has-shine-effect::before {
   content: '';
@@ -117,6 +155,9 @@ body {
   pointer-events: none;
   background-size: 250% 100%;
   background-position: 150%;
+}
+.dark .has-shine-effect::before {
+   background: linear-gradient(110deg, transparent 20%, rgba(255,255,255,0.1) 50%, transparent 80%);
 }
 
 .hover\:shine-effect:hover::before {
@@ -141,6 +182,9 @@ body {
   background-image: radial-gradient(circle at 1px 1px, rgba(0,0,0,0.03) 1px, transparent 0);
   background-size: 1rem 1rem;
 }
+.dark .hero-metric-bg {
+    background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0);
+}
 
 /* -- Prose styles for AI-generated content (good practice) -- */
 .prose {
@@ -148,6 +192,10 @@ body {
     line-height: 1.7;
     max-width: none;
 }
+.dark .prose {
+    color: #94a3b8; /* slate-400 */
+}
+
 .prose p {
     margin-bottom: 1em;
 }
@@ -159,11 +207,19 @@ body {
     margin-top: 1.5em;
     letter-spacing: -0.025em; /* Tighter headings */
 }
+.dark .prose h1, .dark .prose h2, .dark .prose h3 {
+    color: #f1f5f9; /* slate-100 */
+}
+
 .prose h2 {
     font-size: 1.5em;
     padding-bottom: 0.4em;
     border-bottom: 1px solid #e2e8f0;
 }
+.dark .prose h2 {
+    border-bottom-color: #334155; /* slate-700 */
+}
+
 .prose h3 {
     font-size: 1.25em;
 }
@@ -171,6 +227,10 @@ body {
     font-weight: 600;
     color: #1e293b;
 }
+.dark .prose strong {
+    color: #e2e8f0; /* slate-200 */
+}
+
 .prose ul {
     list-style-type: disc;
     padding-left: 1.5em;
@@ -185,6 +245,10 @@ body {
     margin-bottom: 2em;
     border-top: 1px solid #e2e8f0;
 }
+.dark .prose hr {
+    border-top-color: #334155; /* slate-700 */
+}
+
 
 /* -- Print Styles -- */
 @media screen {

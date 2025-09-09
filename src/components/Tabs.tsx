@@ -33,7 +33,7 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeTabId, onTabChange, onTabClose,
 
   return (
     <div className={className}>
-      <div className="relative border-b border-slate-200">
+      <div className="relative border-b border-slate-200 dark:border-slate-700">
         <nav ref={tabsRef} className="-mb-px flex space-x-2 sm:space-x-4 overflow-x-auto" aria-label="Tabs">
           {tabs.map(tab => {
              const isActive = activeTabId === tab.id;
@@ -54,8 +54,8 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeTabId, onTabChange, onTabClose,
                     ${isStudentTab ? 'py-3 px-4' : 'py-4 px-6'}
                     ${
                       isActive
-                        ? `text-blue-600 ${isStudentTab ? 'font-semibold' : 'font-bold'}`
-                        : `text-slate-500 hover:bg-slate-100/70 hover:text-slate-700 ${isStudentTab ? 'font-medium' : 'font-semibold'}`
+                        ? `text-blue-600 dark:text-blue-400 ${isStudentTab ? 'font-semibold' : 'font-bold'}`
+                        : `text-slate-500 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/70 hover:text-slate-700 dark:hover:text-slate-200 ${isStudentTab ? 'font-medium' : 'font-semibold'}`
                     }
                     ${tab.isClosable && onTabClose ? 'pr-9' : ''}
                   `}
@@ -69,7 +69,7 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeTabId, onTabChange, onTabClose,
                       e.stopPropagation();
                       onTabClose(tab.id);
                     }}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded-full text-slate-400 hover:bg-rose-100 hover:text-rose-600 transition-colors opacity-50 group-hover:opacity-100 focus:opacity-100 z-20"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded-full text-slate-400 dark:text-slate-500 hover:bg-rose-100 dark:hover:bg-rose-900/50 hover:text-rose-600 dark:hover:text-rose-400 transition-colors opacity-50 group-hover:opacity-100 focus:opacity-100 z-20"
                     aria-label={`Cerrar pestaña ${tab.label}`}
                   >
                     <span className="material-icons !text-base">close</span>
@@ -80,7 +80,7 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeTabId, onTabChange, onTabClose,
           })}
         </nav>
         <div 
-           className="absolute bottom-0 h-1 bg-blue-500 rounded-full transition-all duration-500 ease-in-out"
+           className="absolute bottom-0 h-1 bg-blue-500 dark:bg-blue-400 rounded-full transition-all duration-500 ease-in-out"
            style={gliderStyle}
         />
       </div>

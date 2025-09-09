@@ -15,7 +15,7 @@ interface CheckboxProps {
 
 const Checkbox: React.FC<CheckboxProps> = ({ id, name, checked, onChange, label, value, disabled = false, onBlur, error = false, 'aria-describedby': ariaDescribedby }) => {
   return (
-    <label htmlFor={id} className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 ${checked ? 'bg-blue-50 border-blue-500 shadow-sm' : 'bg-white border-slate-300 hover:border-blue-400'} ${disabled ? 'cursor-not-allowed bg-slate-100 border-slate-200' : ''} ${error ? 'border-red-400 bg-red-50' : ''}`}>
+    <label htmlFor={id} className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 ${checked ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-500 dark:border-blue-600 shadow-sm' : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 hover:border-blue-400 dark:hover:border-blue-500'} ${disabled ? 'cursor-not-allowed bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700' : ''} ${error ? 'border-red-400 bg-red-50 dark:border-red-500/50 dark:bg-red-900/20' : ''}`}>
       <input
         type="checkbox"
         id={id}
@@ -27,9 +27,9 @@ const Checkbox: React.FC<CheckboxProps> = ({ id, name, checked, onChange, label,
         onBlur={onBlur}
         aria-invalid={error}
         aria-describedby={ariaDescribedby}
-        className="h-4 w-4 rounded text-blue-600 border-slate-400 focus:ring-2 focus:ring-blue-500/50"
+        className="h-4 w-4 rounded text-blue-600 bg-slate-100 dark:bg-slate-600 border-slate-400 dark:border-slate-500 focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-offset-slate-800"
       />
-      <span className={`ml-3 text-sm font-medium ${checked ? 'text-blue-900' : 'text-slate-700'} ${disabled ? 'text-slate-500' : ''}`}>{label}</span>
+      <span className={`ml-3 text-sm font-medium ${checked ? 'text-blue-900 dark:text-blue-100' : 'text-slate-700 dark:text-slate-200'} ${disabled ? 'text-slate-500 dark:text-slate-400' : ''}`}>{label}</span>
     </label>
   );
 };

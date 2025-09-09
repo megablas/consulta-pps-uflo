@@ -74,24 +74,24 @@ const Footer: React.FC<FooterProps> = ({ activeTab }) => {
       <Card>
         <div className="flex items-start gap-5">
           <div className="flex-shrink-0">
-            <div className="bg-blue-100 text-blue-600 rounded-full size-11 flex items-center justify-center">
+            <div className="bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300 rounded-full size-11 flex items-center justify-center">
               <span className="material-icons" aria-hidden="true">
                 {currentNotice.icon}
               </span>
             </div>
           </div>
           <div className="flex-grow">
-            <h3 className="font-bold text-slate-800 text-lg leading-tight">
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg leading-tight">
               {currentNotice.title}
             </h3>
-            <p className="mt-2 text-slate-600 text-sm leading-relaxed max-w-prose">
+            <p className="mt-2 text-slate-600 dark:text-slate-300 text-sm leading-relaxed max-w-prose">
               {currentNotice.text}
             </p>
             <a
               href={mailToLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-5 inline-flex items-center gap-2.5 bg-blue-600 text-white font-bold text-sm py-2.5 px-6 rounded-lg border border-transparent hover:bg-blue-700 transition-all duration-200 transform hover:-translate-y-0.5 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-white"
+              className="mt-5 inline-flex items-center gap-2.5 bg-blue-600 text-white font-bold text-sm py-2.5 px-6 rounded-lg border border-transparent hover:bg-blue-700 transition-all duration-200 transform hover:-translate-y-0.5 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-white dark:focus:ring-offset-slate-800"
             >
               <span className="material-icons !text-base">email</span>
               <span>{currentNotice.buttonText}</span>
