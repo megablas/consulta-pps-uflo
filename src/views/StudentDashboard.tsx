@@ -2,9 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import CriteriosPanel from '../components/CriteriosPanel';
 import PracticasTable from '../components/PracticasTable';
 import SolicitudesList from '../components/SolicitudesList';
-import EmptyState from '../components/EmptyState';
 import Tabs from '../components/Tabs';
-import Card from '../components/Card';
 import WelcomeBanner from '../components/WelcomeBanner';
 import ConvocatoriasList from '../components/ConvocatoriasList';
 import InformesList from '../components/InformesList';
@@ -22,6 +20,8 @@ import { useConvocatorias } from '../hooks/useConvocatorias';
 import { processInformeTasks } from '../services/dataService';
 import ProfileView from '../components/ProfileView';
 import PrintableReport from '../components/PrintableReport';
+import MobileBottomNav from '../components/MobileBottomNav';
+import { HORAS_OBJETIVO_TOTAL } from '../constants';
 
 interface StudentDashboardProps {
   user: AuthUser;
@@ -30,9 +30,53 @@ interface StudentDashboardProps {
   showExportButton?: boolean;
 }
 
+const CollapsedCriteriosPanel: React.FC<{
+  criterios: ReturnType<typeof calculateCriterios>;
+  onToggle: () => void;
+  isOpen: boolean;
+}> = ({ criterios, onToggle, isOpen }) => {
+    const percentage = HORAS_OBJETIVO_TOTAL > 0 ? Math.max(0, Math.min(Math.round((criterios.horasTotales / HORAS_OBJETIVO_TOTAL) * 100), 100)) : 0;
+    
+    return (
+        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-md p-4 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-lg">
+            <div className="flex items-center justify-between gap-4">
+                {/* Left & Middle Part */}
+                <div className="flex items-center gap-4 min-w-0">
+                    {/* Big Percentage & Hours */}
+                    <div className="flex-shrink-0 text-center leading-none">
+                        <div className="flex items-baseline">
+                            <span className="text-5xl font-black text-blue-600 dark:text-blue-400 tracking-tighter">{percentage}</span>
+                            <span className="text-2xl font-bold text-blue-600/70 dark:text-blue-400/70">%</span>
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 whitespace-nowrap">{Math.round(criterios.horasTotales)} / {HORAS_OBJETIVO_TOTAL} hs</div>
+                    </div>
+                    {/* Title */}
+                    <div className="min-w-0">
+                        <h3 className="font-bold text-slate-800 dark:text-slate-100 truncate">Tu Progreso</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Resumen de criterios PPS</p>
+                    </div>
+                </div>
+                
+                {/* Right Part (Button) */}
+                <button 
+                    onClick={onToggle} 
+                    className="flex-shrink-0 flex items-center gap-1 text-sm font-semibold text-blue-600 dark:text-blue-400 p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/50 transition-colors whitespace-nowrap"
+                    aria-expanded={isOpen}
+                    aria-controls="criterios-panel-full"
+                >
+                    <span>Ver Detalles</span>
+                    <span className={`material-icons !text-lg transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>expand_more</span>
+                </button>
+            </div>
+        </div>
+    );
+};
+
+
 const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, onTabChange, showExportButton = false }) => {
   const { isSuperUserMode } = useAuth();
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
+  const [isCriteriosPanelOpen, setIsCriteriosPanelOpen] = useState(false);
 
   // --- CUSTOM HOOKS FOR DATA FETCHING AND MUTATIONS ---
   const { studentDetails, studentAirtableId, isStudentLoading, studentError, updateOrientation, refetchStudent } = useStudentData(user.legajo);
@@ -51,12 +95,12 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   const isLoading = isStudentLoading || isPracticasLoading || isSolicitudesLoading || isConvocatoriasLoading;
   const error = studentError || practicasError || solicitudesError || convocatoriasError;
 
-  const refetchAll = () => {
+  const refetchAll = useCallback(() => {
     refetchStudent();
     refetchPracticas();
     refetchSolicitudes();
     refetchConvocatorias();
-  };
+  }, [refetchStudent, refetchPracticas, refetchSolicitudes, refetchConvocatorias]);
   
   const selectedOrientacion = (studentDetails?.['Orientación Elegida'] || "") as Orientacion | "";
   const studentNameForPanel = studentDetails?.['Nombre'] || user.nombre;
@@ -77,13 +121,20 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   const handleNotaChange = useCallback((practicaId: string, nota: string, convocatoriaId?: string) => {
     updateNota.mutate({ practicaId, nota, convocatoriaId });
   }, [updateNota]);
-  
+
+  // FIX: Memoize tab content to prevent re-renders on tab change
+  const convocatoriasContent = useMemo(() => <ConvocatoriasList lanzamientos={lanzamientos} myEnrollments={myEnrollments} practicas={practicas} student={studentDetails} onInscribir={enrollStudent.mutate} />, [lanzamientos, myEnrollments, practicas, studentDetails, enrollStudent.mutate]);
+  const informesContent = useMemo(() => <InformesList tasks={informeTasks} onConfirmar={confirmInforme.mutate} />, [informeTasks, confirmInforme.mutate]);
+  const solicitudesContent = useMemo(() => <SolicitudesList solicitudes={solicitudes} />, [solicitudes]);
+  const practicasContent = useMemo(() => <PracticasTable practicas={practicas} handleNotaChange={handleNotaChange} />, [practicas, handleNotaChange]);
+  const profileContent = useMemo(() => <ProfileView studentDetails={studentDetails} isLoading={isStudentLoading} />, [studentDetails, isStudentLoading]);
+
   const studentDataTabs = useMemo(() => {
     let tabs = [
-      { id: 'convocatorias' as TabId, label: `Convocatorias`, icon: 'campaign', content: <ConvocatoriasList lanzamientos={lanzamientos} myEnrollments={myEnrollments} practicas={practicas} student={studentDetails} onInscribir={enrollStudent.mutate} />, badge: lanzamientos.length > 0 ? lanzamientos.length : undefined },
-      { id: 'informes' as TabId, label: `Informes`, icon: 'assignment_turned_in', content: <InformesList tasks={informeTasks} onConfirmar={confirmInforme.mutate} />, badge: informeTasks.length > 0 ? informeTasks.length : undefined },
-      { id: 'solicitudes' as TabId, label: `Mis Solicitudes`, icon: 'list_alt', content: <SolicitudesList solicitudes={solicitudes} />, badge: solicitudes.length > 0 ? solicitudes.length : undefined },
-      { id: 'practicas' as TabId, label: `Mis Prácticas`, icon: 'work_history', content: <PracticasTable practicas={practicas} handleNotaChange={handleNotaChange} />, badge: practicas.length > 0 ? practicas.length : undefined }
+      { id: 'convocatorias' as TabId, label: `Convocatorias`, icon: 'campaign', title: 'Convocatorias Abiertas', description: "Aquí encontrarás las oportunidades de Prácticas Profesionales Supervisadas (PPS) disponibles para postularte.", content: convocatoriasContent },
+      { id: 'informes' as TabId, label: `Informes`, icon: 'assignment_turned_in', title: 'Entrega de Informes', description: "Gestiona la entrega de tus informes finales. Sube tu trabajo al campus y luego confirma la entrega aquí para que podamos registrarlo.", content: informesContent },
+      { id: 'solicitudes' as TabId, label: `Mis Solicitudes`, icon: 'list_alt', title: 'Seguimiento de Solicitudes', description: "Revisa el estado de las solicitudes de PPS que has autogestionado. Te notificaremos por correo ante cualquier novedad.", content: solicitudesContent },
+      { id: 'practicas' as TabId, label: `Mis Prácticas`, icon: 'work_history', title: 'Historial de Prácticas', description: "Aquí se detallan todas las prácticas que has realizado, junto con sus horas, fechas y estado.", content: practicasContent }
     ];
 
     if (showExportButton) {
@@ -96,14 +147,17 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
         id: 'profile' as TabId,
         label: 'Mi Perfil',
         icon: 'person',
-        content: <ProfileView studentDetails={studentDetails} isLoading={isStudentLoading} />,
-        badge: undefined
+        title: 'Mis Datos Personales',
+        description: 'Aquí puedes revisar la información de contacto que tenemos registrada. Si algo es incorrecto, por favor solicita una actualización.',
+        content: profileContent,
     });
     return tabs;
 
-  }, [solicitudes, practicas, lanzamientos, myEnrollments, informeTasks, studentDetails, confirmInforme.mutate, handleNotaChange, enrollStudent.mutate, showExportButton, isStudentLoading]);
+  }, [showExportButton, convocatoriasContent, informesContent, solicitudesContent, practicasContent, profileContent]);
   
-  // Effect to reset active tab if it's no longer in the list of available tabs (e.g., after filtering for admin view).
+  const mobileNavTabs = useMemo(() => studentDataTabs.filter(tab => tab.id !== 'profile'), [studentDataTabs]);
+  const activeTabObject = useMemo(() => studentDataTabs.find(tab => tab.id === currentActiveTab), [studentDataTabs, currentActiveTab]);
+  
   useEffect(() => {
     const isCurrentTabValid = studentDataTabs.some(tab => tab.id === currentActiveTab);
     if (!isCurrentTabValid && studentDataTabs.length > 0) {
@@ -111,10 +165,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
     }
   }, [studentDataTabs, currentActiveTab, setCurrentActiveTab]);
 
-  const hasData = useMemo(() => practicas.length > 0 || solicitudes.length > 0 || lanzamientos.length > 0 || informeTasks.length > 0, [practicas, solicitudes, lanzamientos, informeTasks]);
-  const showEmptyState = useMemo(() => !isLoading && !hasData && isSuperUserMode, [isLoading, hasData, isSuperUserMode]);
-
-  // --- RENDER LOGIC ---
   if (isLoading) return <DashboardLoadingSkeleton />;
   if (error) return <ErrorState error={error.message} onRetry={refetchAll} />;
   
@@ -128,27 +178,61 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
           />
       </div>
       <div className="no-print">
-        <div className="space-y-8 animate-fade-in-up">
-          <WelcomeBanner studentName={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />
-          <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
+        <div className="space-y-8 animate-fade-in-up pb-24 md:pb-0">
+          <div className="hidden md:block">
+            <WelcomeBanner studentName={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />
+          </div>
           
-          {hasData && (
-            <Card>
+          {/* Desktop Criterios Panel */}
+          <div className="hidden md:block">
+            <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
+          </div>
+          
+          {/* Mobile Collapsible Criterios Panel */}
+          <div className="md:hidden">
+             <CollapsedCriteriosPanel criterios={criterios} onToggle={() => setIsCriteriosPanelOpen(!isCriteriosPanelOpen)} isOpen={isCriteriosPanelOpen} />
+             {isCriteriosPanelOpen && (
+                <div className="mt-4" id="criterios-panel-full">
+                    <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
+                </div>
+             )}
+          </div>
+          
+            
+          {/* Desktop View with Tabs inside a Card */}
+          <div className="hidden md:block">
               <Tabs
-                tabs={studentDataTabs}
+                  tabs={studentDataTabs}
+                  activeTabId={currentActiveTab}
+                  onTabChange={(id) => setCurrentActiveTab(id as TabId)}
+              />
+          </div>
+    
+          {/* Mobile View - Title header and then content */}
+          <div className="md:hidden mt-8">
+              {activeTabObject && (
+                  <>
+                      <div className="flex items-start gap-4 mb-6">
+                          <div className="flex-shrink-0 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300 rounded-full h-12 w-12 flex items-center justify-center mt-1">
+                              <span className="material-icons !text-3xl">{activeTabObject.icon}</span>
+                          </div>
+                          <div>
+                              <h2 className="text-slate-900 dark:text-slate-50 text-2xl font-bold tracking-tight">{activeTabObject.title}</h2>
+                              <p className="text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">{activeTabObject.description}</p>
+                          </div>
+                      </div>
+                      {activeTabObject.content}
+                  </>
+              )}
+          </div>
+        </div>
+         {!showExportButton && (
+            <MobileBottomNav 
+                tabs={mobileNavTabs}
                 activeTabId={currentActiveTab}
                 onTabChange={(id) => setCurrentActiveTab(id as TabId)}
-              />
-            </Card>
-          )}
-
-          {showEmptyState && (
-            <Card className="border-slate-300/50 bg-slate-50/30">
-              <EmptyState icon="search_off" title="Sin Resultados" message="No se encontró información de prácticas o solicitudes para este estudiante." action={<button onClick={refetchAll} className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-300 hover:scale-105">Actualizar Datos</button>} />
-            </Card>
-          )}
-        </div>
-        
+            />
+         )}
         {showExportButton && (
           <>
             <WhatsAppExportButton practicas={practicas} criterios={criterios} selectedOrientacion={selectedOrientacion} studentNameForPanel={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />

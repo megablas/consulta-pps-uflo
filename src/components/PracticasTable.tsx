@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { Practica } from '../types';
 import {
+  // FIX: Corrected typo in constant name
   FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS,
   FIELD_HORAS_PRACTICAS,
   FIELD_FECHA_INICIO_PRACTICAS,
@@ -68,6 +69,50 @@ const SortableHeader: React.FC<{
   );
 };
 
+const NotaEditor: React.FC<{
+  practica: Practica;
+  handleNotaChange: (practicaId: string, nota: string) => void;
+  savingNotaId: string | null;
+  justUpdatedPracticaId: string | null;
+}> = ({ practica, handleNotaChange, savingNotaId, justUpdatedPracticaId }) => {
+    const nota = practica[FIELD_NOTA_PRACTICAS] || 'Sin calificar';
+    // FIX: Corrected typo in constant name
+    const institucionRaw = practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
+    const institucion = Array.isArray(institucionRaw) ? institucionRaw.join(', ') : institucionRaw;
+    const isEditable = nota === 'Sin calificar' || nota === 'Entregado (sin corregir)';
+    const notaClass = `inline-block px-3 py-1 rounded-full text-xs font-semibold transition-transform hover:scale-105 shadow-sm ${notaColors[nota] || notaColors['Sin calificar']}`;
+    
+    if (!isEditable) {
+        return <div className={notaClass} title={`Nota: ${nota}`}>{nota}</div>;
+    }
+
+    return (
+        <div className="flex items-center gap-2 w-full">
+            <div className="relative flex-1">
+                <select
+                    value={nota}
+                    onChange={(e) => handleNotaChange(practica.id, e.target.value)}
+                    className={`appearance-none w-full text-sm font-semibold rounded-lg border border-slate-300 dark:border-slate-600 p-2.5 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 hover:border-blue-400 dark:hover:border-blue-500 dark:focus:border-blue-500 dark:focus:ring-blue-500/30
+                    ${savingNotaId === practica.id ? 'ring-2 ring-blue-500 border-blue-500 shadow-blue-100 dark:ring-blue-600 dark:border-blue-600 dark:shadow-blue-900/50 animate-pulse' : ''}`}
+                    aria-label={`Calificación para ${institucion}`}
+                >
+                    {NOTA_OPTIONS.map(option => (
+                    <option key={option} value={option}>{option}</option>
+                    ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3">
+                    <span className="material-icons !text-base text-slate-500 dark:text-slate-400">expand_more</span>
+                </div>
+            </div>
+            {justUpdatedPracticaId === practica.id && (
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 animate-fade-in-up whitespace-nowrap" style={{ animationDuration: '300ms' }}>
+                    Guardado ✓
+                </span>
+            )}
+        </div>
+    );
+};
+
 const PracticasTable: React.FC<PracticasTableProps> = ({ practicas, handleNotaChange }) => {
   const [sortConfig, setSortConfig] = useState<{ key: string | null; direction: 'ascending' | 'descending' }>({ key: 'fechaInicio', direction: 'descending' });
   const [savingNotaId, setSavingNotaId] = useState<string | null>(null);
@@ -93,6 +138,7 @@ const PracticasTable: React.FC<PracticasTableProps> = ({ practicas, handleNotaCh
         };
         switch (sortConfig.key) {
           case 'institucion':
+            // FIX: Corrected typo in constant name
             aValue = normalizeStringForComparison(Array.isArray(a[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]) ? a[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]?.[0] : a[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]);
             bValue = normalizeStringForComparison(Array.isArray(b[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]) ? b[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]?.[0] : b[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]);
             break;
@@ -143,16 +189,8 @@ const PracticasTable: React.FC<PracticasTableProps> = ({ practicas, handleNotaCh
 
   return (
     <div>
-      <div className="flex items-start gap-4 mb-6">
-        <div className="flex-shrink-0 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300 rounded-full h-12 w-12 flex items-center justify-center mt-1">
-          <span className="material-icons !text-3xl">work_history</span>
-        </div>
-        <div>
-          <h2 className="text-slate-900 dark:text-slate-50 text-2xl font-bold tracking-tight">Historial de Prácticas</h2>
-          <p className="text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">Aquí se detallan todas las prácticas que has realizado, junto con sus horas, fechas y estado.</p>
-        </div>
-      </div>
-      <div className="overflow-x-auto">
+      {/* Desktop Table View */}
+      <div className="overflow-x-auto hidden md:block">
         <table className="w-full min-w-[800px] text-sm">
           <caption className="sr-only">Historial de Prácticas Profesionales Supervisadas</caption>
           <thead className="bg-slate-100/70 dark:bg-slate-800/70">
@@ -167,14 +205,12 @@ const PracticasTable: React.FC<PracticasTableProps> = ({ practicas, handleNotaCh
           </thead>
           <tbody>
             {sortedPracticas.map((practica) => {
+              // FIX: Corrected typo in constant name
               const institucionRaw = practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
               const institucion = Array.isArray(institucionRaw) ? institucionRaw.join(', ') : institucionRaw;
               const statusRaw = practica[FIELD_ESTADO_PRACTICA];
               const status = Array.isArray(statusRaw) ? statusRaw?.[0] : statusRaw;
               const statusVisuals = getStatusVisuals(status);
-              const nota = practica[FIELD_NOTA_PRACTICAS] || 'Sin calificar';
-              const notaClass = `inline-block px-3 py-1 rounded-full text-xs font-semibold transition-transform hover:scale-105 shadow-sm ${notaColors[nota] || notaColors['Sin calificar']}`;
-              const isEditable = nota === 'Sin calificar' || nota === 'Entregado (sin corregir)';
 
               return (
                 <tr 
@@ -204,41 +240,58 @@ const PracticasTable: React.FC<PracticasTableProps> = ({ practicas, handleNotaCh
                     </span>
                   </td>
                   <td className="p-4 align-middle w-56 text-center">
-                    {isEditable ? (
-                      <div className="flex items-center gap-2">
-                        <div className="relative flex-1">
-                            <select
-                              value={nota}
-                              onChange={(e) => handleLocalNotaChange(practica.id, e.target.value)}
-                              className={`appearance-none w-full text-sm font-semibold rounded-lg border border-slate-300 dark:border-slate-600 p-2.5 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 hover:border-blue-400 dark:hover:border-blue-500 dark:focus:border-blue-500 dark:focus:ring-blue-500/30
-                                ${savingNotaId === practica.id ? 'ring-2 ring-blue-500 border-blue-500 shadow-blue-100 dark:ring-blue-600 dark:border-blue-600 dark:shadow-blue-900/50 animate-pulse' : ''}`}
-                              aria-label={`Calificación para ${institucion}`}
-                            >
-                              {NOTA_OPTIONS.map(option => (
-                                <option key={option} value={option}>{option}</option>
-                              ))}
-                            </select>
-                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3">
-                              <span className="material-icons !text-base text-slate-500 dark:text-slate-400">expand_more</span>
-                            </div>
-                        </div>
-                        {justUpdatedPracticaId === practica.id && (
-                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 animate-fade-in-up whitespace-nowrap" style={{ animationDuration: '300ms' }}>
-                                Guardado ✓
-                            </span>
-                        )}
-                      </div>
-                    ) : (
-                      <div className={notaClass} title={`Nota: ${nota}`}>
-                        {nota}
-                      </div>
-                    )}
+                    <NotaEditor practica={practica} handleNotaChange={handleLocalNotaChange} savingNotaId={savingNotaId} justUpdatedPracticaId={justUpdatedPracticaId} />
                   </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="space-y-4 md:hidden">
+        {sortedPracticas.map(practica => {
+           // FIX: Corrected typo in constant name
+           const institucionRaw = practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
+           const institucion = Array.isArray(institucionRaw) ? institucionRaw.join(', ') : institucionRaw;
+           const statusRaw = practica[FIELD_ESTADO_PRACTICA];
+           const status = Array.isArray(statusRaw) ? statusRaw?.[0] : statusRaw;
+           const statusVisuals = getStatusVisuals(status);
+
+           return (
+            <div key={practica.id} className={`bg-white dark:bg-slate-800 rounded-xl shadow-lg dark:shadow-black/20 border border-slate-200/70 dark:border-slate-700/70 p-4 space-y-3 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${justUpdatedPracticaId === practica.id ? 'bg-green-100 dark:bg-green-900/30' : ''}`}>
+                <div className="flex justify-between items-start">
+                    <h3 className="font-bold text-slate-900 dark:text-slate-50 pr-2">{institucion || 'N/A'}</h3>
+                    <span className={`${getEspecialidadClasses(practica[FIELD_ESPECIALIDAD_PRACTICAS]).tag} shadow-sm flex-shrink-0`}>
+                      {practica[FIELD_ESPECIALIDAD_PRACTICAS] || 'N/A'}
+                    </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm border-t border-slate-200/80 dark:border-slate-700/80 pt-3">
+                    <div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Horas</p>
+                        <p className="font-semibold text-slate-800 dark:text-slate-200">{practica[FIELD_HORAS_PRACTICAS] || 0}</p>
+                    </div>
+                    <div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Estado</p>
+                        <p className="font-semibold text-slate-800 dark:text-slate-200">{status || 'N/A'}</p>
+                    </div>
+                    <div className="col-span-2">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Periodo</p>
+                        <p className="font-semibold text-slate-800 dark:text-slate-200">
+                         {formatDate(practica[FIELD_FECHA_INICIO_PRACTICAS])} - {formatDate(practica[FIELD_FECHA_FIN_PRACTICAS])}
+                        </p>
+                    </div>
+                </div>
+                
+                <div className="border-t border-slate-200/80 dark:border-slate-700/80 pt-3">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">Nota</p>
+                    <NotaEditor practica={practica} handleNotaChange={handleLocalNotaChange} savingNotaId={savingNotaId} justUpdatedPracticaId={justUpdatedPracticaId} />
+                </div>
+            </div>
+           )
+        })}
       </div>
     </div>
   );

@@ -83,29 +83,23 @@ const ProfileView: React.FC<ProfileViewProps> = ({ studentDetails, isLoading }) 
 
   return (
     <>
-      <Card
-          icon="badge"
-          title="Mis Datos Personales"
-          description="Aquí puedes revisar la información de contacto que tenemos registrada. Si algo es incorrecto, por favor solicita una actualización."
-      >
-          <div className="mt-6 border-t border-slate-200 dark:border-slate-700 divide-y divide-slate-200 dark:divide-slate-700">
-              <InfoRow icon="fingerprint" label="DNI" value={dni} />
-              <InfoRow icon="email" label="Correo Electrónico" value={correo} />
-              <InfoRow icon="phone" label="Teléfono" value={telefono} />
-          </div>
-          <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 text-center">
-              <a
-                href={mailToLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group relative overflow-hidden inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-bold text-sm py-3 px-6 rounded-xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:focus:ring-offset-slate-800 shadow-lg hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-1 active:transform active:scale-95"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-                <span className="material-icons !text-lg transition-transform duration-300 relative z-10">edit</span>
-                <span className="relative z-10 tracking-wide">Solicitar Actualización de Datos</span>
-              </a>
-          </div>
-      </Card>
+      <div className="border-t border-slate-200 dark:border-slate-700 divide-y divide-slate-200 dark:divide-slate-700">
+          <InfoRow icon="fingerprint" label="DNI" value={dni} />
+          <InfoRow icon="email" label="Correo Electrónico" value={correo} />
+          <InfoRow icon="phone" label="Teléfono" value={telefono} />
+      </div>
+      <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 text-center">
+          <a
+            href={mailToLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group relative overflow-hidden inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-bold text-sm py-3 px-6 rounded-xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:focus:ring-offset-slate-800 shadow-lg hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-1 active:transform active:scale-95"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+            <span className="material-icons !text-lg transition-transform duration-300 relative z-10">edit</span>
+            <span className="relative z-10 tracking-wide">Solicitar Actualización de Datos</span>
+          </a>
+      </div>
 
       {(isSuperUserMode || isJefeMode) && (
         <Card className="mt-8" icon="edit_note" title="Anotaciones Internas" description="Estas notas son privadas y solo visibles para administradores y jefes de cátedra.">
