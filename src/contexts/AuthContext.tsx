@@ -12,7 +12,7 @@ interface AuthContextType {
   isSuperUserMode: boolean;
   isJefeMode: boolean;
   isAuthLoading: boolean;
-  login: (user: AuthUser) => void;
+  login: (user: AuthUser, rememberMe?: boolean) => void;
   logout: () => void;
 }
 
@@ -24,25 +24,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     try {
-      const storedUser = sessionStorage.getItem('authenticatedUser');
+      // Check localStorage first for "remembered" users
+      let storedUser = localStorage.getItem('authenticatedUser');
+      // If not found, check sessionStorage for non-remembered sessions
+      if (!storedUser) {
+        storedUser = sessionStorage.getItem('authenticatedUser');
+      }
+      
       if (storedUser) {
         setAuthenticatedUser(JSON.parse(storedUser));
       }
     } catch (error) {
-        console.error("Failed to parse user from session storage", error);
+        console.error("Failed to parse user from storage", error);
+        localStorage.removeItem('authenticatedUser');
         sessionStorage.removeItem('authenticatedUser');
     } finally {
         setIsAuthLoading(false);
     }
   }, []);
 
-  const login = useCallback((user: AuthUser) => {
-    sessionStorage.setItem('authenticatedUser', JSON.stringify(user));
+  const login = useCallback((user: AuthUser, rememberMe = false) => {
+    const storage = rememberMe ? localStorage : sessionStorage;
+    storage.setItem('authenticatedUser', JSON.stringify(user));
     setAuthenticatedUser(user);
   }, []);
 
   const logout = useCallback(() => {
     sessionStorage.removeItem('authenticatedUser');
+    localStorage.removeItem('authenticatedUser');
     setAuthenticatedUser(null);
   }, []);
 
