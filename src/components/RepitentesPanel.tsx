@@ -167,15 +167,15 @@ const RepitentesPanel: React.FC = () => {
     }
 
     return (
-        <div className="animate-fade-in-up space-y-6 p-4 bg-slate-50/50 rounded-lg">
+        <div className="animate-fade-in-up space-y-6 p-4 bg-slate-50/50 dark:bg-slate-800/50 rounded-lg">
              <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-2">
                 <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 bg-blue-100 text-blue-600 rounded-full h-12 w-12 flex items-center justify-center mt-1">
+                    <div className="flex-shrink-0 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300 rounded-full h-12 w-12 flex items-center justify-center mt-1">
                         <span className="material-icons !text-3xl">history_edu</span>
                     </div>
                     <div>
-                        <h2 className="text-slate-900 text-2xl font-bold tracking-tight">Estudiantes con PPS Repetidas</h2>
-                        <p className="text-slate-600 mt-1 max-w-2xl">Esta lista muestra estudiantes que han cursado la misma práctica (misma institución y orientación) más de una vez.</p>
+                        <h2 className="text-slate-900 dark:text-slate-50 text-2xl font-bold tracking-tight">Estudiantes con PPS Repetidas</h2>
+                        <p className="text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">Esta lista muestra estudiantes que han cursado la misma práctica (misma institución y orientación) más de una vez.</p>
                     </div>
                 </div>
                 <div>
@@ -193,26 +193,26 @@ const RepitentesPanel: React.FC = () => {
                 {repeatedPractices.map((item, index) => {
                     const especialidadVisuals = getEspecialidadClasses(item.orientation);
                     return (
-                        <div key={`${item.studentLegajo}-${index}`} className="bg-white rounded-xl border border-slate-200/80 shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-px group">
-                            <div className="p-4 border-b border-slate-200/60 flex justify-between items-start gap-3">
+                        <div key={`${item.studentLegajo}-${index}`} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/80 dark:border-slate-700 shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-px group">
+                            <div className="p-4 border-b border-slate-200/60 dark:border-slate-700 flex justify-between items-start gap-3">
                                 <div>
-                                    <h4 className="font-extrabold tracking-tight text-slate-800">{item.studentName}</h4>
-                                    <p className="text-sm text-slate-500 font-mono">Legajo: {item.studentLegajo}</p>
+                                    <h4 className="font-extrabold tracking-tight text-slate-800 dark:text-slate-100">{item.studentName}</h4>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 font-mono">Legajo: {item.studentLegajo}</p>
                                 </div>
-                                <span className="text-xs font-bold text-red-700 bg-red-100 px-2 py-1 rounded-full ring-1 ring-red-200">REPITENTE</span>
+                                <span className="text-xs font-bold text-red-700 bg-red-100 dark:bg-red-900/50 dark:text-red-200 px-2 py-1 rounded-full ring-1 ring-red-200 dark:ring-red-700">REPITENTE</span>
                             </div>
                             <div className="p-4">
-                                <p className="text-sm font-semibold text-slate-600 mb-2">Detalle de la repetición:</p>
-                                <div className="bg-slate-50/70 p-3 rounded-lg border border-slate-200/70">
+                                <p className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2">Detalle de la repetición:</p>
+                                <div className="bg-slate-50/70 dark:bg-slate-700/50 p-3 rounded-lg border border-slate-200/70 dark:border-slate-600/50">
                                     <div className="flex justify-between items-center">
-                                        <p className="font-semibold text-slate-900">{item.institution}</p>
+                                        <p className="font-semibold text-slate-900 dark:text-slate-50">{item.institution}</p>
                                         <span className={`${especialidadVisuals.tag} shadow-sm`}>{item.orientation}</span>
                                     </div>
-                                    <p className="text-sm text-slate-500 mt-2">Realizada <span className="font-bold">{item.count}</span> veces</p>
-                                    <ul className="mt-2 text-xs text-slate-600 space-y-1">
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Realizada <span className="font-bold">{item.count}</span> veces</p>
+                                    <ul className="mt-2 text-xs text-slate-600 dark:text-slate-300 space-y-1">
                                         {item.practices.map(p => (
                                             <li key={p.id} className="flex items-center gap-2">
-                                                <span className="material-icons !text-sm text-slate-400">arrow_right</span>
+                                                <span className="material-icons !text-sm text-slate-400 dark:text-slate-500">arrow_right</span>
                                                 <span>{formatDate(p[FIELD_FECHA_INICIO_PRACTICAS])} al {formatDate(p[FIELD_FECHA_FIN_PRACTICAS])}</span>
                                             </li>
                                         ))}

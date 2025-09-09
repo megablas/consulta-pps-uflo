@@ -136,7 +136,7 @@ const AdminView: React.FC = () => {
     }, [studentTabs, activeMetricsTabId, activeGestionTabId, activeHerramientasTabId, openStudentPanel, showModal]);
 
     return (
-        <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg border border-slate-200/60 animate-fade-in-up">
+        <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-2xl shadow-lg border border-slate-200/60 dark:border-slate-700/80 animate-fade-in-up">
             <Tabs
                 tabs={allTabs}
                 activeTabId={activeTabId}

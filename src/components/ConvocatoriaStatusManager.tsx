@@ -55,26 +55,26 @@ const StatusCard: React.FC<StatusCardProps> = React.memo(({ pps, onStatusChange,
     }
   };
 
-  const headerBg = justSaved ? 'bg-emerald-50' : especialidadVisuals.headerBg;
-  const headerTextColor = justSaved ? 'text-emerald-800' : especialidadVisuals.headerText;
+  const headerBg = justSaved ? 'bg-emerald-50 dark:bg-emerald-900/30' : especialidadVisuals.headerBg;
+  const headerTextColor = justSaved ? 'text-emerald-800 dark:text-emerald-200' : especialidadVisuals.headerText;
   const statusVisuals = getStatusVisuals(status);
 
   return (
-    <div className="bg-white rounded-lg border border-slate-200/60 shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-px group">
-      <div className={`p-3 border-b border-slate-200/60 transition-colors duration-300 ${headerBg}`}>
+    <div className="bg-white dark:bg-slate-800/50 rounded-lg border border-slate-200/60 dark:border-slate-700 shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-px group">
+      <div className={`p-3 border-b border-slate-200/60 dark:border-slate-700 transition-colors duration-300 ${headerBg}`}>
         <h4 className={`font-bold text-sm ${headerTextColor}`}>{pps[FIELD_NOMBRE_PPS_LANZAMIENTOS]}</h4>
         <div className="mt-1">
           <span className={`${especialidadVisuals.tag} shadow-sm`}>{pps[FIELD_ORIENTACION_LANZAMIENTOS]}</span>
         </div>
       </div>
-      <div className="p-3 bg-slate-50/30">
-        <p className="text-xs text-slate-600 flex items-center gap-1.5">
+      <div className="p-3 bg-slate-50/30 dark:bg-slate-800/30">
+        <p className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
           <span className="material-icons !text-sm">date_range</span>
           <span>{formatDate(pps[FIELD_FECHA_INICIO_LANZAMIENTOS])} - {formatDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS])}</span>
         </p>
         <div className="mt-3 relative">
           <label htmlFor={`status-${pps.id}`} className="sr-only">Estado de la convocatoria</label>
-          <div className={`absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none ${justSaved ? 'text-emerald-600' : 'text-slate-500'}`}>
+          <div className={`absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none ${justSaved ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'}`}>
             <span className="material-icons !text-base">{justSaved ? 'check_circle' : statusVisuals.icon}</span>
           </div>
           <select
@@ -82,14 +82,14 @@ const StatusCard: React.FC<StatusCardProps> = React.memo(({ pps, onStatusChange,
             value={status}
             onChange={handleStatusChange}
             disabled={isUpdating}
-            className={`w-full appearance-none rounded-lg border border-slate-300 py-2 pl-9 pr-8 text-sm font-semibold shadow-sm transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none disabled:cursor-not-allowed ${justSaved ? 'bg-emerald-100 border-emerald-300 text-emerald-800 ring-2 ring-emerald-200' : 'bg-white text-slate-800'}`}
+            className={`w-full appearance-none rounded-lg border border-slate-300 dark:border-slate-600 py-2 pl-9 pr-8 text-sm font-semibold shadow-sm transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none disabled:cursor-not-allowed ${justSaved ? 'bg-emerald-100 dark:bg-emerald-900/50 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200 ring-2 ring-emerald-200 dark:ring-emerald-800/50' : 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100'}`}
           >
             {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
           </select>
           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2">
             {isUpdating
-              ? <div className="w-4 h-4 border-2 border-slate-400/50 border-t-slate-500 rounded-full animate-spin" />
-              : <span className="material-icons !text-base text-slate-400">unfold_more</span>
+              ? <div className="w-4 h-4 border-2 border-slate-400/50 dark:border-slate-500/50 border-t-slate-500 dark:border-t-slate-400 rounded-full animate-spin" />
+              : <span className="material-icons !text-base text-slate-400 dark:text-slate-500">unfold_more</span>
             }
           </div>
         </div>
@@ -100,11 +100,11 @@ const StatusCard: React.FC<StatusCardProps> = React.memo(({ pps, onStatusChange,
 
 const CollapsibleSection: React.FC<{ title: string; count: number; children: React.ReactNode; defaultOpen?: boolean; icon: string; }> = ({ title, count, children, defaultOpen = true, icon }) => (
   <details className="group" open={defaultOpen}>
-    <summary className="list-none flex items-center gap-3 cursor-pointer mb-4 p-1 rounded-lg transition-colors hover:bg-slate-50">
-      <span className="material-icons text-slate-500">{icon}</span>
-      <h3 className="text-xl font-bold text-slate-800">{title}</h3>
-      <span className="bg-slate-200 text-slate-700 text-xs font-bold px-2.5 py-1 rounded-full">{count}</span>
-      <span className="material-icons text-slate-400 transition-transform duration-300 group-open:rotate-90 ml-auto">chevron_right</span>
+    <summary className="list-none flex items-center gap-3 cursor-pointer mb-4 p-1 rounded-lg transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50">
+      <span className="material-icons text-slate-500 dark:text-slate-400">{icon}</span>
+      <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{title}</h3>
+      <span className="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold px-2.5 py-1 rounded-full">{count}</span>
+      <span className="material-icons text-slate-400 dark:text-slate-500 transition-transform duration-300 group-open:rotate-90 ml-auto">chevron_right</span>
     </summary>
     <div className="pl-9">
       {children}
@@ -196,7 +196,7 @@ const ConvocatoriaStatusManager: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                             {groupedLanzamientos.abiertas.map(pps => <StatusCard key={pps.id} pps={pps} onStatusChange={handleStatusChange} isUpdating={updatingId === pps.id} />)}
                         </div>
-                    ) : <p className="text-slate-500 text-sm">No hay convocatorias abiertas.</p>}
+                    ) : <p className="text-slate-500 dark:text-slate-400 text-sm">No hay convocatorias abiertas.</p>}
                 </CollapsibleSection>
 
                 <CollapsibleSection title="Cerradas" count={groupedLanzamientos.cerradas.length} icon="lock">
@@ -204,7 +204,7 @@ const ConvocatoriaStatusManager: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                             {groupedLanzamientos.cerradas.map(pps => <StatusCard key={pps.id} pps={pps} onStatusChange={handleStatusChange} isUpdating={updatingId === pps.id} />)}
                         </div>
-                    ) : <p className="text-slate-500 text-sm">No hay convocatorias cerradas.</p>}
+                    ) : <p className="text-slate-500 dark:text-slate-400 text-sm">No hay convocatorias cerradas.</p>}
                 </CollapsibleSection>
 
                 <CollapsibleSection title="Ocultas" count={groupedLanzamientos.ocultas.length} icon="visibility_off">
@@ -212,7 +212,7 @@ const ConvocatoriaStatusManager: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                             {groupedLanzamientos.ocultas.map(pps => <StatusCard key={pps.id} pps={pps} onStatusChange={handleStatusChange} isUpdating={updatingId === pps.id} />)}
                         </div>
-                    ) : <p className="text-slate-500 text-sm">No hay convocatorias ocultas.</p>}
+                    ) : <p className="text-slate-500 dark:text-slate-400 text-sm">No hay convocatorias ocultas.</p>}
                 </CollapsibleSection>
             </div>
         );

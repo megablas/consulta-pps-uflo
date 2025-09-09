@@ -20,7 +20,7 @@ const SolicitudCard: React.FC<SolicitudCardProps> = ({ solicitud }) => {
   const visuals = getStatusVisuals(status);
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-lg shadow-slate-200/40 border border-slate-200/60 flex items-center gap-4 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg shadow-slate-200/40 dark:shadow-black/20 border border-slate-200/60 dark:border-slate-700/80 flex items-center gap-4 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
       <div className={visuals.iconContainerClass}>
         <span className="material-icons !text-3xl">{visuals.icon}</span>
       </div>
@@ -28,17 +28,17 @@ const SolicitudCard: React.FC<SolicitudCardProps> = ({ solicitud }) => {
       <div className="flex-grow flex flex-col sm:flex-row justify-between sm:items-center min-w-0 gap-4">
 
         <div className="flex-grow min-w-0">
-          <p className="text-slate-900 font-bold text-lg leading-tight break-words">
+          <p className="text-slate-900 dark:text-slate-50 font-bold text-lg leading-tight break-words">
             {institucion || 'Institución no especificada'}
           </p>
 
           {notas && (
-            <p className="text-slate-600 text-sm leading-snug whitespace-normal mt-1 max-w-prose">
+            <p className="text-slate-600 dark:text-slate-400 text-sm leading-snug whitespace-normal mt-1 max-w-prose">
               {notas}
             </p>
           )}
           
-          <p className="text-slate-500 text-xs font-medium mt-2">
+          <p className="text-slate-500 dark:text-slate-400 text-xs font-medium mt-2">
             Actualizado: {formatDate(actualizacion)}
           </p>
         </div>

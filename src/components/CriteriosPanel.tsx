@@ -12,7 +12,7 @@ const CertificationButton: React.FC = React.memo(() => (
     href="https://airtable.com/appBY8PYhPZ1X2ka1/paglLBxubDedzl1qz/form"
     target="_blank"
     rel="noopener noreferrer"
-    className="group relative overflow-hidden inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-sm py-3 px-6 rounded-xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-300 shadow-lg hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-1 active:transform active:scale-95 has-shine-effect hover:shine-effect"
+    className="group relative overflow-hidden inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-sm py-3 px-6 rounded-xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-800 shadow-lg hover:shadow-xl hover:shadow-blue-500/30 dark:hover:shadow-blue-400/20 hover:-translate-y-1 active:transform active:scale-95 has-shine-effect hover:shine-effect"
     aria-label="Solicitar acreditación final - Se abrirá en nueva ventana"
   >
     <span className="material-icons !text-lg transition-transform duration-300 relative z-10 group-hover:rotate-12 group-hover:scale-110">school</span>
@@ -38,14 +38,14 @@ const CriteriosPanel: React.FC<CriteriosPanelProps> = ({ criterios, selectedOrie
 
   return (
     <section className="animate-fade-in-up">
-      <div className={`relative bg-gradient-to-br from-white to-slate-50/70 backdrop-blur-xl p-6 sm:p-8 rounded-3xl border shadow-2xl transition-all duration-700 grid grid-cols-1 lg:grid-cols-5 gap-8 overflow-hidden ${
+      <div className={`relative bg-gradient-to-br from-white to-slate-50/70 dark:from-slate-800/70 dark:to-slate-900/70 backdrop-blur-xl p-6 sm:p-8 rounded-3xl border shadow-2xl transition-all duration-700 grid grid-cols-1 lg:grid-cols-5 gap-8 overflow-hidden ${
         todosLosCriteriosCumplidos 
-          ? 'border-emerald-300/50 animate-pulse-glow-emerald' 
-          : 'border-slate-200 shadow-slate-500/10'
+          ? 'border-emerald-300/50 dark:border-emerald-500/40 animate-pulse-glow-emerald' 
+          : 'border-slate-200 dark:border-slate-700 shadow-slate-500/10 dark:shadow-black/20'
       }`}>
         
-        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-blue-100/50 to-transparent rounded-full blur-3xl -z-10" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-purple-100/50 to-transparent rounded-full blur-3xl -z-10" />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-blue-100/50 to-transparent dark:from-blue-900/30 rounded-full blur-3xl -z-10" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-purple-100/50 to-transparent dark:from-purple-900/30 rounded-full blur-3xl -z-10" />
         
         {todosLosCriteriosCumplidos && (
             <div className="absolute inset-0 pointer-events-none">
@@ -72,13 +72,13 @@ const CriteriosPanel: React.FC<CriteriosPanelProps> = ({ criterios, selectedOrie
           />
           <div className="flex-1 text-center sm:text-left">
             <div className="flex items-center gap-3 mb-4 justify-center sm:justify-start">
-              <h3 className="text-3xl font-black text-slate-900 tracking-tight">
+              <h3 className="text-3xl font-black text-slate-900 dark:text-slate-50 tracking-tight">
                 Horas Totales
               </h3>
             </div>
             
-            <p className="text-slate-700 text-lg leading-relaxed mb-4">
-              Has completado {todosLosCriteriosCumplidos ? 'exitosamente' : 'un total de'} <strong className="font-black text-blue-600 text-xl">{Math.round(criterios.horasTotales)}</strong> de <strong className="font-black text-slate-800 text-xl">{HORAS_OBJETIVO_TOTAL}</strong> horas requeridas.
+            <p className="text-slate-700 dark:text-slate-300 text-lg leading-relaxed mb-4">
+              Has completado {todosLosCriteriosCumplidos ? 'exitosamente' : 'un total de'} <strong className="font-black text-blue-600 dark:text-blue-400 text-xl">{Math.round(criterios.horasTotales)}</strong> de <strong className="font-black text-slate-800 dark:text-slate-100 text-xl">{HORAS_OBJETIVO_TOTAL}</strong> horas requeridas.
             </p>
             
             {todosLosCriteriosCumplidos && (
@@ -90,7 +90,7 @@ const CriteriosPanel: React.FC<CriteriosPanelProps> = ({ criterios, selectedOrie
         </div>
 
         {/* Criterios Secundarios */}
-        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6 border-t-2 lg:border-t-0 lg:border-l-2 border-slate-200/60 pt-8 lg:pt-0 lg:pl-8 z-10">
+        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6 border-t-2 lg:border-t-0 lg:border-l-2 border-slate-200/60 dark:border-slate-700/60 pt-8 lg:pt-0 lg:pl-8 z-10">
           <RotationTracker
             count={criterios.orientacionesCursadasCount}
             orientacionesUnicas={criterios.orientacionesUnicas}

@@ -92,25 +92,25 @@ const AdminSearch: React.FC<AdminSearchProps> = ({ onStudentSelect }) => {
   return (
     <div ref={searchContainerRef} className="relative w-full max-w-lg mx-auto">
         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-            <span className="material-icons text-slate-400">search</span>
+            <span className="material-icons text-slate-400 dark:text-slate-500">search</span>
         </div>
         <input
             type="text"
             value={searchTerm}
             onChange={handleInputChange}
             onFocus={() => setIsDropdownOpen(true)}
-            className="w-full rounded-lg border border-slate-300 p-3 pl-11 text-base text-slate-800 bg-white shadow-sm
-                       placeholder-slate-400/80
+            className="w-full rounded-lg border border-slate-300 dark:border-slate-700 p-3 pl-11 text-base text-slate-800 dark:text-slate-50 bg-white dark:bg-slate-900 shadow-sm
+                       placeholder-slate-400/80 dark:placeholder-slate-500
                        focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
             placeholder="Buscar por Legajo o Nombre..."
             aria-label="Buscar Estudiante"
             autoComplete="off"
         />
         {showDropdown && (
-            <div className="absolute z-10 mt-2 w-full bg-white rounded-lg shadow-2xl border border-slate-200/70 overflow-hidden max-h-80 overflow-y-auto animate-fade-in-up" style={{ animationDuration: '200ms' }}>
+            <div className="absolute z-10 mt-2 w-full bg-white dark:bg-slate-800 rounded-lg shadow-2xl border border-slate-200/70 dark:border-slate-700 overflow-hidden max-h-80 overflow-y-auto animate-fade-in-up" style={{ animationDuration: '200ms' }}>
                 {isLoading ? (
-                    <div className="p-4 flex items-center justify-center text-slate-500">
-                        <div className="border-2 border-slate-200 border-t-blue-500 rounded-full w-5 h-5 animate-spin mr-2"></div>
+                    <div className="p-4 flex items-center justify-center text-slate-500 dark:text-slate-400">
+                        <div className="border-2 border-slate-200 dark:border-slate-600 border-t-blue-500 rounded-full w-5 h-5 animate-spin mr-2"></div>
                         Buscando...
                     </div>
                 ) : results.length > 0 ? (
@@ -119,16 +119,16 @@ const AdminSearch: React.FC<AdminSearchProps> = ({ onStudentSelect }) => {
                             <li key={student[FIELD_LEGAJO_ESTUDIANTES] || index}>
                                 <button
                                     onClick={() => handleSelect(student)}
-                                    className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex justify-between items-center"
+                                    className="w-full text-left px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/50 transition-colors flex justify-between items-center"
                                 >
-                                    <span className="font-medium text-slate-800">{student[FIELD_NOMBRE_ESTUDIANTES]}</span>
-                                    <span className="text-sm text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{student[FIELD_LEGAJO_ESTUDIANTES]}</span>
+                                    <span className="font-medium text-slate-800 dark:text-slate-100">{student[FIELD_NOMBRE_ESTUDIANTES]}</span>
+                                    <span className="text-sm text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">{student[FIELD_LEGAJO_ESTUDIANTES]}</span>
                                 </button>
                             </li>
                         ))}
                     </ul>
                 ) : (
-                     <div className="p-4 text-center text-slate-500">
+                     <div className="p-4 text-center text-slate-500 dark:text-slate-400">
                         No se encontraron resultados para "{searchTerm}".
                     </div>
                 )}

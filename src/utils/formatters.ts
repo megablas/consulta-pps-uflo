@@ -69,39 +69,39 @@ export function getEspecialidadClasses(especialidad?: string): {
 
     const styles = {
         clinica: {
-            tag: `${baseClasses} bg-green-100 text-green-800 border-green-200`,
+            tag: `${baseClasses} bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700/50`,
             gradient: 'from-green-500 to-teal-500',
             textOnDark: 'text-green-100',
-            headerBg: 'bg-green-50',
-            headerText: 'text-green-900',
+            headerBg: 'bg-green-50 dark:bg-green-900/20',
+            headerText: 'text-green-900 dark:text-green-200',
         },
         educacional: {
-            tag: `${baseClasses} bg-sky-100 text-sky-800 border-sky-200`,
+            tag: `${baseClasses} bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-900/50 dark:text-sky-300 dark:border-sky-700/50`,
             gradient: 'from-sky-500 to-blue-600',
             textOnDark: 'text-sky-100',
-            headerBg: 'bg-sky-50',
-            headerText: 'text-sky-900',
+            headerBg: 'bg-sky-50 dark:bg-sky-900/20',
+            headerText: 'text-sky-900 dark:text-sky-200',
         },
         laboral: {
-            tag: `${baseClasses} bg-rose-100 text-rose-800 border-rose-200`,
+            tag: `${baseClasses} bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-900/50 dark:text-rose-300 dark:border-rose-700/50`,
             gradient: 'from-rose-500 to-red-600',
             textOnDark: 'text-rose-100',
-            headerBg: 'bg-rose-50',
-            headerText: 'text-rose-900',
+            headerBg: 'bg-rose-50 dark:bg-rose-900/20',
+            headerText: 'text-rose-900 dark:text-rose-200',
         },
         comunitaria: {
-            tag: `${baseClasses} bg-violet-100 text-violet-800 border-violet-200`,
+            tag: `${baseClasses} bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-900/50 dark:text-violet-300 dark:border-violet-700/50`,
             gradient: 'from-violet-500 to-purple-600',
             textOnDark: 'text-violet-100',
-            headerBg: 'bg-violet-50',
-            headerText: 'text-violet-900',
+            headerBg: 'bg-violet-50 dark:bg-violet-900/20',
+            headerText: 'text-violet-900 dark:text-violet-200',
         },
         default: {
-            tag: `${baseClasses} bg-slate-100 text-slate-800 border-slate-200`,
+            tag: `${baseClasses} bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600`,
             gradient: 'from-slate-500 to-slate-600',
             textOnDark: 'text-slate-100',
-            headerBg: 'bg-slate-50',
-            headerText: 'text-slate-900',
+            headerBg: 'bg-slate-50 dark:bg-slate-800/50',
+            headerText: 'text-slate-900 dark:text-slate-200',
         },
     };
 
@@ -113,110 +113,54 @@ export function getStatusVisuals(status?: string): { icon: string; iconContainer
     const baseLabel = "inline-flex items-center font-semibold px-2.5 py-1 rounded-full text-xs capitalize";
     const baseIconContainer = "flex-shrink-0 size-11 rounded-lg flex items-center justify-center mr-4";
 
-    // --- PRIORITY 1: TERMINAL STATES (Completed / Failed) ---
-    // Handle these first as they are the final state of a request.
+    const states = {
+        'convenio realizado': { icon: 'fact_check', color: 'blue' },
+        'pps realizada': { icon: 'check_circle', color: 'blue' },
+        'finalizada': { icon: 'check_circle', color: 'blue' },
+        'realizada': { icon: 'check_circle', color: 'blue' },
+        'no se pudo concretar': { icon: 'cancel', color: 'rose' },
+        'no seleccionado': { icon: 'cancel', color: 'rose' },
+        'en curso': { icon: 'sync', color: 'yellow', animation: 'animate-spin [animation-duration:3s]' },
+        'en conversaciones': { icon: 'hourglass_top', color: 'amber' },
+        'realizando convenio': { icon: 'hourglass_top', color: 'amber' },
+        'puesta en contacto': { icon: 'rocket_launch', color: 'indigo' },
+        'abierta': { icon: 'door_open', color: 'green' },
+        'abierto': { icon: 'door_open', color: 'green' },
+        'seleccionado': { icon: 'verified', color: 'indigo' },
+        'inscripto': { icon: 'how_to_reg', color: 'sky' },
+        'cerrado': { icon: 'lock', color: 'slate' },
+        'oculto': { icon: 'visibility_off', color: 'neutral' },
+    };
 
-    if (normalizedStatus.includes('convenio realizado')) {
-        return {
-            icon: 'fact_check',
-            iconContainerClass: `${baseIconContainer} bg-blue-100 text-blue-600`,
-            labelClass: `${baseLabel} bg-blue-100 text-blue-800`,
-        };
-    }
-    // Specific check for "PPS Realizada" and other completed states.
-    if (normalizedStatus === 'pps realizada' || normalizedStatus.includes('finalizada')) {
-        return {
-            icon: 'check_circle',
-            iconContainerClass: `${baseIconContainer} bg-blue-100 text-blue-600`,
-            labelClass: `${baseLabel} bg-blue-100 text-blue-800`,
-        };
-    }
-     // Broad check for 'realizada' after specific cases.
-    if (normalizedStatus.includes('realizada')) {
-        return {
-            icon: 'check_circle',
-            iconContainerClass: `${baseIconContainer} bg-blue-100 text-blue-600`,
-            labelClass: `${baseLabel} bg-blue-100 text-blue-800`,
-        };
-    }
-    if (normalizedStatus.includes('no se pudo concretar') || normalizedStatus.includes('no seleccionado')) {
-        return {
-            icon: 'cancel',
-            iconContainerClass: `${baseIconContainer} bg-rose-100 text-rose-600`,
-            labelClass: `${baseLabel} bg-rose-100 text-rose-800`,
-        };
-    }
+    const colorClasses: Record<string, { icon: string, label: string }> = {
+        blue: { icon: 'bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-300', label: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200' },
+        rose: { icon: 'bg-rose-100 text-rose-600 dark:bg-rose-900/50 dark:text-rose-300', label: 'bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-200' },
+        yellow: { icon: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/50 dark:text-yellow-300', label: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200' },
+        amber: { icon: 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-300', label: 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200' },
+        indigo: { icon: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-300', label: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-200' },
+        green: { icon: 'bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-300', label: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200' },
+        sky: { icon: 'bg-sky-100 text-sky-600 dark:bg-sky-900/50 dark:text-sky-300', label: 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-200' },
+        slate: { icon: 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400', label: 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300' },
+        neutral: { icon: 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400', label: 'bg-neutral-100 text-neutral-800 dark:bg-neutral-700 dark:text-neutral-300' },
+    };
 
-    // --- PRIORITY 2: ACTIVE / IN-PROGRESS STATES ---
-
-    if (normalizedStatus.includes('en curso')) {
-        return {
-            icon: 'sync',
-            iconContainerClass: `${baseIconContainer} bg-yellow-100 text-yellow-600 animate-spin [animation-duration:3s]`,
-            labelClass: `${baseLabel} bg-yellow-100 text-yellow-800`,
-        };
+    for (const key in states) {
+        if (normalizedStatus.includes(key)) {
+            const state = (states as any)[key];
+            const classes = colorClasses[state.color];
+            return {
+                icon: state.icon,
+                iconContainerClass: `${baseIconContainer} ${classes.icon} ${state.animation || ''}`,
+                labelClass: `${baseLabel} ${classes.label}`,
+            };
+        }
     }
-    if (normalizedStatus.includes('en conversaciones') || normalizedStatus.includes('realizando convenio')) {
-        return {
-            icon: 'hourglass_top',
-            iconContainerClass: `${baseIconContainer} bg-amber-100 text-amber-600`,
-            labelClass: `${baseLabel} bg-amber-100 text-amber-800`,
-        };
-    }
-    
-    // --- PRIORITY 3: INITIAL / ENROLLMENT STATES ---
-
-    if (normalizedStatus.includes('puesta en contacto')) {
-        return {
-            icon: 'rocket_launch',
-            iconContainerClass: `${baseIconContainer} bg-indigo-100 text-indigo-600`,
-            labelClass: `${baseLabel} bg-indigo-100 text-indigo-800`,
-        };
-    }
-    if (normalizedStatus.includes('abierta') || normalizedStatus.includes('abierto')) {
-        return {
-            icon: 'door_open',
-            iconContainerClass: `${baseIconContainer} bg-green-100 text-green-600`,
-            labelClass: `${baseLabel} bg-green-100 text-green-800`,
-        };
-    }
-    if (normalizedStatus.includes('seleccionado')) {
-        return {
-            icon: 'verified',
-            iconContainerClass: `${baseIconContainer} bg-indigo-100 text-indigo-600`,
-            labelClass: `${baseLabel} bg-indigo-100 text-indigo-800`,
-        };
-    }
-     if (normalizedStatus.includes('inscripto')) {
-        return {
-            icon: 'how_to_reg',
-            iconContainerClass: `${baseIconContainer} bg-sky-100 text-sky-600`,
-            labelClass: `${baseLabel} bg-sky-100 text-sky-800`,
-        };
-    }
-
-    // --- PRIORITY 4: ADMIN / METADATA STATES ---
-    if (normalizedStatus.includes('cerrado')) {
-        return {
-            icon: 'lock',
-            iconContainerClass: `${baseIconContainer} bg-slate-100 text-slate-500`,
-            labelClass: `${baseLabel} bg-slate-100 text-slate-800`,
-        };
-    }
-    if (normalizedStatus.includes('oculto')) {
-        return {
-            icon: 'visibility_off',
-            iconContainerClass: `${baseIconContainer} bg-neutral-100 text-neutral-500`,
-            labelClass: `${baseLabel} bg-neutral-100 text-neutral-800`,
-        };
-    }
-
 
     // --- DEFAULT FALLBACK ---
     return {
         icon: 'help_outline',
-        iconContainerClass: `${baseIconContainer} bg-slate-100 text-slate-500`,
-        labelClass: `${baseLabel} bg-slate-100 text-slate-800`,
+        iconContainerClass: `${baseIconContainer} bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400`,
+        labelClass: `${baseLabel} bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300`,
     };
 }
 

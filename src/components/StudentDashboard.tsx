@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import CriteriosPanel from '../components/CriteriosPanel';
 import PracticasTable from '../components/PracticasTable';
 import SolicitudesList from '../components/SolicitudesList';

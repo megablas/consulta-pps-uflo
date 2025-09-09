@@ -17,7 +17,7 @@ const InformeCard: React.FC<InformeCardProps> = ({ task, onConfirmar }) => {
       return {
         key: 'calificado',
         icon: 'task_alt',
-        iconContainerClass: 'bg-blue-100 text-blue-700',
+        iconContainerClass: 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300',
       };
     }
     // If the report has been submitted (either for real or optimistically), it's in correction.
@@ -26,14 +26,14 @@ const InformeCard: React.FC<InformeCardProps> = ({ task, onConfirmar }) => {
       return {
         key: 'en_correccion',
         icon: 'hourglass_top',
-        iconContainerClass: 'bg-emerald-100 text-emerald-700',
+        iconContainerClass: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300',
       };
     }
     // If none of the above, it's pending submission.
     return {
       key: 'pendiente',
       icon: 'upload',
-      iconContainerClass: 'bg-amber-100 text-amber-700 animate-[subtle-bob_1.5s_ease-in-out_infinite] group-hover:scale-110',
+      iconContainerClass: 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 animate-[subtle-bob_1.5s_ease-in-out_infinite] group-hover:scale-110',
     };
   }, [nota, informeSubido]);
 
@@ -74,7 +74,7 @@ const InformeCard: React.FC<InformeCardProps> = ({ task, onConfirmar }) => {
   const DeadlineInfo: React.FC = () => {
     if (!deadline) {
         return (
-            <p className="text-sm font-medium mt-1.5 text-slate-500 italic">
+            <p className="text-sm font-medium mt-1.5 text-slate-500 dark:text-slate-400 italic">
                 Fecha límite no disponible
             </p>
         );
@@ -83,17 +83,17 @@ const InformeCard: React.FC<InformeCardProps> = ({ task, onConfirmar }) => {
       return null;
     }
     
-    let textColor = 'text-slate-600';
+    let textColor = 'text-slate-600 dark:text-slate-300';
     let text = `Vence en ${daysRemaining + 1} día${daysRemaining + 1 !== 1 ? 's' : ''}`;
 
     if (isOverdue) {
-      textColor = 'text-red-600';
+      textColor = 'text-red-600 dark:text-red-400';
       text = `Venció hace ${Math.abs(daysRemaining)} día${Math.abs(daysRemaining) !== 1 ? 's' : ''}`;
     } else if (daysRemaining <= 0) {
-      textColor = 'text-amber-600 font-semibold';
+      textColor = 'text-amber-600 dark:text-amber-400 font-semibold';
       text = `Vence hoy`;
     } else if (daysRemaining < 7) {
-      textColor = 'text-amber-600';
+      textColor = 'text-amber-600 dark:text-amber-400';
     }
 
     return (
@@ -106,7 +106,7 @@ const InformeCard: React.FC<InformeCardProps> = ({ task, onConfirmar }) => {
 
   const ActionComponent = () => {
     const baseButtonClass =
-      'inline-flex items-center justify-center gap-2 font-semibold text-sm py-2.5 px-5 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-opacity-50 transform hover:-translate-y-0.5';
+      'inline-flex items-center justify-center gap-2 font-semibold text-sm py-2.5 px-5 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-800 focus:ring-opacity-50 transform hover:-translate-y-0.5';
     const baseLabelClass =
       'inline-flex items-center justify-center gap-2 font-semibold text-sm py-2.5 px-5 rounded-full border';
 
@@ -114,7 +114,7 @@ const InformeCard: React.FC<InformeCardProps> = ({ task, onConfirmar }) => {
       case 'calificado':
         return (
           <div
-            className={`${baseLabelClass} bg-blue-50 text-blue-800 border-blue-200`}
+            className={`${baseLabelClass} bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-900/50 dark:text-blue-200 dark:border-blue-700/50`}
             aria-label={`Nota final ${nota}`}
           >
             <span className="material-icons !text-base">grading</span>
@@ -124,7 +124,7 @@ const InformeCard: React.FC<InformeCardProps> = ({ task, onConfirmar }) => {
       case 'en_correccion':
         return (
           <div
-            className={`${baseLabelClass} bg-emerald-50 text-emerald-800 border-emerald-200`}
+            className={`${baseLabelClass} bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-200 dark:border-emerald-700/50`}
             aria-label="Informe entregado, en corrección"
           >
             <span className="material-icons !text-base">schedule</span>
@@ -136,11 +136,11 @@ const InformeCard: React.FC<InformeCardProps> = ({ task, onConfirmar }) => {
             <button
               onClick={handleConfirmClick}
               disabled={isConfirming}
-              className={`${baseButtonClass} bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed`}
+              className={`${baseButtonClass} bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed`}
               aria-label="Confirmar entrega del informe"
             >
               {isConfirming ? (
-                <div className="border-2 border-slate-400/50 border-t-slate-500 rounded-full w-4 h-4 animate-spin"></div>
+                <div className="border-2 border-slate-400/50 dark:border-slate-500/50 border-t-slate-500 dark:border-t-slate-400 rounded-full w-4 h-4 animate-spin"></div>
               ) : (
                 <span className="material-icons !text-base">task_alt</span>
               )}
@@ -157,7 +157,7 @@ const InformeCard: React.FC<InformeCardProps> = ({ task, onConfirmar }) => {
       href={task.informeLink}
       target="_blank"
       rel="noopener noreferrer"
-      className="group block bg-white p-5 rounded-2xl shadow-xl border border-slate-100/50 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:bg-gradient-to-br from-white to-slate-50/50 animate-fade-in"
+      className="group block bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-xl dark:shadow-black/20 border border-slate-100/50 dark:border-slate-700/50 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:bg-gradient-to-br from-white to-slate-50/50 dark:hover:bg-gradient-to-br dark:from-slate-800 dark:to-slate-700/50 animate-fade-in"
       aria-labelledby={`task-${task.convocatoriaId}`}
     >
         <article className="flex items-center gap-5">
@@ -171,10 +171,10 @@ const InformeCard: React.FC<InformeCardProps> = ({ task, onConfirmar }) => {
                 <div className="flex-grow min-w-0">
                 <h3
                     id={`task-${task.convocatoriaId}`}
-                    className="text-slate-900 font-semibold text-lg leading-tight tracking-tight flex items-center"
+                    className="text-slate-900 dark:text-slate-50 font-semibold text-lg leading-tight tracking-tight flex items-center"
                 >
                     {task.ppsName}
-                    <span className="material-icons !text-base text-slate-400 ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity">launch</span>
+                    <span className="material-icons !text-base text-slate-400 dark:text-slate-500 ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity">launch</span>
                 </h3>
                 <DeadlineInfo />
                 </div>

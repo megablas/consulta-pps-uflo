@@ -53,7 +53,7 @@ const ProgressCircle: React.FC<ProgressCircleProps> = React.memo(({
         </defs>
 
         <circle
-          className="text-slate-200"
+          className="text-slate-200 dark:text-slate-700"
           stroke="currentColor"
           strokeWidth={strokeWidth - 2}
           fill="transparent"
@@ -79,10 +79,10 @@ const ProgressCircle: React.FC<ProgressCircleProps> = React.memo(({
       </svg>
       
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-20">
-        <span className={`text-6xl font-black tracking-tighter drop-shadow-sm transition-colors duration-500 ${isComplete ? 'text-emerald-600' : 'text-blue-600'}`}>
+        <span className={`text-6xl font-black tracking-tighter drop-shadow-sm transition-colors duration-500 ${isComplete ? 'text-emerald-500' : 'text-blue-600 dark:text-blue-400'}`}>
           {Math.round(percentage)}<span className="text-4xl opacity-50">%</span>
         </span>
-        <span className="text-sm font-semibold text-slate-500 -mt-1 tracking-wide">
+        <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 -mt-1 tracking-wide">
           {Math.round(value)} / {max} hs
         </span>
       </div>

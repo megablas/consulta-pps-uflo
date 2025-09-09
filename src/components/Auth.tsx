@@ -19,8 +19,8 @@ interface AuthInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 const AuthInput: React.FC<AuthInputProps> = ({ id, type, value, onChange, placeholder, icon, disabled = false, ...props }) => (
   <div className="relative group">
-    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 transition-colors duration-300 group-focus-within:text-blue-600">
-      <span className="material-icons text-slate-400 group-focus-within:text-blue-600">{icon}</span>
+    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 transition-colors duration-300 group-focus-within:text-blue-600 dark:group-focus-within:text-blue-400">
+      <span className="material-icons text-slate-400 group-focus-within:text-blue-600 dark:group-focus-within:text-blue-400">{icon}</span>
     </div>
     <input
       id={id}
@@ -29,7 +29,7 @@ const AuthInput: React.FC<AuthInputProps> = ({ id, type, value, onChange, placeh
       value={value}
       onChange={onChange}
       disabled={disabled}
-      className="w-full rounded-lg border border-slate-300 py-3 pl-12 pr-4 text-base text-slate-900 bg-white/50 shadow-sm placeholder-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all disabled:bg-slate-100"
+      className="w-full rounded-lg border border-slate-300 dark:border-slate-600 py-3 pl-12 pr-4 text-base text-slate-900 dark:text-slate-50 bg-white/50 dark:bg-slate-700/50 shadow-sm placeholder-slate-500 dark:placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all disabled:bg-slate-100 dark:disabled:bg-slate-800/50"
       placeholder={placeholder}
       required
       {...props}
@@ -310,7 +310,7 @@ const Auth: React.FC = () => {
   }
 
   return (
-    <div className="w-full bg-white md:grid md:grid-cols-2 min-h-[85vh] rounded-2xl shadow-2xl shadow-slate-200/40 overflow-hidden border border-slate-200/60">
+    <div className="w-full bg-white dark:bg-slate-800 md:grid md:grid-cols-2 min-h-[85vh] rounded-2xl shadow-2xl shadow-slate-200/40 dark:shadow-black/20 overflow-hidden border border-slate-200/60 dark:border-slate-700/80">
       {/* Left Panel */}
       <div className="hidden md:flex flex-col justify-between p-8 lg:p-12 bg-slate-900 text-white relative overflow-hidden">
         <div className="absolute -top-1/4 -right-1/4 w-3/4 h-3/4 bg-blue-600/30 rounded-full filter blur-3xl animate-pulse" style={{animationDuration: '8s'}} />
@@ -337,13 +337,13 @@ const Auth: React.FC = () => {
               <div className="flex md:hidden justify-center items-center gap-4 mb-8"><UfloLogo className="h-12 w-auto" /><MiPanelLogo className="h-12 w-auto" /></div>
               
               <div className="text-left mb-8">
-                <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight animate-fade-in-up" style={{ animationDelay: '400ms' }}>Acceso de Estudiantes</h2>
-                <p className="text-slate-500 mt-1 animate-fade-in-up" style={{ animationDelay: '500ms' }}>Accede a tu cuenta o regístrate para comenzar.</p>
+                <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-50 tracking-tight animate-fade-in-up" style={{ animationDelay: '400ms' }}>Acceso de Estudiantes</h2>
+                <p className="text-slate-500 dark:text-slate-400 mt-1 animate-fade-in-up" style={{ animationDelay: '500ms' }}>Accede a tu cuenta o regístrate para comenzar.</p>
               </div>
               
-              <div className="p-1 bg-slate-100 rounded-lg flex items-center mb-8 ring-1 ring-slate-200/50 animate-fade-in-up" style={{ animationDelay: '600ms' }}>
-                <button onClick={() => handleModeChange('login')} className={`w-full py-2.5 text-sm font-semibold rounded-md transition-all duration-300 ${mode === 'login' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700'}`}>Iniciar Sesión</button>
-                <button onClick={() => handleModeChange('register')} className={`w-full py-2.5 text-sm font-semibold rounded-md transition-all duration-300 ${mode === 'register' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-700'}`}>Crear Usuario</button>
+              <div className="p-1 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center mb-8 ring-1 ring-slate-200/50 dark:ring-slate-600/50 animate-fade-in-up" style={{ animationDelay: '600ms' }}>
+                <button onClick={() => handleModeChange('login')} className={`w-full py-2.5 text-sm font-semibold rounded-md transition-all duration-300 ${mode === 'login' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-600/50 hover:text-slate-700 dark:hover:text-slate-200'}`}>Iniciar Sesión</button>
+                <button onClick={() => handleModeChange('register')} className={`w-full py-2.5 text-sm font-semibold rounded-md transition-all duration-300 ${mode === 'register' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-600/50 hover:text-slate-700 dark:hover:text-slate-200'}`}>Crear Usuario</button>
               </div>
 
               <form onSubmit={handleLoginOrRegister} className="space-y-5">
@@ -354,21 +354,21 @@ const Auth: React.FC = () => {
                     <AuthInput id="legajo" type="text" value={legajo} onChange={(e) => setLegajo(e.target.value)} placeholder="Número de Legajo" icon="badge" disabled={isLoading} autoComplete="username"/>
                     { mode === 'register' && (
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                        {legajoCheckState === 'loading' && <div className="border-2 border-slate-200 border-t-blue-500 rounded-full w-5 h-5 animate-spin"></div>}
+                        {legajoCheckState === 'loading' && <div className="border-2 border-slate-200 dark:border-slate-600 border-t-blue-500 rounded-full w-5 h-5 animate-spin"></div>}
                         {legajoCheckState === 'success' && <span className="material-icons text-green-500">check_circle</span>}
                         {legajoCheckState === 'error' && <span className="material-icons text-rose-500">error</span>}
                       </div>
                     )}
                   </div>
                   { mode === 'register' && legajoMessage && (
-                    <p className={`text-xs mt-2 px-1 ${legajoCheckState === 'error' ? 'text-rose-600' : 'text-slate-500'}`}>{legajoMessage}</p>
+                    <p className={`text-xs mt-2 px-1 ${legajoCheckState === 'error' ? 'text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400'}`}>{legajoMessage}</p>
                   )}
                 </div>
 
                 {/* Campos faltantes */}
                 {mode === 'register' && legajoCheckState === 'success' && foundStudent && (
                   <div className="space-y-4 animate-fade-in-up">
-                    {missingFields.length > 0 && <p className="text-sm font-semibold text-slate-700 border-t pt-4 mt-4">Completa tus datos para continuar:</p>}
+                    {missingFields.length > 0 && <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 border-t border-slate-200 dark:border-slate-700 pt-4 mt-4">Completa tus datos para continuar:</p>}
                     {missingFields.includes(FIELD_DNI_ESTUDIANTES) && <AuthInput name={FIELD_DNI_ESTUDIANTES} type="text" placeholder="DNI (sin puntos)" icon="badge" value={newData[FIELD_DNI_ESTUDIANTES] || ''} onChange={handleNewDataChange} disabled={isLoading} inputMode="numeric" pattern="[0-9]*" />}
                     {missingFields.includes(FIELD_FECHA_NACIMIENTO_ESTUDIANTES) && <AuthInput name={FIELD_FECHA_NACIMIENTO_ESTUDIANTES} type="date" placeholder="Fecha de Nacimiento" icon="cake" value={newData[FIELD_FECHA_NACIMIENTO_ESTUDIANTES] || ''} onChange={handleNewDataChange} disabled={isLoading} />}
                     {missingFields.includes(FIELD_CORREO_ESTUDIANTES) && <AuthInput name={FIELD_CORREO_ESTUDIANTES} type="email" placeholder="Correo" icon="email" value={newData[FIELD_CORREO_ESTUDIANTES] || ''} onChange={handleNewDataChange} disabled={isLoading} />}
@@ -381,7 +381,7 @@ const Auth: React.FC = () => {
                   <div className="relative">
                     <label htmlFor="password" className="sr-only">Contraseña</label>
                     <AuthInput id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Contraseña" icon="lock" disabled={isLoading || (mode === 'register' && legajoCheckState !== 'success')} autoComplete={mode === 'login' ? 'current-password' : 'new-password'}/>
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center px-4 text-slate-500 hover:text-slate-700" aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center px-4 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200" aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
                       <span className="material-icons !text-xl">{showPassword ? 'visibility_off' : 'visibility'}</span>
                     </button>
                   </div>
@@ -390,7 +390,7 @@ const Auth: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleModeChange('forgot')}
-                        className="text-sm font-medium text-blue-600 hover:text-blue-500 focus:outline-none focus:underline"
+                        className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 focus:outline-none focus:underline"
                       >
                         ¿Olvidaste tu contraseña?
                       </button>
@@ -406,11 +406,11 @@ const Auth: React.FC = () => {
                 )}
 
                 <div aria-live="assertive">
-                  {error && <p className="text-red-600 text-sm text-center pt-2">{error}</p>}
+                  {error && <p className="text-red-600 dark:text-red-400 text-sm text-center pt-2">{error}</p>}
                 </div>
 
                 <div className="pt-4 animate-fade-in-up" style={{ animationDelay: '1000ms' }}>
-                  <button type="submit" disabled={isLoading || (mode === 'register' && legajoCheckState !== 'success')} className="w-full bg-blue-600 text-white font-bold text-base py-3 px-6 rounded-lg transition-all duration-200 ease-in-out shadow-md hover:bg-blue-700 hover:-translate-y-0.5 active:scale-95 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-y-0 flex items-center justify-center gap-3">
+                  <button type="submit" disabled={isLoading || (mode === 'register' && legajoCheckState !== 'success')} className="w-full bg-blue-600 text-white font-bold text-base py-3 px-6 rounded-lg transition-all duration-200 ease-in-out shadow-md hover:bg-blue-700 hover:-translate-y-0.5 active:scale-95 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-slate-800 disabled:bg-slate-400 dark:disabled:bg-slate-600 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-y-0 flex items-center justify-center gap-3">
                     {isLoading && <div className="border-2 border-white/50 border-t-white rounded-full w-5 h-5 animate-spin"></div>}
                     <span>{isLoading ? 'Procesando...' : (mode === 'login' ? 'Ingresar' : 'Crear Cuenta')}</span>
                   </button>
@@ -422,8 +422,8 @@ const Auth: React.FC = () => {
           {mode === 'forgot' && (
               <form onSubmit={handleForgotPassword} className="space-y-5 animate-fade-in-up">
                 <div className="text-left mb-8">
-                    <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Restablecer Contraseña</h2>
-                    <p className="text-slate-500 mt-1">Ingresa tu legajo. Te indicaremos los pasos a seguir para restablecer tu contraseña.</p>
+                    <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-50 tracking-tight">Restablecer Contraseña</h2>
+                    <p className="text-slate-500 dark:text-slate-400 mt-1">Ingresa tu legajo. Te indicaremos los pasos a seguir para restablecer tu contraseña.</p>
                 </div>
                 
                 <div>
@@ -432,18 +432,18 @@ const Auth: React.FC = () => {
                 </div>
 
                 <div aria-live="assertive">
-                  {error && <p className="text-red-600 text-sm text-center pt-2">{error}</p>}
+                  {error && <p className="text-red-600 dark:text-red-400 text-sm text-center pt-2">{error}</p>}
                 </div>
 
                 <div className="pt-4 space-y-4">
-                  <button type="submit" disabled={isLoading} className="w-full bg-blue-600 text-white font-bold text-base py-3 px-6 rounded-lg transition-all duration-200 ease-in-out shadow-md hover:bg-blue-700 hover:-translate-y-0.5 active:scale-95 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-y-0 flex items-center justify-center gap-3">
+                  <button type="submit" disabled={isLoading} className="w-full bg-blue-600 text-white font-bold text-base py-3 px-6 rounded-lg transition-all duration-200 ease-in-out shadow-md hover:bg-blue-700 hover:-translate-y-0.5 active:scale-95 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-slate-800 disabled:bg-slate-400 dark:disabled:bg-slate-600 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-y-0 flex items-center justify-center gap-3">
                     {isLoading ? (
                         <><div className="border-2 border-white/50 border-t-white rounded-full w-5 h-5 animate-spin"></div><span>Procesando...</span></>
                     ) : (
                         <span>Solicitar Restablecimiento</span>
                     )}
                   </button>
-                  <button type="button" onClick={() => handleModeChange('login')} className="w-full text-center text-sm font-semibold text-slate-600 hover:text-slate-800 transition-colors">
+                  <button type="button" onClick={() => handleModeChange('login')} className="w-full text-center text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 transition-colors">
                     Volver a Iniciar Sesión
                   </button>
                 </div>

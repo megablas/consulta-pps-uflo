@@ -51,12 +51,12 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myE
     return (
         <div>
             <div className="flex items-start gap-4 mb-6">
-                <div className="flex-shrink-0 bg-blue-100 text-blue-600 rounded-full h-12 w-12 flex items-center justify-center mt-1">
+                <div className="flex-shrink-0 bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-300 rounded-full h-12 w-12 flex items-center justify-center mt-1">
                     <span className="material-icons !text-3xl">campaign</span>
                 </div>
                 <div>
-                    <h2 className="text-slate-900 text-2xl font-bold tracking-tight">Convocatorias Abiertas</h2>
-                    <p className="text-slate-600 mt-1 max-w-2xl">Aquí encontrarás las oportunidades de Prácticas Profesionales Supervisadas (PPS) disponibles para postularte.</p>
+                    <h2 className="text-slate-900 dark:text-slate-50 text-2xl font-bold tracking-tight">Convocatorias Abiertas</h2>
+                    <p className="text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">Aquí encontrarás las oportunidades de Prácticas Profesionales Supervisadas (PPS) disponibles para postularte.</p>
                 </div>
             </div>
             <div className="space-y-5">
