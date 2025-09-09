@@ -45,6 +45,7 @@ const Auth: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -173,7 +174,7 @@ const Auth: React.FC = () => {
     const passwordTrimmed = password.trim();
 
     if (legajoTrimmed === 'admin' && passwordTrimmed === 'superadmin') {
-      login({ legajo: 'admin', nombre: 'Super Usuario', role: 'SuperUser' });
+      login({ legajo: 'admin', nombre: 'Super Usuario', role: 'SuperUser' }, rememberMe);
       return;
     }
 
@@ -204,7 +205,7 @@ const Auth: React.FC = () => {
                   nombre: user[FIELD_NOMBRE_AUTH]!,
                   role: user[FIELD_ROLE_AUTH],
                   orientaciones: user[FIELD_ORIENTACIONES_AUTH]?.split(',').map(o => o.trim())
-                });
+                }, rememberMe);
             } else {
                 throw new Error('Legajo o contraseña incorrectos.');
             }
@@ -259,7 +260,7 @@ const Auth: React.FC = () => {
                 userName = foundStudent.fields[FIELD_NOMBRE_ESTUDIANTES]!;
             }
 
-            login({ legajo: legajoTrimmed, nombre: userName });
+            login({ legajo: legajoTrimmed, nombre: userName }, rememberMe);
             showModal('¡Éxito!', 'Tu cuenta ha sido creada y has iniciado sesión automáticamente.');
 
         } catch(err: any) {
@@ -385,17 +386,6 @@ const Auth: React.FC = () => {
                       <span className="material-icons !text-xl">{showPassword ? 'visibility_off' : 'visibility'}</span>
                     </button>
                   </div>
-                   {mode === 'login' && (
-                     <div className="text-right pt-1">
-                      <button
-                        type="button"
-                        onClick={() => handleModeChange('forgot')}
-                        className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 focus:outline-none focus:underline"
-                      >
-                        ¿Olvidaste tu contraseña?
-                      </button>
-                    </div>
-                   )}
                 </div>
 
                 {mode === 'register' && (
@@ -404,6 +394,40 @@ const Auth: React.FC = () => {
                     <AuthInput id="confirmPassword" type={showPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirmar Contraseña" icon="lock_person" disabled={isLoading || (mode === 'register' && legajoCheckState !== 'success')} autoComplete="new-password"/>
                   </div>
                 )}
+
+                <div className="flex items-center justify-between animate-fade-in-up" style={{ animationDelay: '950ms' }}>
+                    <label htmlFor="remember-me" className="flex items-center gap-2 cursor-pointer select-none group">
+                        <input
+                            id="remember-me"
+                            name="remember-me"
+                            type="checkbox"
+                            checked={rememberMe}
+                            onChange={(e) => setRememberMe(e.target.checked)}
+                            disabled={isLoading || (mode === 'register' && legajoCheckState !== 'success')}
+                            className="sr-only"
+                        />
+                        <div className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border-2 transition-all duration-200 ease-in-out ${rememberMe ? 'border-blue-600 bg-blue-600 dark:border-blue-500 dark:bg-blue-500' : 'border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-700'} group-hover:border-blue-500`}>
+                            <span className={`material-icons !text-sm text-white transition-transform duration-200 ease-in-out ${rememberMe ? 'scale-100' : 'scale-0'}`}>
+                                check
+                            </span>
+                        </div>
+                        <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                            Recordarme
+                        </span>
+                    </label>
+
+                    {mode === 'login' && (
+                        <div className="text-sm">
+                            <button
+                                type="button"
+                                onClick={() => handleModeChange('forgot')}
+                                className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 focus:outline-none focus:underline"
+                            >
+                                ¿Olvidaste tu contraseña?
+                            </button>
+                        </div>
+                    )}
+                </div>
 
                 <div aria-live="assertive">
                   {error && <p className="text-red-600 dark:text-red-400 text-sm text-center pt-2">{error}</p>}
