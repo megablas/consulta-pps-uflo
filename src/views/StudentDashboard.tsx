@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import CriteriosPanel from '../components/CriteriosPanel';
 import PracticasTable from '../components/PracticasTable';
 import SolicitudesList from '../components/SolicitudesList';
+import EmptyState from '../components/EmptyState';
 import Tabs from '../components/Tabs';
 import Card from '../components/Card';
 import WelcomeBanner from '../components/WelcomeBanner';
@@ -23,6 +24,7 @@ import ProfileView from '../components/ProfileView';
 import PrintableReport from '../components/PrintableReport';
 import MobileBottomNav from '../components/MobileBottomNav';
 import { HORAS_OBJETIVO_TOTAL, HORAS_OBJETIVO_ORIENTACION, ROTACION_OBJETIVO_ORIENTACIONES } from '../constants';
+import CalendarView from '../components/CalendarView';
 
 interface StudentDashboardProps {
   user: AuthUser;
@@ -109,6 +111,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   const [internalActiveTab, setInternalActiveTab] = useState<TabId>(showExportButton ? 'practicas' : 'convocatorias');
   const currentActiveTab = activeTab ?? internalActiveTab;
   const setCurrentActiveTab = onTabChange ?? setInternalActiveTab;
+  const isCalendarActive = currentActiveTab === 'calendario';
   
   const isLoading = isStudentLoading || isPracticasLoading || isSolicitudesLoading || isConvocatoriasLoading;
   const error = studentError || practicasError || solicitudesError || convocatoriasError;
@@ -147,10 +150,13 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   const solicitudesContent = useMemo(() => <SolicitudesList solicitudes={solicitudes} />, [solicitudes]);
   const practicasContent = useMemo(() => <PracticasTable practicas={practicas} handleNotaChange={handleNotaChange} />, [practicas, handleNotaChange]);
   const profileContent = useMemo(() => <ProfileView studentDetails={studentDetails} isLoading={isStudentLoading} />, [studentDetails, isStudentLoading]);
+  const calendarioContent = useMemo(() => <CalendarView myEnrollments={myEnrollments} allLanzamientos={allLanzamientos} />, [myEnrollments, allLanzamientos]);
+
 
   const studentDataTabs = useMemo(() => {
     let tabs = [
       { id: 'convocatorias' as TabId, label: `Convocatorias`, icon: 'campaign', title: 'Convocatorias Abiertas', content: convocatoriasContent },
+      { id: 'calendario' as TabId, label: 'Calendario', icon: 'calendar_month', title: 'Mi Calendario de PPS', content: calendarioContent },
       { id: 'informes' as TabId, label: `Informes`, icon: 'assignment_turned_in', title: 'Entrega de Informes', content: informesContent },
       { id: 'solicitudes' as TabId, label: `Mis Solicitudes`, icon: 'list_alt', title: 'Seguimiento de Solicitudes', content: solicitudesContent },
       { id: 'practicas' as TabId, label: `Mis Prácticas`, icon: 'work_history', title: 'Historial de Prácticas', content: practicasContent }
@@ -169,7 +175,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
     });
     return tabs;
 
-  }, [showExportButton, convocatoriasContent, informesContent, solicitudesContent, practicasContent, profileContent]);
+  }, [showExportButton, convocatoriasContent, calendarioContent, informesContent, solicitudesContent, practicasContent, profileContent]);
   
   const mobileNavTabs = useMemo(() => studentDataTabs.filter(tab => tab.id !== 'profile'), [studentDataTabs]);
   const activeTabObject = useMemo(() => studentDataTabs.find(tab => tab.id === currentActiveTab), [studentDataTabs, currentActiveTab]);
@@ -198,8 +204,12 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
           
           {/* --- DESKTOP VIEW --- */}
           <div className="hidden md:block space-y-6">
-            <WelcomeBanner studentName={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />
-            <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
+            {!isCalendarActive && (
+                <>
+                    <WelcomeBanner studentName={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />
+                    <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
+                </>
+            )}
             <Card>
               <Tabs
                   tabs={studentDataTabs}
@@ -211,19 +221,23 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
     
           {/* --- MOBILE VIEW --- */}
           <div className="md:hidden space-y-8">
-             <CondensedWelcomeCard
-                criterios={criterios} 
-                greeting={greeting}
-                studentName={studentNameForPanel}
-                selectedOrientacion={selectedOrientacion}
-             />
+             {!isCalendarActive && (
+                <CondensedWelcomeCard
+                    criterios={criterios} 
+                    greeting={greeting}
+                    studentName={studentNameForPanel}
+                    selectedOrientacion={selectedOrientacion}
+                />
+             )}
              
             {activeTabObject && (
               <section aria-labelledby={`mobile-section-title-${activeTabObject.id}`}>
-                <h2 id={`mobile-section-title-${activeTabObject.id}`} className="text-2xl font-bold text-slate-900 dark:text-slate-50 tracking-tight mb-4 flex items-center gap-3">
-                  {activeTabObject.icon && <span className="material-icons !text-2xl text-slate-400 dark:text-slate-500">{activeTabObject.icon}</span>}
-                  <span>{activeTabObject.title}</span>
-                </h2>
+                {!isCalendarActive && (
+                    <h2 id={`mobile-section-title-${activeTabObject.id}`} className="text-2xl font-bold text-slate-900 dark:text-slate-50 tracking-tight mb-4 flex items-center gap-3">
+                        {activeTabObject.icon && <span className="material-icons !text-2xl text-slate-400 dark:text-slate-500">{activeTabObject.icon}</span>}
+                        <span>{activeTabObject.title}</span>
+                    </h2>
+                )}
                 <div>
                     {activeTabObject.content}
                 </div>
