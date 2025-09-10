@@ -5,10 +5,6 @@ const CACHE_NAME = 'mi-panel-academico-cache-v4';
 const FILES_TO_CACHE = [
   './',
   './manifest.json',
-  // Icons should exist in public/icons/, but we remove them from pre-caching
-  // to prevent installation failure if they are missing. The browser will fetch them via the manifest.
-  './icons/icon-192x192.png',
-  './icons/icon-512x512.png'
 ];
 
 // The install event is fired when the service worker is first installed.
