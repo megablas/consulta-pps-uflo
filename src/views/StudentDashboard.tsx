@@ -21,7 +21,7 @@ import { processInformeTasks } from '../services/dataService';
 import ProfileView from '../components/ProfileView';
 import PrintableReport from '../components/PrintableReport';
 import MobileBottomNav from '../components/MobileBottomNav';
-import { HORAS_OBJETIVO_TOTAL } from '../constants';
+import { HORAS_OBJETIVO_TOTAL, HORAS_OBJETIVO_ORIENTACION, ROTACION_OBJETIVO_ORIENTACIONES } from '../constants';
 
 interface StudentDashboardProps {
   user: AuthUser;
@@ -30,43 +30,72 @@ interface StudentDashboardProps {
   showExportButton?: boolean;
 }
 
-const CollapsedCriteriosPanel: React.FC<{
+const CondensedWelcomeCard: React.FC<{
   criterios: ReturnType<typeof calculateCriterios>;
-  onToggle: () => void;
-  isOpen: boolean;
-}> = ({ criterios, onToggle, isOpen }) => {
-    const percentage = HORAS_OBJETIVO_TOTAL > 0 ? Math.max(0, Math.min(Math.round((criterios.horasTotales / HORAS_OBJETIVO_TOTAL) * 100), 100)) : 0;
+  greeting: string;
+  studentName: string;
+  selectedOrientacion: Orientacion | "";
+}> = ({ criterios, greeting, studentName, selectedOrientacion }) => {
+    const totalHoursPercentage = HORAS_OBJETIVO_TOTAL > 0 ? Math.min((criterios.horasTotales / HORAS_OBJETIVO_TOTAL) * 100, 100) : 0;
     
     return (
-        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-md p-4 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-lg">
-            <div className="flex items-center justify-between gap-4">
-                {/* Left & Middle Part */}
-                <div className="flex items-center gap-4 min-w-0">
-                    {/* Big Percentage & Hours */}
-                    <div className="flex-shrink-0 text-center leading-none">
-                        <div className="flex items-baseline">
-                            <span className="text-5xl font-black text-blue-600 dark:text-blue-400 tracking-tighter">{percentage}</span>
-                            <span className="text-2xl font-bold text-blue-600/70 dark:text-blue-400/70">%</span>
-                        </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 whitespace-nowrap">{Math.round(criterios.horasTotales)} / {HORAS_OBJETIVO_TOTAL} hs</div>
+        <div className="bg-white dark:bg-slate-800/70 backdrop-blur-md p-5 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-lg space-y-5">
+            {/* Greeting */}
+            <div>
+                 <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">
+                  {greeting}, <span className="text-blue-600 dark:text-blue-400">{studentName?.split(' ')[0] || 'Estudiante'}</span>.
+                </h1>
+            </div>
+
+            {/* Main Progress Bar */}
+            <div className="w-full">
+              <div className="flex justify-between items-baseline mb-1">
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Horas Totales</span>
+                <div className="text-sm font-semibold">
+                  <span className={criterios.cumpleHorasTotales ? 'text-blue-600 dark:text-blue-400' : 'text-slate-800 dark:text-slate-100'}>{Math.round(criterios.horasTotales)}</span>
+                  <span className="text-slate-500 dark:text-slate-400"> / {HORAS_OBJETIVO_TOTAL} hs</span>
+                </div>
+              </div>
+              <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 shadow-inner">
+                <div
+                  className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-1000 ease-out"
+                  style={{ width: `${totalHoursPercentage}%` }}
+                ></div>
+              </div>
+            </div>
+
+            {/* Secondary Criteria */}
+            <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-200/80 dark:border-slate-700/80">
+                {/* Rotations */}
+                <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-lg h-10 w-10 flex items-center justify-center">
+                        <span className="material-icons !text-xl">360</span>
                     </div>
-                    {/* Title */}
-                    <div className="min-w-0">
-                        <h3 className="font-bold text-slate-800 dark:text-slate-100 truncate">Tu Progreso</h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Resumen de criterios PPS</p>
+                    <div>
+                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Rotaciones</p>
+                        <p className="text-base font-bold text-slate-800 dark:text-slate-100">
+                           {criterios.orientacionesCursadasCount} <span className="font-medium text-slate-600 dark:text-slate-300">/ {ROTACION_OBJETIVO_ORIENTACIONES}</span>
+                        </p>
                     </div>
                 </div>
-                
-                {/* Right Part (Button) */}
-                <button 
-                    onClick={onToggle} 
-                    className="flex-shrink-0 flex items-center gap-1 text-sm font-semibold text-blue-600 dark:text-blue-400 p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/50 transition-colors whitespace-nowrap"
-                    aria-expanded={isOpen}
-                    aria-controls="criterios-panel-full"
-                >
-                    <span>Ver Detalles</span>
-                    <span className={`material-icons !text-lg transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>expand_more</span>
-                </button>
+                {/* Specialization */}
+                <div className="flex items-center gap-3">
+                     <div className="flex-shrink-0 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-lg h-10 w-10 flex items-center justify-center">
+                        <span className="material-icons !text-xl">school</span>
+                    </div>
+                    <div>
+                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">
+                          {selectedOrientacion ? `Hs. ${selectedOrientacion}` : 'Hs. Orientación'}
+                        </p>
+                        {selectedOrientacion ? (
+                          <p className="text-base font-bold text-slate-800 dark:text-slate-100">
+                             {Math.round(criterios.horasOrientacionElegida)} <span className="font-medium text-slate-600 dark:text-slate-300">/ {HORAS_OBJETIVO_ORIENTACION}</span>
+                          </p>
+                        ) : (
+                          <p className="text-xs font-medium text-blue-600 dark:text-blue-400">Define tu esp.</p>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -76,7 +105,18 @@ const CollapsedCriteriosPanel: React.FC<{
 const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, onTabChange, showExportButton = false }) => {
   const { isSuperUserMode } = useAuth();
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
-  const [isCriteriosPanelOpen, setIsCriteriosPanelOpen] = useState(false);
+  const [greeting, setGreeting] = useState('');
+
+  useEffect(() => {
+    const hour = new Date().getHours();
+    if (hour < 12 && hour >= 5) {
+      setGreeting('Buenos días');
+    } else if (hour < 20 && hour >= 12) {
+      setGreeting('Buenas tardes');
+    } else {
+      setGreeting('Buenas noches');
+    }
+  }, []);
 
   // --- CUSTOM HOOKS FOR DATA FETCHING AND MUTATIONS ---
   const { studentDetails, studentAirtableId, isStudentLoading, studentError, updateOrientation, refetchStudent } = useStudentData(user.legajo);
@@ -188,14 +228,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
             <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
           </div>
           
-          {/* Mobile Collapsible Criterios Panel */}
+          {/* Mobile Condensed Welcome Card */}
           <div className="md:hidden">
-             <CollapsedCriteriosPanel criterios={criterios} onToggle={() => setIsCriteriosPanelOpen(!isCriteriosPanelOpen)} isOpen={isCriteriosPanelOpen} />
-             {isCriteriosPanelOpen && (
-                <div className="mt-4" id="criterios-panel-full">
-                    <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
-                </div>
-             )}
+             <CondensedWelcomeCard
+                criterios={criterios} 
+                greeting={greeting}
+                studentName={studentNameForPanel}
+                selectedOrientacion={selectedOrientacion}
+             />
           </div>
           
             

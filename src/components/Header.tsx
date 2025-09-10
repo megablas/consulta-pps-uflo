@@ -4,10 +4,12 @@ import UfloLogo from './UfloLogo';
 import { useAuth } from '../contexts/AuthContext';
 import ThemeToggle from './ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
+import { usePwaInstall } from '../contexts/PwaInstallContext';
 
 const AppHeader: React.FC = () => {
   const { authenticatedUser, logout, isSuperUserMode } = useAuth();
   const { resolvedTheme } = useTheme();
+  const { canInstall, triggerInstall } = usePwaInstall();
   const isLoggedIn = !!authenticatedUser;
   const [hasScrolled, setHasScrolled] = useState(false);
 
@@ -48,6 +50,19 @@ const AppHeader: React.FC = () => {
 
               <ThemeToggle />
               
+              {canInstall && (
+                 <button
+                    onClick={triggerInstall}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold p-2.5 rounded-full transition-all duration-200 shadow-md border border-blue-700 flex items-center justify-center group"
+                    aria-label="Instalar aplicación"
+                    title="Instalar aplicación"
+                  >
+                    <span className="material-icons !text-xl sm:!text-2xl transition-transform duration-300 ease-out group-hover:scale-110">
+                      install_mobile
+                    </span>
+                  </button>
+              )}
+
               {isLoggedIn && (
                   <button
                     onClick={logout}

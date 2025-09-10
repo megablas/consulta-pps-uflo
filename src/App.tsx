@@ -6,6 +6,7 @@ import { useAuth } from './contexts/AuthContext';
 import { ModalProvider } from './contexts/ModalContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import ErrorBoundary from './components/ErrorBoundary';
+import { PwaInstallProvider } from './contexts/PwaInstallContext';
 
 // Carga diferida (lazy loading) de las vistas principales para optimizar el rendimiento.
 // Cada vista se cargará en un "chunk" de JavaScript separado solo cuando sea necesario.
@@ -29,25 +30,27 @@ const App: React.FC = () => {
   return (
     <ThemeProvider>
       <ModalProvider>
-        <Layout>
-          <ErrorBoundary>
-            <Suspense fallback={
-              <div className="flex justify-center items-center min-h-[60vh]">
-                <Loader />
-              </div>
-            }>
-              {!authenticatedUser ? (
-                <Auth />
-              ) : isSuperUserMode ? (
-                <AdminView />
-              ) : isJefeMode ? (
-                <JefeView />
-              ) : (
-                <StudentView />
-              )}
-            </Suspense>
-          </ErrorBoundary>
-        </Layout>
+        <PwaInstallProvider>
+          <Layout>
+            <ErrorBoundary>
+              <Suspense fallback={
+                <div className="flex justify-center items-center min-h-[60vh]">
+                  <Loader />
+                </div>
+              }>
+                {!authenticatedUser ? (
+                  <Auth />
+                ) : isSuperUserMode ? (
+                  <AdminView />
+                ) : isJefeMode ? (
+                  <JefeView />
+                ) : (
+                  <StudentView />
+                )}
+              </Suspense>
+            </ErrorBoundary>
+          </Layout>
+        </PwaInstallProvider>
       </ModalProvider>
     </ThemeProvider>
   );
