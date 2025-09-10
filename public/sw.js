@@ -1,10 +1,11 @@
 // Define the cache name and files to cache.
 // Using a versioned cache name is a best practice to manage updates.
-const CACHE_NAME = 'mi-panel-academico-cache-v2';
+const CACHE_NAME = 'mi-panel-academico-cache-v3';
 // Note: The base path '/consulta-pps-uflo/' from vite.config.ts must be prepended.
 const FILES_TO_CACHE = [
   '/consulta-pps-uflo/',
   '/consulta-pps-uflo/index.html',
+  '/consulta-pps-uflo/manifest.json',
   '/consulta-pps-uflo/index.tsx', // This will be the bundled JS in production
   '/consulta-pps-uflo/src/index.css',
   '/consulta-pps-uflo/icons/icon-192x192.png',
