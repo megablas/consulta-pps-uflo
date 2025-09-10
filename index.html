@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consulta de PPS y Prácticas</title>
     <!-- PWA Manifest Link -->
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="/consulta-pps-uflo/manifest.json">
     <!-- Theme Color for browsers -->
     <meta name="theme-color" content="#2563eb">
     <script>
@@ -57,8 +57,11 @@
     <script>
       // Service Worker Registration
       if ('serviceWorker' in navigator) {
+        // Use an absolute path for the service worker, derived from the app's base path,
+        // to ensure it's always found correctly.
+        const base = '/consulta-pps-uflo/';
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('sw.js')
+          navigator.serviceWorker.register(base + 'sw.js', { scope: base })
             .then(registration => {
               console.log('Service Worker registered with scope:', registration.scope);
             })
