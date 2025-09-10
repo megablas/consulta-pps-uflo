@@ -3,6 +3,7 @@ import CriteriosPanel from '../components/CriteriosPanel';
 import PracticasTable from '../components/PracticasTable';
 import SolicitudesList from '../components/SolicitudesList';
 import Tabs from '../components/Tabs';
+import Card from '../components/Card';
 import WelcomeBanner from '../components/WelcomeBanner';
 import ConvocatoriasList from '../components/ConvocatoriasList';
 import InformesList from '../components/InformesList';
@@ -21,7 +22,6 @@ import { processInformeTasks } from '../services/dataService';
 import ProfileView from '../components/ProfileView';
 import PrintableReport from '../components/PrintableReport';
 import MobileBottomNav from '../components/MobileBottomNav';
-import { HORAS_OBJETIVO_TOTAL, HORAS_OBJETIVO_ORIENTACION, ROTACION_OBJETIVO_ORIENTACIONES } from '../constants';
 
 interface StudentDashboardProps {
   user: AuthUser;
@@ -36,68 +36,70 @@ const CondensedWelcomeCard: React.FC<{
   studentName: string;
   selectedOrientacion: Orientacion | "";
 }> = ({ criterios, greeting, studentName, selectedOrientacion }) => {
-    const totalHoursPercentage = HORAS_OBJETIVO_TOTAL > 0 ? Math.min((criterios.horasTotales / HORAS_OBJETIVO_TOTAL) * 100, 100) : 0;
+    const [isDetailsOpen, setIsDetailsOpen] = useState(false);
     
     return (
-        <div className="bg-white dark:bg-slate-800/70 backdrop-blur-md p-5 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-lg space-y-5">
-            {/* Greeting */}
-            <div>
-                 <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">
-                  {greeting}, <span className="text-blue-600 dark:text-blue-400">{studentName?.split(' ')[0] || 'Estudiante'}</span>.
-                </h1>
+        <Card titleAs="h1" title={
+            <div className="flex items-center gap-2 text-2xl">
+                <span>{greeting},</span>
+                <span className="text-blue-600 dark:text-blue-400">{studentName?.split(' ')[0] || 'Estudiante'}.</span>
             </div>
-
-            {/* Main Progress Bar */}
-            <div className="w-full">
-              <div className="flex justify-between items-baseline mb-1">
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Horas Totales</span>
-                <div className="text-sm font-semibold">
-                  <span className={criterios.cumpleHorasTotales ? 'text-blue-600 dark:text-blue-400' : 'text-slate-800 dark:text-slate-100'}>{Math.round(criterios.horasTotales)}</span>
-                  <span className="text-slate-500 dark:text-slate-400"> / {HORAS_OBJETIVO_TOTAL} hs</span>
+        }>
+            <div className="flex flex-col sm:flex-row items-center text-center sm:text-left sm:justify-between gap-4">
+                <div>
+                    <h2 className="text-6xl font-black text-slate-800 dark:text-slate-100 tracking-tighter">
+                        {Math.round(criterios.horasTotales)}
+                    </h2>
+                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 -mt-1">Horas Totales Realizadas</p>
                 </div>
-              </div>
-              <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 shadow-inner">
-                <div
-                  className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-1000 ease-out"
-                  style={{ width: `${totalHoursPercentage}%` }}
-                ></div>
-              </div>
-            </div>
-
-            {/* Secondary Criteria */}
-            <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-200/80 dark:border-slate-700/80">
-                {/* Rotations */}
-                <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-lg h-10 w-10 flex items-center justify-center">
-                        <span className="material-icons !text-xl">360</span>
-                    </div>
-                    <div>
-                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Rotaciones</p>
-                        <p className="text-base font-bold text-slate-800 dark:text-slate-100">
-                           {criterios.orientacionesCursadasCount} <span className="font-medium text-slate-600 dark:text-slate-300">/ {ROTACION_OBJETIVO_ORIENTACIONES}</span>
-                        </p>
-                    </div>
-                </div>
-                {/* Specialization */}
-                <div className="flex items-center gap-3">
-                     <div className="flex-shrink-0 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-lg h-10 w-10 flex items-center justify-center">
-                        <span className="material-icons !text-xl">school</span>
-                    </div>
-                    <div>
-                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">
-                          {selectedOrientacion ? `Hs. ${selectedOrientacion}` : 'Hs. Orientación'}
-                        </p>
-                        {selectedOrientacion ? (
-                          <p className="text-base font-bold text-slate-800 dark:text-slate-100">
-                             {Math.round(criterios.horasOrientacionElegida)} <span className="font-medium text-slate-600 dark:text-slate-300">/ {HORAS_OBJETIVO_ORIENTACION}</span>
-                          </p>
-                        ) : (
-                          <p className="text-xs font-medium text-blue-600 dark:text-blue-400">Define tu esp.</p>
-                        )}
-                    </div>
+                <div className="flex-shrink-0">
+                    <button 
+                        onClick={() => setIsDetailsOpen(!isDetailsOpen)}
+                        className="mt-2 sm:mt-0 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-500"
+                        aria-expanded={isDetailsOpen}
+                    >
+                        <span>{isDetailsOpen ? 'Ocultar detalles' : 'Ver detalles'}</span>
+                        <span className={`material-icons !text-base transition-transform duration-300 ${isDetailsOpen ? 'rotate-180' : ''}`}>expand_more</span>
+                    </button>
                 </div>
             </div>
-        </div>
+            <div className={`transition-all duration-500 ease-in-out grid ${isDetailsOpen ? 'grid-rows-[1fr] opacity-100 pt-6 mt-6 border-t border-slate-200/80 dark:border-slate-700/80' : 'grid-rows-[0fr] opacity-0'}`}>
+                <div className="overflow-hidden">
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* Rotations */}
+                        <div className="flex items-center gap-3 p-3 bg-slate-50/70 dark:bg-slate-800/60 rounded-xl">
+                            <div className="flex-shrink-0 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-lg h-10 w-10 flex items-center justify-center">
+                                <span className="material-icons !text-xl">360</span>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Rotaciones</p>
+                                <p className="text-2xl font-black text-slate-800 dark:text-slate-100">
+                                   {criterios.orientacionesCursadasCount}
+                                </p>
+                            </div>
+                        </div>
+                        {/* Specialization */}
+                        <div className="flex items-center gap-3 p-3 bg-slate-50/70 dark:bg-slate-800/60 rounded-xl">
+                             <div className="flex-shrink-0 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-lg h-10 w-10 flex items-center justify-center">
+                                <span className="material-icons !text-xl">school</span>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">
+                                  {selectedOrientacion ? `Hs. ${selectedOrientacion}` : 'Hs. Orientación'}
+                                </p>
+                                {selectedOrientacion ? (
+                                  <p className="text-2xl font-black text-slate-800 dark:text-slate-100">
+                                     {Math.round(criterios.horasOrientacionElegida)}
+                                  </p>
+                                ) : (
+                                  <p className="text-xs font-medium text-blue-600 dark:text-blue-400">Define tu esp.</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Card>
     );
 };
 
@@ -248,21 +250,17 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
               />
           </div>
     
-          {/* Mobile View - Title header and then content */}
-          <div className="md:hidden mt-8">
+          {/* Mobile View - Content wrapped in a Card for better design */}
+          <div className="md:hidden">
               {activeTabObject && (
-                  <>
-                      <div className="flex items-start gap-4 mb-6">
-                          <div className="flex-shrink-0 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300 rounded-full h-12 w-12 flex items-center justify-center mt-1">
-                              <span className="material-icons !text-3xl">{activeTabObject.icon}</span>
-                          </div>
-                          <div>
-                              <h2 className="text-slate-900 dark:text-slate-50 text-2xl font-bold tracking-tight">{activeTabObject.title}</h2>
-                              <p className="text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">{activeTabObject.description}</p>
-                          </div>
-                      </div>
+                   <Card
+                      icon={activeTabObject.icon}
+                      title={activeTabObject.title}
+                      description={activeTabObject.description}
+                      titleAs="h2"
+                  >
                       {activeTabObject.content}
-                  </>
+                  </Card>
               )}
           </div>
         </div>
