@@ -10,6 +10,8 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
   },
+  // Ruta base para producción en GitHub Pages
+  base: '/consulta-pps-uflo/',
   server: {
     proxy: {
       '/airtable-api': {
