@@ -32,7 +32,7 @@ body {
   color: rgb(var(--color-slate-800));
 }
 html.dark body {
-  background-color: rgb(var(--color-slate-900));
+  background-color: #000;
   color: rgb(var(--color-slate-200));
 }
 

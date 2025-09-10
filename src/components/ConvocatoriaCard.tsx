@@ -244,14 +244,8 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         {/* Información Principal */}
         <div className="flex-grow min-w-0">
-          <div className="flex justify-between items-start mb-3">
+          <div className="flex self-start items-center gap-2 mb-3">
             <StatusBadge />
-            {estadoConvocatoria && (
-              <span className={`${convocatoriaStatusVisuals.labelClass} gap-1.5 sm:hidden transition-all duration-200 hover:scale-105`}>
-                <span className="material-icons !text-sm">{convocatoriaStatusVisuals.icon}</span>
-                <span>{estadoConvocatoria}</span>
-              </span>
-            )}
           </div>
           
           <h3 className="text-xl font-bold text-slate-900 dark:text-slate-50 leading-tight mb-1 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors duration-200">

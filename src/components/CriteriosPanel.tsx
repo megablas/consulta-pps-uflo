@@ -38,14 +38,14 @@ const CriteriosPanel: React.FC<CriteriosPanelProps> = ({ criterios, selectedOrie
 
   return (
     <section className="animate-fade-in-up">
-      <div className={`relative bg-gradient-to-br from-white to-slate-50/70 dark:from-slate-800/70 dark:to-slate-900/70 backdrop-blur-xl p-6 sm:p-8 rounded-3xl border shadow-2xl transition-all duration-700 grid grid-cols-1 lg:grid-cols-5 gap-8 overflow-hidden ${
+      <div className={`relative bg-gradient-to-br from-white to-slate-50/70 dark:from-slate-800/60 dark:to-slate-900/50 backdrop-blur-xl p-6 sm:p-8 rounded-3xl border shadow-2xl transition-all duration-700 grid grid-cols-1 lg:grid-cols-5 gap-8 overflow-hidden ${
         todosLosCriteriosCumplidos 
           ? 'border-emerald-300/50 dark:border-emerald-500/40 animate-pulse-glow-emerald' 
           : 'border-slate-200 dark:border-slate-700 shadow-slate-500/10 dark:shadow-black/20'
       }`}>
         
-        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-blue-100/50 to-transparent dark:from-blue-900/30 rounded-full blur-3xl -z-10" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-purple-100/50 to-transparent dark:from-purple-900/30 rounded-full blur-3xl -z-10" />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-blue-100/50 to-transparent dark:from-blue-800/30 rounded-full blur-3xl -z-10" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-purple-100/50 to-transparent dark:from-purple-800/30 rounded-full blur-3xl -z-10" />
         
         {todosLosCriteriosCumplidos && (
             <div className="absolute inset-0 pointer-events-none">
