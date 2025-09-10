@@ -155,11 +155,11 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
 
   const studentDataTabs = useMemo(() => {
     let tabs = [
-      { id: 'convocatorias' as TabId, label: `Convocatorias`, icon: 'campaign', title: 'Convocatorias Abiertas', content: convocatoriasContent },
+      { id: 'convocatorias' as TabId, label: 'Convocatorias', icon: 'campaign', title: 'Convocatorias Abiertas', content: convocatoriasContent },
       { id: 'calendario' as TabId, label: 'Calendario', icon: 'calendar_month', title: 'Mi Calendario de PPS', content: calendarioContent },
-      { id: 'informes' as TabId, label: `Informes`, icon: 'assignment_turned_in', title: 'Entrega de Informes', content: informesContent },
-      { id: 'solicitudes' as TabId, label: `Mis Solicitudes`, icon: 'list_alt', title: 'Seguimiento de Solicitudes', content: solicitudesContent },
-      { id: 'practicas' as TabId, label: `Mis Prácticas`, icon: 'work_history', title: 'Historial de Prácticas', content: practicasContent }
+      { id: 'informes' as TabId, label: 'Informes', icon: 'assignment_turned_in', title: 'Entrega de Informes', content: informesContent },
+      { id: 'solicitudes' as TabId, label: 'Solicitudes', icon: 'list_alt', title: 'Seguimiento de Solicitudes', content: solicitudesContent },
+      { id: 'practicas' as TabId, label: 'Prácticas', icon: 'work_history', title: 'Historial de Prácticas', content: practicasContent }
     ];
 
     if (showExportButton) {
