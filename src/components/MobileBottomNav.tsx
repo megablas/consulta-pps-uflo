@@ -28,9 +28,6 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ tabs, activeTabId, on
               }`}
               aria-current={isActive ? 'page' : undefined}
             >
-              {/* Active indicator bar - appears above icon */}
-              <span className={`absolute top-0 h-1 w-8 rounded-full bg-blue-600 dark:bg-blue-400 transform transition-transform duration-300 ease-out ${isActive ? 'scale-x-100' : 'scale-x-0'}`} />
-
               {/* Icon with float animation */}
               <div className={`transform transition-all duration-300 ease-out ${isActive ? '-translate-y-1 scale-110' : ''}`}>
                 <span className="material-icons !text-2xl">{tab.icon}</span>
