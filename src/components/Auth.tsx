@@ -12,6 +12,7 @@ import MiPanelLogo from './MiPanelLogo';
 import UfloLogo from './UfloLogo';
 import { useAuth } from '../contexts/AuthContext';
 import { useModal } from '../contexts/ModalContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface AuthInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   icon: string;
@@ -40,6 +41,7 @@ const AuthInput: React.FC<AuthInputProps> = ({ id, type, value, onChange, placeh
 const Auth: React.FC = () => {
   const { login } = useAuth();
   const { showModal } = useModal();
+  const { resolvedTheme } = useTheme();
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
   const [legajo, setLegajo] = useState('');
   const [password, setPassword] = useState('');
@@ -335,7 +337,7 @@ const Auth: React.FC = () => {
         <main className="w-full max-w-md">
           {mode !== 'forgot' && (
             <>
-              <div className="flex md:hidden justify-center items-center gap-4 mb-8"><UfloLogo className="h-12 w-auto" /><MiPanelLogo className="h-12 w-auto" /></div>
+              <div className="flex md:hidden justify-center items-center gap-4 mb-8"><UfloLogo className="h-12 w-auto" variant={resolvedTheme} /><MiPanelLogo className="h-12 w-auto" variant={resolvedTheme} /></div>
               
               <div className="text-left mb-8">
                 <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-50 tracking-tight animate-fade-in-up" style={{ animationDelay: '400ms' }}>Acceso de Estudiantes</h2>

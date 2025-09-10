@@ -1,13 +1,14 @@
 // Define the cache name and files to cache.
 // Using a versioned cache name is a best practice to manage updates.
-const CACHE_NAME = 'mi-panel-academico-cache-v3';
+const CACHE_NAME = 'mi-panel-academico-cache-v4';
 // Note: The base path '/consulta-pps-uflo/' from vite.config.ts must be prepended.
+// This list is now more robust, only caching essential shell files.
+// The browser will cache versioned assets (JS, CSS) automatically upon first load.
 const FILES_TO_CACHE = [
   '/consulta-pps-uflo/',
-  '/consulta-pps-uflo/index.html',
   '/consulta-pps-uflo/manifest.json',
-  '/consulta-pps-uflo/index.tsx', // This will be the bundled JS in production
-  '/consulta-pps-uflo/src/index.css',
+  // Icons should exist in public/icons/, but we remove them from pre-caching
+  // to prevent installation failure if they are missing. The browser will fetch them via the manifest.
   '/consulta-pps-uflo/icons/icon-192x192.png',
   '/consulta-pps-uflo/icons/icon-512x512.png'
 ];
@@ -18,8 +19,11 @@ self.addEventListener('install', (event) => {
   // We wait until the cache is populated before completing the installation.
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[ServiceWorker] Pre-caching offline page');
-      return cache.addAll(FILES_TO_CACHE);
+      console.log('[ServiceWorker] Pre-caching app shell');
+      // Use addAll with a catch to prevent installation failure if an asset (like an icon) is missing.
+      return cache.addAll(FILES_TO_CACHE).catch(error => {
+        console.warn('[ServiceWorker] Failed to cache all initial assets. The app will still work offline, but some resources might be missing until fetched.', error);
+      });
     })
   );
   // Force the waiting service worker to become the active service worker.
@@ -45,40 +49,37 @@ self.addEventListener('activate', (event) => {
 });
 
 // The fetch event is fired for every network request.
-// We implement a "cache-first" strategy.
 self.addEventListener('fetch', (event) => {
   // We only want to handle GET requests.
-  if (event.request.method !== 'GET') {
+  if (event.request.method !== 'GET' || event.request.url.startsWith('chrome-extension://')) {
     return;
   }
   
-  // For navigation requests, we use a network-first strategy to get the latest HTML.
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match('/consulta-pps-uflo/index.html');
-      })
-    );
-    return;
-  }
-
-  // For all other requests (CSS, JS, images), we use a cache-first strategy.
+  // Strategy: Network falling back to cache
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      // If we have a match in the cache, return it.
-      if (response) {
-        return response;
-      }
-      // Otherwise, fetch from the network.
-      return fetch(event.request).then((networkResponse) => {
-        // OPTIONAL: You could add the new response to the cache here if desired.
-        // For dynamic data, it's often better not to cache it automatically.
+    fetch(event.request)
+      .then((networkResponse) => {
+        // If the fetch is successful, clone it and cache it for future offline use.
+        if (networkResponse.ok) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+        }
         return networkResponse;
-      });
-    }).catch(error => {
-      // This is a fallback for when both cache and network fail.
-      // You could return a generic offline fallback page or image here.
-      console.error('[ServiceWorker] Fetch failed:', error);
-    })
+      })
+      .catch(() => {
+        // If the network fails, try to serve from the cache.
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          // If the request is for a page and it's not in the cache, return the main index.html as a fallback (for SPA).
+          if (event.request.mode === 'navigate') {
+            return caches.match('/consulta-pps-uflo/');
+          }
+          return new Response(null, { status: 404, statusText: "Not Found" });
+        });
+      })
   );
 });
