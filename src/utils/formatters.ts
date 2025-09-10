@@ -63,6 +63,7 @@ export function getEspecialidadClasses(especialidad?: string): {
     textOnDark: string;
     headerBg: string;
     headerText: string;
+    dot: string;
 } {
     const baseClasses = "inline-flex items-center font-semibold py-1 px-2.5 rounded-full text-xs border";
     const normalizedEspecialidad = normalizeStringForComparison(especialidad);
@@ -74,6 +75,7 @@ export function getEspecialidadClasses(especialidad?: string): {
             textOnDark: 'text-green-100',
             headerBg: 'bg-green-50 dark:bg-green-900/20',
             headerText: 'text-green-900 dark:text-green-200',
+            dot: 'bg-green-500',
         },
         educacional: {
             tag: `${baseClasses} bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-900/50 dark:text-sky-300 dark:border-sky-700/50`,
@@ -81,6 +83,7 @@ export function getEspecialidadClasses(especialidad?: string): {
             textOnDark: 'text-sky-100',
             headerBg: 'bg-sky-50 dark:bg-sky-900/20',
             headerText: 'text-sky-900 dark:text-sky-200',
+            dot: 'bg-sky-500',
         },
         laboral: {
             tag: `${baseClasses} bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-900/50 dark:text-rose-300 dark:border-rose-700/50`,
@@ -88,6 +91,7 @@ export function getEspecialidadClasses(especialidad?: string): {
             textOnDark: 'text-rose-100',
             headerBg: 'bg-rose-50 dark:bg-rose-900/20',
             headerText: 'text-rose-900 dark:text-rose-200',
+            dot: 'bg-rose-500',
         },
         comunitaria: {
             tag: `${baseClasses} bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-900/50 dark:text-violet-300 dark:border-violet-700/50`,
@@ -95,6 +99,7 @@ export function getEspecialidadClasses(especialidad?: string): {
             textOnDark: 'text-violet-100',
             headerBg: 'bg-violet-50 dark:bg-violet-900/20',
             headerText: 'text-violet-900 dark:text-violet-200',
+            dot: 'bg-violet-500',
         },
         default: {
             tag: `${baseClasses} bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600`,
@@ -102,6 +107,7 @@ export function getEspecialidadClasses(especialidad?: string): {
             textOnDark: 'text-slate-100',
             headerBg: 'bg-slate-50 dark:bg-slate-800/50',
             headerText: 'text-slate-900 dark:text-slate-200',
+            dot: 'bg-slate-500',
         },
     };
 
