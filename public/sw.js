@@ -1,16 +1,14 @@
 // Define the cache name and files to cache.
 // Using a versioned cache name is a best practice to manage updates.
 const CACHE_NAME = 'mi-panel-academico-cache-v4';
-// Note: The base path '/consulta-pps-uflo/' from vite.config.ts must be prepended.
-// This list is now more robust, only caching essential shell files.
-// The browser will cache versioned assets (JS, CSS) automatically upon first load.
+// This list now uses relative paths, making it more robust and independent of the base path.
 const FILES_TO_CACHE = [
-  '/consulta-pps-uflo/',
-  '/consulta-pps-uflo/manifest.json',
+  './',
+  './manifest.json',
   // Icons should exist in public/icons/, but we remove them from pre-caching
   // to prevent installation failure if they are missing. The browser will fetch them via the manifest.
-  '/consulta-pps-uflo/icons/icon-192x192.png',
-  '/consulta-pps-uflo/icons/icon-512x512.png'
+  './icons/icon-192x192.png',
+  './icons/icon-512x512.png'
 ];
 
 // The install event is fired when the service worker is first installed.
@@ -76,7 +74,7 @@ self.addEventListener('fetch', (event) => {
           }
           // If the request is for a page and it's not in the cache, return the main index.html as a fallback (for SPA).
           if (event.request.mode === 'navigate') {
-            return caches.match('/consulta-pps-uflo/');
+            return caches.match('./'); // Use the relative path to the root
           }
           return new Response(null, { status: 404, statusText: "Not Found" });
         });
