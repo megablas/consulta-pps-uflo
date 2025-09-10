@@ -103,7 +103,7 @@ const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
   const hasAnyInfo = infoItems.some((item) => !!item.value);
 
   return (
-    <div className="relative p-6 sm:p-8 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-lg overflow-hidden bg-gradient-to-br from-blue-50/80 via-white/70 to-slate-50/80 dark:from-blue-900/20 dark:via-slate-900/40 dark:to-slate-900/60 backdrop-blur-lg">
+    <div className="relative p-6 sm:p-8 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-lg overflow-hidden bg-gradient-to-br from-blue-50/80 via-white/70 to-slate-50/80 dark:from-blue-900/30 dark:via-slate-900/20 dark:to-black/30 backdrop-blur-lg">
       {/* Fondo decorativo */}
       <div className="absolute -top-20 -right-20 w-64 h-64 bg-blue-400/10 dark:bg-blue-600/10 rounded-full blur-3xl"></div>
       <div className="absolute -bottom-24 -left-20 w-72 h-72 bg-indigo-400/10 dark:bg-indigo-600/10 rounded-full blur-3xl"></div>

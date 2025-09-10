@@ -315,7 +315,7 @@ const Auth: React.FC = () => {
   return (
     <div className="w-full bg-white dark:bg-slate-800 md:grid md:grid-cols-2 min-h-[85vh] rounded-2xl shadow-2xl shadow-slate-200/40 dark:shadow-black/20 overflow-hidden border border-slate-200/60 dark:border-slate-700/80">
       {/* Left Panel */}
-      <div className="hidden md:flex flex-col justify-between p-8 lg:p-12 bg-slate-900 text-white relative overflow-hidden">
+      <div className="hidden md:flex flex-col justify-between p-8 lg:p-12 bg-black text-white relative overflow-hidden">
         <div className="absolute -top-1/4 -right-1/4 w-3/4 h-3/4 bg-blue-600/30 rounded-full filter blur-3xl animate-pulse" style={{animationDuration: '8s'}} />
         <div className="absolute -bottom-1/4 -left-1/4 w-3/4 h-3/4 bg-indigo-600/30 rounded-full filter blur-3xl animate-pulse" style={{animationDuration: '10s', animationDelay: '2s'}} />
         <div className="relative z-10">
