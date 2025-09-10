@@ -2,6 +2,7 @@
 // Using a versioned cache name is a best practice to manage updates.
 const CACHE_NAME = 'mi-panel-academico-cache-v4';
 // This list now uses relative paths, making it more robust and independent of the base path.
+// Icons have been removed from this list, as the browser will fetch them via the manifest.
 const FILES_TO_CACHE = [
   './',
   './manifest.json',
