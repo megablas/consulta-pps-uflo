@@ -58,10 +58,8 @@
       // Service Worker Registration
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          // Register the service worker with a relative path.
-          // The browser will resolve this against the current origin.
-          // The scope will default to the directory containing the SW file, which is correct.
-          navigator.serviceWorker.register('sw.js')
+          // Register the service worker with an absolute path to avoid resolution issues in subdirectories.
+          navigator.serviceWorker.register('/consulta-pps-uflo/sw.js')
             .then(registration => {
               console.log('Service Worker registered with scope:', registration.scope);
             })
