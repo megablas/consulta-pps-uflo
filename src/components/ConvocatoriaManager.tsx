@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import * as XLSX from 'xlsx';
 import { fetchAllAirtableData, updateAirtableRecord, createAirtableRecord } from '../services/airtableService';
 import type { LanzamientoPPS, Practica, InstitucionFields } from '../types';
 import {
@@ -150,6 +151,7 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
 
   const isEnConversacion = status === 'En Conversación';
   const actionButtonClass = "font-bold py-2 px-4 rounded-lg text-sm transition-all duration-300 shadow-md flex items-center justify-center gap-2 w-44";
+  const cupos = pps[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS];
 
   return (
     <div className={`relative bg-white dark:bg-slate-800/50 rounded-xl border shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-px group overflow-hidden ${isEnConversacion ? 'border-sky-300 dark:border-sky-500 ring-2 ring-sky-50 dark:ring-sky-900/50' : 'border-slate-200/60 dark:border-slate-700/60'}`}>
@@ -165,12 +167,20 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
                     <span className={`${especialidadVisuals.tag} shadow-sm`}>{pps[FIELD_ORIENTACION_LANZAMIENTOS]}</span>
                 </div>
             </div>
-            {timeBadge?.text && (
-            <div className={`flex-shrink-0 flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ring-1 ${timeBadge.color}`}>
-                <span className="material-icons !text-sm">{timeBadge.icon}</span>
-                <span>{timeBadge.text}</span>
+            <div className="flex-shrink-0 flex flex-col items-end gap-1.5">
+                {timeBadge?.text && (
+                <div className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ring-1 ${timeBadge.color}`}>
+                    <span className="material-icons !text-sm">{timeBadge.icon}</span>
+                    <span>{timeBadge.text}</span>
+                </div>
+                )}
+                {cupos != null && (
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full ring-1 ring-slate-200 dark:ring-slate-600">
+                        <span className="material-icons !text-sm">groups</span>
+                        <span>{cupos} cupo{cupos !== 1 ? 's' : ''}</span>
+                    </div>
+                )}
             </div>
-            )}
         </div>
         
         <div className="p-4 bg-gradient-to-br from-white to-slate-50/50 dark:from-slate-800/50 dark:to-slate-800/20 space-y-4">
@@ -263,7 +273,7 @@ const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpd
   );
 });
 
-const CollapsibleSection: React.FC<{ title: string; count: number; children: React.ReactNode; defaultOpen?: boolean; icon: string; iconBgColor: string; iconColor: string; borderColor: string; }> = ({ title, count, children, defaultOpen = true, icon, iconBgColor, iconColor, borderColor }) => (
+const CollapsibleSection: React.FC<{ title: string; count: number; children: React.ReactNode; defaultOpen?: boolean; icon: string; iconBgColor: string; iconColor: string; borderColor: string; actions?: React.ReactNode; }> = ({ title, count, children, defaultOpen = true, icon, iconBgColor, iconColor, borderColor, actions }) => (
     <details className="group/details" open={defaultOpen}>
         <summary className="list-none flex items-center gap-4 cursor-pointer mb-4 p-2 rounded-lg transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50">
             <div className={`flex-shrink-0 size-10 rounded-lg flex items-center justify-center ${iconBgColor}`}>
@@ -272,6 +282,7 @@ const CollapsibleSection: React.FC<{ title: string; count: number; children: Rea
             <div className="flex-grow">
                 <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">{title}</h3>
             </div>
+            {actions && <div className="flex-shrink-0">{actions}</div>}
             <span className="text-base font-bold text-slate-700 dark:text-slate-200 bg-slate-200 dark:bg-slate-700 h-8 w-8 flex items-center justify-center rounded-full">{count}</span>
             <span className="material-icons text-slate-400 dark:text-slate-500 transition-transform duration-300 group-open/details:rotate-90">chevron_right</span>
         </summary>
@@ -312,6 +323,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                     FIELD_NOTAS_GESTION_LANZAMIENTOS,
                     FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS,
                     FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS,
+                    FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS,
                 ],
                 undefined,
                 [{ field: FIELD_FECHA_FIN_LANZAMIENTOS, direction: 'desc' }]
@@ -629,6 +641,35 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
         const normalizedPpsName = ppsName ? normalizeStringForComparison(ppsName) : '';
         return institutionsMap.get(normalizedPpsName);
     }, [institutionsMap]);
+    
+    const handleExportFinalizadas = useCallback(() => {
+        if (finalizadasParaReactivar.length === 0) return;
+
+        const dataToExport = finalizadasParaReactivar.map(pps => {
+            const institutionInfo = getInstitutionForPps(pps);
+            return {
+                'Nombre Institución': pps[FIELD_NOMBRE_PPS_LANZAMIENTOS] || '',
+                'Orientación': pps[FIELD_ORIENTACION_LANZAMIENTOS] || '',
+                'Fecha de Finalización': formatDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS]),
+                'Contacto': institutionInfo?.phone || 'N/A',
+                'Comentarios': '', // Empty column for comments
+            };
+        });
+
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+        ws['!cols'] = [
+            { wch: 40 }, // Nombre Institución
+            { wch: 15 }, // Orientación
+            { wch: 20 }, // Fecha de Finalización
+            { wch: 20 }, // Contacto
+            { wch: 30 }, // Comentarios
+        ];
+        
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Finalizadas para Reactivar');
+        XLSX.writeFile(wb, 'Reporte_Finalizadas_Para_Reactivar.xlsx');
+    }, [finalizadasParaReactivar, getInstitutionForPps]);
+
 
     const renderContent = () => {
         if (loadingState === 'loading' || loadingState === 'initial') return <Loader />;
@@ -654,6 +695,17 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                         iconBgColor="bg-sky-100 dark:bg-sky-900/50"
                         iconColor="text-sky-600 dark:text-sky-300"
                         borderColor="border-sky-300 dark:border-sky-700"
+                        actions={
+                            hasFinalizadas ? (
+                                <button
+                                    onClick={handleExportFinalizadas}
+                                    className="inline-flex items-center gap-2 bg-green-600 text-white font-bold text-xs py-2 px-3 rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+                                >
+                                    <span className="material-icons !text-base">download</span>
+                                    <span>Exportar</span>
+                                </button>
+                            ) : undefined
+                        }
                     >
                         {hasFinalizadas ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-4">
