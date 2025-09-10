@@ -1,10 +1,10 @@
 // Define the cache name and files to cache.
 // Using a versioned cache name is a best practice to manage updates.
-const CACHE_NAME = 'mi-panel-academico-cache-v5';
+const CACHE_NAME = 'mi-panel-academico-cache-v6';
 // This list now uses absolute paths, making it robust for sub-path deployments.
 // Icons have been removed from this list, as the browser will fetch them via the manifest.
 const FILES_TO_CACHE = [
-  '/consulta-pps-uflo/',
+  '/consulta-pps-uflo/index.html',
   '/consulta-pps-uflo/manifest.json',
 ];
 
@@ -71,7 +71,7 @@ self.addEventListener('fetch', (event) => {
           }
           // If the request is for a page and it's not in the cache, return the main index.html as a fallback (for SPA).
           if (event.request.mode === 'navigate') {
-            return caches.match('/consulta-pps-uflo/'); // Use the absolute path to the root
+            return caches.match('/consulta-pps-uflo/index.html'); // Use the absolute path to the root HTML
           }
           return new Response(null, { status: 404, statusText: "Not Found" });
         });
