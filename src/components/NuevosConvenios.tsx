@@ -9,7 +9,6 @@ import {
   FIELD_FECHA_INICIO_LANZAMIENTOS,
   FIELD_NOMBRE_INSTITUCIONES,
   FIELD_CONVENIO_NUEVO_INSTITUCIONES,
-  FIELD_REVISADO_CONVENIO_2025_INSTITUCIONES,
   FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS,
 } from '../constants';
 import Loader from './Loader';
@@ -32,7 +31,7 @@ const fetchConveniosData = async (): Promise<{ launches: LanzamientoPPS[], insti
         ),
         fetchAllAirtableData<InstitucionFields>(
             AIRTABLE_TABLE_NAME_INSTITUCIONES,
-            [FIELD_NOMBRE_INSTITUCIONES, FIELD_CONVENIO_NUEVO_INSTITUCIONES, FIELD_REVISADO_CONVENIO_2025_INSTITUCIONES]
+            [FIELD_NOMBRE_INSTITUCIONES, FIELD_CONVENIO_NUEVO_INSTITUCIONES]
         )
     ]);
 
@@ -73,7 +72,7 @@ const NuevosConvenios: React.FC = () => {
     });
     
     const [selection, setSelection] = useState<Map<string, boolean>>(new Map());
-    const [initialStatus, setInitialStatus] = useState<Map<string, { isNew: boolean, isReviewed: boolean }>>(new Map());
+    const [initialStatus, setInitialStatus] = useState<Map<string, { isNew: boolean }>>(new Map());
     const [toastInfo, setToastInfo] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
@@ -100,7 +99,7 @@ const NuevosConvenios: React.FC = () => {
             return name.split(' - ')[0].trim();
         };
 
-        const institutionMap = new Map<string, { id: string; originalName: string; isNew: boolean; isReviewed: boolean }>();
+        const institutionMap = new Map<string, { id: string; originalName: string; isNew: boolean; }>();
         data.institutions.forEach(inst => {
             if (inst[FIELD_NOMBRE_INSTITUCIONES]) {
                 const normName = normalizeStringForComparison(inst[FIELD_NOMBRE_INSTITUCIONES]);
@@ -108,7 +107,6 @@ const NuevosConvenios: React.FC = () => {
                     id: inst.id,
                     originalName: inst[FIELD_NOMBRE_INSTITUCIONES],
                     isNew: !!inst[FIELD_CONVENIO_NUEVO_INSTITUCIONES],
-                    isReviewed: !!inst[FIELD_REVISADO_CONVENIO_2025_INSTITUCIONES],
                 });
             }
         });
@@ -163,7 +161,7 @@ const NuevosConvenios: React.FC = () => {
 
             if (representativeInst.isNew) {
                 confirmed.push(finalGroupData);
-            } else if (!representativeInst.isReviewed && !institutions2024GroupNames.has(normGroupName)) {
+            } else if (!institutions2024GroupNames.has(normGroupName)) {
                 suggested.push(finalGroupData);
             }
         }
@@ -176,18 +174,17 @@ const NuevosConvenios: React.FC = () => {
     
     useEffect(() => {
         if (data?.institutions) {
-            const initialStatusMap = new Map<string, { isNew: boolean, isReviewed: boolean }>();
+            const initialStatusMap = new Map<string, { isNew: boolean }>();
             data.institutions.forEach(inst => {
                 initialStatusMap.set(inst.id, {
                     isNew: !!inst[FIELD_CONVENIO_NUEVO_INSTITUCIONES],
-                    isReviewed: !!inst[FIELD_REVISADO_CONVENIO_2025_INSTITUCIONES]
                 });
             });
             setInitialStatus(initialStatusMap);
 
             const newSelection = new Map<string, boolean>();
             confirmedNewConvenios.forEach(group => newSelection.set(group.id, true));
-            suggestedNewConvenios.forEach(group => newSelection.set(group.id, true));
+            suggestedNewConvenios.forEach(group => newSelection.set(group.id, false));
             setSelection(newSelection);
         }
     }, [data, confirmedNewConvenios, suggestedNewConvenios]);
@@ -198,6 +195,8 @@ const NuevosConvenios: React.FC = () => {
         onSuccess: () => {
             setToastInfo({ message: 'Cambios guardados exitosamente.', type: 'success' });
             queryClient.invalidateQueries({ queryKey: ['nuevosConveniosData'] });
+            // Invalidate dashboard data to update the KPI
+            queryClient.invalidateQueries({ queryKey: ['metricsDashboardData', 2025] });
         },
         onError: (err) => {
             setToastInfo({ message: `Error al guardar: ${err.message}`, type: 'error' });
@@ -215,25 +214,16 @@ const NuevosConvenios: React.FC = () => {
     const changesToSave = useMemo(() => {
         const changes: { id: string, fields: Partial<InstitucionFields> }[] = [];
         const allDisplayedGroups = [
-            ...confirmedNewConvenios.map(g => ({...g, wasSuggested: false })),
-            ...suggestedNewConvenios.map(g => ({...g, wasSuggested: true }))
+            ...confirmedNewConvenios,
+            ...suggestedNewConvenios
         ];
 
         for (const group of allDisplayedGroups) {
             const isSelectedInUI = selection.get(group.id) ?? false;
+            const initial = initialStatus.get(group.id) || { isNew: false };
             
-            const initial = initialStatus.get(group.id) || { isNew: false, isReviewed: false };
-            const wasInitiallyNew = initial.isNew;
-            const wasInitiallyReviewed = initial.isReviewed;
-            
-            const hasStatusChanged = isSelectedInUI !== wasInitiallyNew;
-            const needsReviewUpdate = (group.wasSuggested && !wasInitiallyReviewed) || (wasInitiallyNew && !isSelectedInUI);
-
-            if (hasStatusChanged || needsReviewUpdate) {
-                const fieldsToUpdate: Partial<InstitucionFields> = {};
-                if(hasStatusChanged) fieldsToUpdate[FIELD_CONVENIO_NUEVO_INSTITUCIONES] = isSelectedInUI;
-                if(needsReviewUpdate) fieldsToUpdate[FIELD_REVISADO_CONVENIO_2025_INSTITUCIONES] = true;
-                if(Object.keys(fieldsToUpdate).length > 0) changes.push({ id: group.id, fields: fieldsToUpdate });
+            if (isSelectedInUI !== initial.isNew) {
+                changes.push({ id: group.id, fields: { [FIELD_CONVENIO_NUEVO_INSTITUCIONES]: isSelectedInUI } });
             }
         }
         return changes;
@@ -255,31 +245,31 @@ const NuevosConvenios: React.FC = () => {
                 const isSelected = selection.get(group.id) ?? false;
                 const isExpanded = expandedGroups.has(group.groupName);
                 return (
-                    <div key={group.id} className={`bg-white rounded-xl border-2 transition-all duration-200 ${isSelected ? 'border-emerald-400 shadow-sm' : 'border-slate-200/80'}`}>
+                    <div key={group.id} className={`bg-white dark:bg-slate-800/50 rounded-xl border-2 transition-all duration-200 ${isSelected ? 'border-emerald-400 dark:border-emerald-500 shadow-sm' : 'border-slate-200/80 dark:border-slate-700'}`}>
                         <div className="flex items-start gap-3 p-4">
                             <button onClick={() => handleToggleSelection(group.id)} className="flex-shrink-0 mt-1">
-                                <span className={`material-icons !text-2xl transition-colors ${isSelected ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                <span className={`material-icons !text-2xl transition-colors ${isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
                                     {isSelected ? 'check_box' : 'check_box_outline_blank'}
                                 </span>
                             </button>
                             <div className="flex-grow">
-                                <p className={`font-bold ${isSelected ? 'text-emerald-900' : 'text-slate-800'}`}>{group.groupName}</p>
-                                <p className="text-sm text-slate-500">
+                                <p className={`font-bold ${isSelected ? 'text-emerald-900 dark:text-emerald-200' : 'text-slate-800 dark:text-slate-100'}`}>{group.groupName}</p>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">
                                     <span className="font-semibold">{group.totalCupos}</span> cupos en <span className="font-semibold">{group.subPps.length}</span> PPS
                                 </p>
                             </div>
-                            <button onClick={() => toggleExpanded(group.groupName)} className="flex-shrink-0 p-2 -m-2 rounded-full text-slate-500 hover:bg-slate-100 transition-colors">
+                            <button onClick={() => toggleExpanded(group.groupName)} className="flex-shrink-0 p-2 -m-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors">
                                 <span className={`material-icons !text-lg transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>expand_more</span>
                             </button>
                         </div>
                         {isExpanded && (
-                            <div className="border-t border-slate-200/80 bg-slate-50/50 p-4 animate-fade-in-up" style={{animationDuration: '300ms'}}>
-                                <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Desglose de PPS</h5>
+                            <div className="border-t border-slate-200/80 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4 animate-fade-in-up" style={{animationDuration: '300ms'}}>
+                                <h5 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Desglose de PPS</h5>
                                 <ul className="space-y-1.5">
                                     {group.subPps.map(pps => (
                                         <li key={pps.name} className="flex justify-between items-center text-sm">
-                                            <span className="text-slate-700">{pps.name.replace(`${group.groupName} - `, '')}</span>
-                                            <span className="font-semibold text-slate-600 bg-slate-200/70 px-2 py-0.5 rounded-md">{pps.cupos} cupos</span>
+                                            <span className="text-slate-700 dark:text-slate-300">{pps.name.replace(`${group.groupName} - `, '')}</span>
+                                            <span className="font-semibold text-slate-600 dark:text-slate-300 bg-slate-200/70 dark:bg-slate-700 px-2 py-0.5 rounded-md">{pps.cupos} cupos</span>
                                         </li>
                                     ))}
                                 </ul>
@@ -298,10 +288,10 @@ const NuevosConvenios: React.FC = () => {
             <Card
                 icon="fact_check"
                 title="Convenios Nuevos Confirmados"
-                description="Esta es la lista de instituciones marcadas como nuevos convenios para el ciclo 2025. Desmarca una para eliminarla y marcarla como revisada."
+                description="Esta es la lista de instituciones marcadas como nuevos convenios para el ciclo 2025. Desmarca una para que vuelva a aparecer como sugerencia."
             >
                 {confirmedNewConvenios.length > 0 ? (
-                    <div className="mt-6 border-t border-slate-200 pt-6">
+                    <div className="mt-6 border-t border-slate-200 dark:border-slate-700 pt-6">
                         {renderList(confirmedNewConvenios)}
                     </div>
                 ) : (
@@ -315,17 +305,25 @@ const NuevosConvenios: React.FC = () => {
                 )}
             </Card>
 
-            {suggestedNewConvenios.length > 0 && (
-                <Card
-                    icon="lightbulb"
-                    title="Sugerencias para Revisar"
-                    description={`Hemos identificado ${suggestedNewConvenios.length} instituciones que podrían ser convenios nuevos. Mantén marcadas las que quieres confirmar y desmarca las que no.`}
-                >
-                    <div className="mt-6 border-t border-slate-200 pt-6">
+            <Card
+                icon="lightbulb"
+                title="Sugerencias para Revisar"
+                description={`Hemos identificado ${suggestedNewConvenios.length} instituciones que podrían ser convenios nuevos. Marca las que quieres confirmar.`}
+            >
+                {suggestedNewConvenios.length > 0 ? (
+                    <div className="mt-6 border-t border-slate-200 dark:border-slate-700 pt-6">
                         {renderList(suggestedNewConvenios)}
                     </div>
-                </Card>
-            )}
+                ) : (
+                    <div className="mt-4">
+                        <EmptyState 
+                            icon="celebration"
+                            title="No hay sugerencias nuevas"
+                            message="Parece que todas las instituciones nuevas para 2025 ya han sido confirmadas."
+                        />
+                    </div>
+                )}
+            </Card>
 
             {changesToSave.length > 0 && (
                 <div className="flex justify-end sticky bottom-4">

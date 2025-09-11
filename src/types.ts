@@ -1,6 +1,5 @@
 import {
   FIELD_CONVENIO_NUEVO_INSTITUCIONES,
-  FIELD_REVISADO_CONVENIO_2025_INSTITUCIONES,
 } from "./constants";
 
 export interface AirtableRecord<T> {
@@ -84,7 +83,6 @@ export interface InstitucionFields {
   'Nombre'?: string;
   'Teléfono'?: string;
   [FIELD_CONVENIO_NUEVO_INSTITUCIONES]?: boolean;
-  [FIELD_REVISADO_CONVENIO_2025_INSTITUCIONES]?: boolean;
 }
 
 export interface ConvocatoriaFields {

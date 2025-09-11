@@ -79,7 +79,7 @@ export const FIELD_TELEFONO_INSTITUCION_LANZAMIENTOS = 'Teléfono (from Instituc
 export const FIELD_NOMBRE_INSTITUCIONES = 'Nombre';
 export const FIELD_TELEFONO_INSTITUCIONES = 'Teléfono';
 export const FIELD_CONVENIO_NUEVO_INSTITUCIONES = 'Convenio Nuevo';
-export const FIELD_REVISADO_CONVENIO_2025_INSTITUCIONES = 'Revisado Convenio 2025';
+
 
 // --- Fields for 'Convocatorias' table ---
 export const FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS = 'Lanzamiento Vinculado';
