@@ -19,7 +19,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ value, max, label, unit = '',
       <div className="flex justify-between items-baseline mb-1">
         <span className="text-base font-bold text-slate-800 dark:text-slate-100">{label}</span>
         <div className="text-sm font-semibold">
-          <span className={isComplete ? textClass : 'text-slate-800 dark:text-slate-100'}>{roundedValue}</span>
+          <span className={`font-black ${textClass}`}>{roundedValue}</span>
           <span className="text-slate-500 dark:text-slate-400"> / {max}{unit}</span>
         </div>
       </div>

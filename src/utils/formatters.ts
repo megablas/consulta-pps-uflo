@@ -114,7 +114,7 @@ export function getEspecialidadClasses(especialidad?: string): {
     return (styles as any)[normalizedEspecialidad] || styles.default;
 }
 
-export function getStatusVisuals(status?: string): { icon: string; iconContainerClass: string; labelClass: string; } {
+export function getStatusVisuals(status?: string): { icon: string; iconContainerClass: string; labelClass: string; accentBg: string; } {
     const normalizedStatus = normalizeStringForComparison(status);
     const baseLabel = "inline-flex items-center font-semibold px-2.5 py-1 rounded-full text-xs capitalize";
     const baseIconContainer = "flex-shrink-0 size-11 rounded-lg flex items-center justify-center mr-4";
@@ -138,16 +138,16 @@ export function getStatusVisuals(status?: string): { icon: string; iconContainer
         'oculto': { icon: 'visibility_off', color: 'neutral' },
     };
 
-    const colorClasses: Record<string, { icon: string, label: string }> = {
-        blue: { icon: 'bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-300', label: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200' },
-        rose: { icon: 'bg-rose-100 text-rose-600 dark:bg-rose-900/50 dark:text-rose-300', label: 'bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-200' },
-        yellow: { icon: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/50 dark:text-yellow-300', label: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200' },
-        amber: { icon: 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-300', label: 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200' },
-        indigo: { icon: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-300', label: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-200' },
-        green: { icon: 'bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-300', label: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200' },
-        sky: { icon: 'bg-sky-100 text-sky-600 dark:bg-sky-900/50 dark:text-sky-300', label: 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-200' },
-        slate: { icon: 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400', label: 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300' },
-        neutral: { icon: 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400', label: 'bg-neutral-100 text-neutral-800 dark:bg-neutral-700 dark:text-neutral-300' },
+    const colorClasses: Record<string, { icon: string, label: string, accentBg: string }> = {
+        blue: { icon: 'bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-300', label: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300', accentBg: 'bg-blue-500' },
+        rose: { icon: 'bg-rose-100 text-rose-600 dark:bg-rose-900/50 dark:text-rose-300', label: 'bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-200', accentBg: 'bg-rose-500' },
+        yellow: { icon: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/50 dark:text-yellow-300', label: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200', accentBg: 'bg-yellow-500' },
+        amber: { icon: 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-300', label: 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200', accentBg: 'bg-amber-500' },
+        indigo: { icon: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-300', label: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-200', accentBg: 'bg-indigo-500' },
+        green: { icon: 'bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-300', label: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200', accentBg: 'bg-green-500' },
+        sky: { icon: 'bg-sky-100 text-sky-600 dark:bg-sky-900/50 dark:text-sky-300', label: 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-200', accentBg: 'bg-sky-500' },
+        slate: { icon: 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400', label: 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300', accentBg: 'bg-slate-400' },
+        neutral: { icon: 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400', label: 'bg-neutral-100 text-neutral-800 dark:bg-neutral-700 dark:text-neutral-300', accentBg: 'bg-neutral-400' },
     };
 
     for (const key in states) {
@@ -158,6 +158,7 @@ export function getStatusVisuals(status?: string): { icon: string; iconContainer
                 icon: state.icon,
                 iconContainerClass: `${baseIconContainer} ${classes.icon} ${state.animation || ''}`,
                 labelClass: `${baseLabel} ${classes.label}`,
+                accentBg: classes.accentBg,
             };
         }
     }
@@ -167,6 +168,7 @@ export function getStatusVisuals(status?: string): { icon: string; iconContainer
         icon: 'help_outline',
         iconContainerClass: `${baseIconContainer} bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400`,
         labelClass: `${baseLabel} bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300`,
+        accentBg: 'bg-slate-400',
     };
 }
 
