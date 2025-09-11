@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consulta de PPS y Prácticas</title>
-    <!-- El plugin PWA inyectará el manifest aquí -->
+    <!-- PWA Manifest Link -->
+    <link rel="manifest" href="manifest.json">
     <!-- Theme Color for browsers -->
     <meta name="theme-color" content="#2563eb">
     <script>
@@ -45,8 +46,7 @@
     "@storybook/react-vite": "https://aistudiocdn.com/@storybook/react-vite@^9.1.4",
     "@storybook/react": "https://aistudiocdn.com/@storybook/react@^9.1.4",
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.17.0",
-    "@testing-library/user-event": "https://aistudiocdn.com/@testing-library/user-event@^14.6.1",
-    "vite-plugin-pwa": "https://aistudiocdn.com/vite-plugin-pwa@^1.0.3"
+    "@testing-library/user-event": "https://aistudiocdn.com/@testing-library/user-event@^14.6.1"
   }
 }
 </script>
@@ -54,6 +54,20 @@
 <body>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
-    <!-- El plugin PWA inyectará el script de registro del Service Worker aquí -->
+    <script>
+      // Service Worker Registration
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          // Register the service worker with an absolute path to avoid resolution issues in subdirectories.
+          navigator.serviceWorker.register('/consulta-pps-uflo/sw.js')
+            .then(registration => {
+              console.log('Service Worker registered with scope:', registration.scope);
+            })
+            .catch(error => {
+              console.log('Service Worker registration failed:', error);
+            });
+        });
+      }
+    </script>
 </body>
 </html>
