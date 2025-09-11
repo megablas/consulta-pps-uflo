@@ -6,27 +6,27 @@
 
 ---
 
-## ✨ Características Principales (Key Features)
+## Características Principales (Key Features)
 
-La plataforma ofrece una experiencia completa tanto para estudiantes como para administradores.
+La plataforma ofrece funcionalidades tanto para estudiantes como para administradores.
 
 ### Portal Estudiantil
-- **🔐 Acceso Seguro:** Inicio de sesión único por número de Legajo y contraseña.
-- **📊 Dashboard de Progreso:** Visualización clara del avance de horas totales, horas por especialidad y rotación de orientaciones.
-- **📝 Seguimiento de PPS:** Consulta el estado actualizado de las solicitudes de PPS enviadas.
-- **🗂️ Historial de Prácticas:** Tabla detallada con todas las prácticas realizadas, horas, fechas y estado.
-- **🚀 Inscripción a Convocatorias:** Postulación a nuevas oportunidades de PPS directamente desde la plataforma.
-- **✅ Gestión de Informes:** Subida y confirmación de la entrega de informes finales.
+- **Acceso Seguro:** Autenticación de usuarios mediante número de Legajo y una contraseña personal.
+- **Dashboard de Progreso:** Muestra el total de horas de prácticas completadas, el progreso por especialidad y el cumplimiento del criterio de rotación de orientaciones.
+- **Seguimiento de PPS:** Permite consultar el estado de las solicitudes de PPS autogestionadas por el estudiante.
+- **Historial de Prácticas:** Presenta una tabla con el detalle de todas las prácticas realizadas, incluyendo institución, fechas, horas y estado de aprobación.
+- **Inscripción a Convocatorias:** Lista las oportunidades de PPS disponibles y permite al estudiante postularse a través de un formulario.
+- **Gestión de Informes:** Proporciona los enlaces para la entrega de informes finales y permite confirmar dicha entrega para su posterior corrección.
 
 ### Panel de Administración (SuperUser)
-- **🔍 Búsqueda Centralizada:** Localiza estudiantes por nombre o legajo para ver su panel individual.
-- **⚙️ Gestión de Convocatorias:** Controla el estado de las convocatorias (Abierta, Cerrada, Oculta).
-- **🛡️ Generador de Seguros:** Herramienta para generar reportes de seguro para los alumnos seleccionados.
-- **✍️ Corrección Rápida:** Panel optimizado para la corrección masiva de informes de PPS.
+- **Búsqueda de Estudiantes:** Permite buscar un estudiante por nombre o legajo para acceder a una vista de su panel personal.
+- **Gestión de Convocatorias:** Permite modificar el estado de las convocatorias de PPS (Abierta, Cerrada, Oculta) para controlar su visibilidad para los estudiantes.
+- **Generador de Seguros:** Herramienta que recopila los datos de los alumnos seleccionados en una convocatoria y genera una planilla Excel para la tramitación del seguro ART.
+- **Panel de Corrección:** Interfaz para visualizar los informes de PPS entregados y registrar las calificaciones correspondientes.
 
 ---
 
-## 🚀 Pila Tecnológica (Tech Stack)
+## Pila Tecnológica (Tech Stack)
 
 - **Frontend:** [React](https://react.dev/) con [Vite](https://vitejs.dev/)
 - **Lenguaje:** [TypeScript](https://www.typescriptlang.org/)

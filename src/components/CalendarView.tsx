@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import type { Convocatoria, LanzamientoPPS } from '../types';
 import {
+    // FIX: Corrected typo in constant name
     FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
     FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS,
     FIELD_FECHA_INICIO_LANZAMIENTOS,
     FIELD_FECHA_FIN_LANZAMIENTOS,
     FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS,
+    FIELD_HORARIO_FORMULA_CONVOCATORIAS,
     FIELD_ORIENTACION_LANZAMIENTOS,
     FIELD_NOMBRE_PPS_LANZAMIENTOS,
     FIELD_DIRECCION_LANZAMIENTOS,
@@ -97,17 +99,20 @@ const CalendarView: React.FC<CalendarViewProps> = ({ myEnrollments, allLanzamien
     const enrolledPractices = useMemo(() => {
         return myEnrollments
             .filter(e => normalizeStringForComparison(e[FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS]) === 'seleccionado')
-            .map(e => {
-                const lanzamientoId = (e[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])[0];
-                return allLanzamientos.find(l => l.id === lanzamientoId);
+            .map(enrollment => {
+                const lanzamientoId = (enrollment[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])[0];
+                const pps = allLanzamientos.find(l => l.id === lanzamientoId);
+                
+                if (!pps) return null;
+                
+                const startDate = parseToUTCDate(pps[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+                const endDate = parseToUTCDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS]);
+                if (!startDate || !endDate) return null;
+
+                // Devolvemos un objeto combinado con los datos del lanzamiento y la inscripción
+                return { pps, enrollment };
             })
-            .filter((l): l is LanzamientoPPS => {
-                if (!l) return false;
-                const startDate = parseToUTCDate(l[FIELD_FECHA_INICIO_LANZAMIENTOS]);
-                const endDate = parseToUTCDate(l[FIELD_FECHA_FIN_LANZAMIENTOS]);
-                // Only include practices that have valid start and end dates
-                return !!(startDate && endDate);
-            });
+            .filter((item): item is { pps: LanzamientoPPS, enrollment: Convocatoria } => item !== null);
     }, [myEnrollments, allLanzamientos]);
 
     const eventsByDate = useMemo(() => {
@@ -125,15 +130,22 @@ const CalendarView: React.FC<CalendarViewProps> = ({ myEnrollments, allLanzamien
             const dayOfWeek = date.getUTCDay();
             const dateString = date.toISOString().split('T')[0];
 
-            enrolledPractices.forEach(pps => {
-                // Check if the current date is within the practice's start and end date
+            enrolledPractices.forEach(({ pps, enrollment }) => {
                 const ppsStartDate = parseToUTCDate(pps[FIELD_FECHA_INICIO_LANZAMIENTOS]);
                 const ppsEndDate = parseToUTCDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS]);
                 if (!ppsStartDate || !ppsEndDate || date < ppsStartDate || date > ppsEndDate) {
-                    return; // Skip if not within the practice's date range
+                    return;
                 }
 
-                const schedule = pps[FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS] || '';
+                // **LÓGICA DE HORARIO DEFINITIVA**
+                // El horario DEBE provenir EXCLUSIVAMENTE del registro de 'Convocatorias' del estudiante ('Horario').
+                // Si este campo está vacío, no hay horario asignado y no se debe mostrar el evento.
+                const schedule = (enrollment[FIELD_HORARIO_FORMULA_CONVOCATORIAS] || '').trim();
+
+                if (!schedule) {
+                    return; // No schedule assigned, so do not process this event for this day.
+                }
+
                 const normalizedSchedule = normalizeStringForComparison(schedule);
                 const scheduleDays = Object.keys(dayMap).filter(d => normalizedSchedule.includes(d) && !normalizedSchedule.includes(`no ${d}`));
 
@@ -145,7 +157,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ myEnrollments, allLanzamien
                     events.get(dateString)!.push({
                         id: pps.id,
                         name: pps[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'Práctica',
-                        schedule: schedule,
+                        schedule: schedule, // Use the original, non-normalized schedule string for display
                         orientation: orientation,
                         location: pps[FIELD_DIRECCION_LANZAMIENTOS] || 'No especificada',
                         colorClasses: getEspecialidadClasses(orientation),
