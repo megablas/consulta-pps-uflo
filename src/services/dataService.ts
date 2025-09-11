@@ -129,7 +129,8 @@ export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: 
         FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
         FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS,
         FIELD_INFORME_SUBIDO_CONVOCATORIAS,
-        FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS
+        FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS,
+        FIELD_HORARIO_FORMULA_CONVOCATORIAS,
     ], convocatoriasFormula),
     fetchAllAirtableData<LanzamientoPPSFields>(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, [], undefined, [{ field: FIELD_FECHA_INICIO_LANZAMIENTOS, direction: 'desc' }])
   ]);
