@@ -5,16 +5,14 @@ import type {
   EstudianteFields,
   PracticaFields,
   ConvocatoriaFields,
-  FinalizacionPPS,
-  FinalizacionPPSFields,
   LanzamientoPPSFields,
   InstitucionFields,
+  AirtableRecord,
 } from '../types';
 import {
   AIRTABLE_TABLE_NAME_PRACTICAS,
   AIRTABLE_TABLE_NAME_ESTUDIANTES,
   AIRTABLE_TABLE_NAME_CONVOCATORIAS,
-  AIRTABLE_TABLE_NAME_FINALIZACION,
   AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
   AIRTABLE_TABLE_NAME_INSTITUCIONES,
   FIELD_FECHA_INICIO_PRACTICAS,
@@ -26,7 +24,6 @@ import {
   FIELD_NOMBRE_ESTUDIANTES,
   FIELD_ESTUDIANTE_LINK_PRACTICAS,
   FIELD_FECHA_INICIO_CONVOCATORIAS,
-  FIELD_ESTUDIANTE_FINALIZACION,
   FIELD_FECHA_INICIO_LANZAMIENTOS,
   FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS,
   FIELD_NOMBRE_PPS_LANZAMIENTOS,
@@ -38,7 +35,6 @@ import {
   FIELD_ORIENTACION_LANZAMIENTOS,
 } from '../constants';
 import { normalizeStringForComparison, parseToUTCDate, formatDate, getEspecialidadClasses } from '../utils/formatters';
-import { finalizacionPPSArraySchema } from '../schemas';
 import EmptyState from './EmptyState';
 import StudentListModal from './StudentListModal';
 import Card from './Card';
@@ -88,13 +84,14 @@ function getGroupName(raw: unknown): string {
 const fetchMetricsData = async () => {
   const convFields = [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, FIELD_FECHA_INICIO_CONVOCATORIAS, FIELD_NOMBRE_PPS_CONVOCATORIAS];
 
-  const [estudiantesRes, practicasRes, convocatoriasRes, finalizacionesRes, lanzamientosRes, institucionesRes] =
+  const [estudiantesRes, practicasRes, convocatoriasRes, lanzamientosRes, institucionesRes] =
     await Promise.all([
       fetchAllAirtableData<EstudianteFields>(AIRTABLE_TABLE_NAME_ESTUDIANTES, [
         FIELD_LEGAJO_ESTUDIANTES,
         FIELD_NOMBRE_ESTUDIANTES,
         'Finalizaron',
         'Creada',
+        'Fecha de Finalización',
       ]),
       fetchAllAirtableData<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS, [
         FIELD_NOMBRE_BUSQUEDA_PRACTICAS,
@@ -106,7 +103,6 @@ const fetchMetricsData = async () => {
         FIELD_ESTADO_PRACTICA,
       ]),
       fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS, convFields),
-      fetchAllAirtableData<FinalizacionPPSFields>(AIRTABLE_TABLE_NAME_FINALIZACION, [FIELD_ESTUDIANTE_FINALIZACION]),
       fetchAllAirtableData<LanzamientoPPSFields>(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, [
         FIELD_FECHA_INICIO_LANZAMIENTOS,
         FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS,
@@ -123,7 +119,6 @@ const fetchMetricsData = async () => {
     estudiantesRes.error ||
     practicasRes.error ||
     convocatoriasRes.error ||
-    finalizacionesRes.error ||
     lanzamientosRes.error ||
     institucionesRes.error
   ) {
@@ -131,7 +126,6 @@ const fetchMetricsData = async () => {
       estudiantesRes.error ||
       practicasRes.error ||
       convocatoriasRes.error ||
-      finalizacionesRes.error ||
       lanzamientosRes.error ||
       institucionesRes.error;
     const errorMessage =
@@ -141,23 +135,10 @@ const fetchMetricsData = async () => {
     throw new Error(`Error al cargar datos críticos para las métricas: ${errorMessage}`);
   }
 
-  let validatedFinalizaciones: FinalizacionPPS[] = [];
-  if (!finalizacionesRes.error) {
-    const finalizacionesValidation = finalizacionPPSArraySchema.safeParse(finalizacionesRes.records);
-    if (finalizacionesValidation.success) {
-      validatedFinalizaciones = finalizacionesValidation.data.map((r) => ({
-        ...r.fields,
-        id: r.id,
-        createdTime: r.createdTime,
-      }));
-    }
-  }
-
   return {
     estudiantes: estudiantesRes.records.map((r) => ({ ...r.fields, id: r.id })),
     practicas: practicasRes.records.map((r) => ({ ...r.fields, id: r.id })),
     convocatorias: convocatoriasRes.records.map((r) => r.fields),
-    finalizaciones: validatedFinalizaciones,
     lanzamientos: lanzamientosRes.records.map((r) => ({...r.fields, id: r.id})),
     institutions: institucionesRes.records.map((r) => r.fields),
   };
@@ -165,39 +146,43 @@ const fetchMetricsData = async () => {
 
 // Encapsula toda la lógica de métricas; incluye coerción segura de Lookups
 function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targetYear: number) {
-  const { estudiantes, practicas, convocatorias, finalizaciones, lanzamientos, institutions } = data;
+  const { estudiantes, practicas, convocatorias, lanzamientos, institutions } = data;
 
   const studentMapById = new Map<string, any>(estudiantes.map((e) => [e.id, e]));
 
   const startOfTargetYear = new Date(Date.UTC(targetYear, 0, 1));
   const endOfTargetYear = new Date(Date.UTC(targetYear + 1, 0, 1));
-
-  const allActiveStudents = estudiantes.filter((student) => !student['Finalizaron']);
-
-  const finalizacionesBeforeThisYear = finalizaciones.filter((finalizacion) => {
-    const finalizacionDate = parseToUTCDate(finalizacion.createdTime);
-    return finalizacionDate && finalizacionDate < startOfTargetYear;
-  });
-  const finalizedStudentIdsBeforeThisYear = new Set(
-    finalizacionesBeforeThisYear.flatMap((f) => f[FIELD_ESTUDIANTE_FINALIZACION] || [])
-  );
-
+  
   const studentsAtStartOfYear = estudiantes.filter((student) => {
     const creationDate = parseToUTCDate(student['Creada']);
-    const esPreexistente = !creationDate || creationDate < startOfTargetYear;
-    const noFinalizadoAntes = !finalizedStudentIdsBeforeThisYear.has(student.id);
-    return esPreexistente && noFinalizadoAntes;
+    const finalizationDate = parseToUTCDate(student['Fecha de Finalización']);
+    
+    // Condition 1: Must have been created before the target year starts.
+    const wasCreatedBefore = !creationDate || creationDate < startOfTargetYear;
+    if (!wasCreatedBefore) {
+        return false;
+    }
+
+    // Condition 2: Must not have a finalization date before the target year starts.
+    if (student['Finalizaron'] && finalizationDate && finalizationDate < startOfTargetYear) {
+        return false;
+    }
+    
+    return true;
   });
+
+  const allActiveStudents = estudiantes.filter((student) => !student['Finalizaron']);
 
   const newStudentsThisYear = estudiantes.filter((student) => {
     const creationDate = parseToUTCDate(student['Creada']);
     return creationDate && creationDate.getUTCFullYear() === targetYear;
   });
 
-  const finalizacionesThisYear = finalizaciones.filter((finalizacion) => {
-    const finalizacionDate = parseToUTCDate(finalizacion.createdTime);
-    return finalizacionDate && finalizacionDate >= startOfTargetYear && finalizacionDate < endOfTargetYear;
+  const finalizacionesThisYear = estudiantes.filter(student => {
+    const finalizationDate = parseToUTCDate(student['Fecha de Finalización']);
+    return student['Finalizaron'] && finalizationDate && finalizationDate >= startOfTargetYear && finalizationDate < endOfTargetYear;
   });
+
 
   // Pico de alumnos
   let currentStudentCount = studentsAtStartOfYear.length;
@@ -208,10 +193,11 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
     const creationDate = parseToUTCDate(student['Creada']);
     if (creationDate) events.push({ date: creationDate, type: 'increment' });
   });
-  finalizacionesThisYear.forEach((finalizacion) => {
-    const finalizacionDate = parseToUTCDate(finalizacion.createdTime)!;
-    const studentIds = finalizacion[FIELD_ESTUDIANTE_FINALIZACION] || [];
-    studentIds.forEach(() => events.push({ date: finalizacionDate, type: 'decrement' }));
+  finalizacionesThisYear.forEach((student) => {
+    const finalizationDate = parseToUTCDate(student['Fecha de Finalización']);
+    if (finalizationDate) {
+        events.push({ date: finalizationDate, type: 'decrement' });
+    }
   });
   events.sort((a, b) => a.date.getTime() - b.date.getTime());
   events.forEach((event) => {
@@ -410,14 +396,11 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
     }))
     .sort((a, b) => a.nombre.localeCompare(b.nombre));
 
-  const finalizedStudentIdsThisYear = new Set(
-    finalizacionesThisYear.flatMap((f) => f[FIELD_ESTUDIANTE_FINALIZACION] || [])
-  );
-  const alumnosFinalizadosList = Array.from(finalizedStudentIdsThisYear)
-    .map((id) => {
-      const student = studentMapById.get(id);
-      return { legajo: student?.[FIELD_LEGAJO_ESTUDIANTES] || 'N/A', nombre: student?.[FIELD_NOMBRE_ESTUDIANTES] || `ID ${id}` };
-    })
+  const alumnosFinalizadosList = finalizacionesThisYear
+    .map((student) => ({
+      legajo: student[FIELD_LEGAJO_ESTUDIANTES] || 'N/A',
+      nombre: student[FIELD_NOMBRE_ESTUDIANTES] || `ID ${student.id}`,
+    }))
     .sort((a, b) => a.nombre.localeCompare(b.nombre));
 
   const studentTotalHoursById = practicas.reduce((acc, p) => {
@@ -563,7 +546,7 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
     alumnosActivos: { value: allActiveStudents.length, list: alumnosActivosList },
     alumnosSinPPS: { value: alumnosSinPPSList.length, list: alumnosSinPPSList },
     alumnosSinNingunaPPS: { value: alumnosSinNingunaPPSList.length, list: alumnosSinNingunaPPSList },
-    alumnosFinalizados: { value: finalizedStudentIdsThisYear.size, list: alumnosFinalizadosList },
+    alumnosFinalizados: { value: finalizacionesThisYear.length, list: alumnosFinalizadosList },
     ppsLanzadas: { value: ppsLanzadasCount, list: ppsLanzadasList },
     cuposOfrecidos: { value: cuposOfrecidosSinRelevamiento },
     cuposTotalesConRelevamiento: { value: cuposTotalesConRelevamiento },
