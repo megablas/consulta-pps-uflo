@@ -17,9 +17,10 @@ const RotationTracker: React.FC<RotationTrackerProps> = ({ count, orientacionesU
         <h4 className="text-base font-bold text-slate-800 dark:text-slate-100">
           Rotación de Orientaciones
         </h4>
-        <div className={`flex items-center gap-1.5 text-sm font-bold ${isComplete ? colorClass : 'text-slate-800 dark:text-slate-100'}`}>
-          {isComplete && <span className="material-icons !text-base">check_circle</span>}
-          <span>{count} / {total}</span>
+        <div className="flex items-center gap-1.5 text-sm font-bold">
+          {isComplete && <span className={`material-icons !text-base ${colorClass}`}>check_circle</span>}
+          <span className={`font-black ${colorClass}`}>{count}</span>
+          <span className="text-slate-500 dark:text-slate-400"> / {total}</span>
         </div>
       </div>
       

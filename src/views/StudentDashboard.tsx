@@ -48,7 +48,7 @@ const CondensedWelcomeCard: React.FC<{
             </p>
 
             <div className="flex items-baseline justify-center sm:justify-start gap-2">
-                <span className="text-6xl font-black text-slate-800 dark:text-slate-100 tracking-tighter">
+                <span className="text-6xl font-black text-blue-600 dark:text-blue-400 tracking-tighter">
                     {Math.round(criterios.horasTotales)}
                 </span>
                 <span className="text-2xl font-bold text-slate-500 dark:text-slate-400">
@@ -61,8 +61,8 @@ const CondensedWelcomeCard: React.FC<{
                     {/* Rotations */}
                     <div className="flex flex-col items-center sm:items-start">
                         <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Rotaciones</p>
-                        <p className="text-2xl font-black text-slate-800 dark:text-slate-100">
-                           {criterios.orientacionesCursadasCount}
+                        <p className="text-2xl font-black">
+                           <span className="text-blue-600 dark:text-blue-400">{criterios.orientacionesCursadasCount}</span>
                             <span className="text-lg font-bold text-slate-500 dark:text-slate-400"> / {ROTACION_OBJETIVO_ORIENTACIONES}</span>
                         </p>
                     </div>
@@ -71,11 +71,38 @@ const CondensedWelcomeCard: React.FC<{
                         <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 truncate">
                           {selectedOrientacion ? `Hs. ${selectedOrientacion}` : 'Hs. Orientación'}
                         </p>
-                        <p className="text-2xl font-black text-slate-800 dark:text-slate-100">
-                           {Math.round(criterios.horasOrientacionElegida)}
+                        <p className="text-2xl font-black">
+                           <span className="text-blue-600 dark:text-blue-400">{Math.round(criterios.horasOrientacionElegida)}</span>
                             <span className="text-lg font-bold text-slate-500 dark:text-slate-400"> / {HORAS_OBJETIVO_ORIENTACION}</span>
                         </p>
                     </div>
+                </div>
+            </div>
+        </Card>
+    );
+};
+
+const TotalHoursSummaryCard: React.FC<{ totalHours: number, goalHours: number }> = ({ totalHours, goalHours }) => {
+    const percentage = goalHours > 0 ? Math.min((totalHours / goalHours) * 100, 100) : 0;
+
+    return (
+        <Card>
+            <div className="flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
+                <div className="flex-shrink-0">
+                    <p className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Horas Totales</p>
+                    <p className="text-7xl font-black text-blue-600 dark:text-blue-400 tracking-tighter -my-1">{Math.round(totalHours)}</p>
+                    <p className="text-lg font-semibold text-slate-600 dark:text-slate-300">de {goalHours} completadas</p>
+                </div>
+                <div className="w-full flex-grow">
+                     <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3.5 shadow-inner">
+                        <div
+                        className="bg-gradient-to-r from-sky-400 to-blue-500 h-3.5 rounded-full transition-all duration-1000 ease-out"
+                        style={{ width: `${percentage}%` }}
+                        ></div>
+                    </div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                        {totalHours >= goalHours ? "¡Felicitaciones! Has cumplido el requisito de horas." : `Te faltan ${Math.round(goalHours - totalHours)} horas para alcanzar el objetivo.`}
+                    </p>
                 </div>
             </div>
         </Card>
@@ -148,7 +175,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   const convocatoriasContent = useMemo(() => <ConvocatoriasList lanzamientos={lanzamientos} myEnrollments={myEnrollments} practicas={practicas} student={studentDetails} onInscribir={enrollStudent.mutate} />, [lanzamientos, myEnrollments, practicas, studentDetails, enrollStudent.mutate]);
   const informesContent = useMemo(() => <InformesList tasks={informeTasks} onConfirmar={confirmInforme.mutate} />, [informeTasks, confirmInforme.mutate]);
   const solicitudesContent = useMemo(() => <SolicitudesList solicitudes={solicitudes} />, [solicitudes]);
-  const practicasContent = useMemo(() => <PracticasTable practicas={practicas} handleNotaChange={handleNotaChange} />, [practicas, handleNotaChange]);
+  const practicasContent = useMemo(() => (
+    <div className="space-y-6">
+      <div className="md:hidden">
+        <TotalHoursSummaryCard totalHours={criterios.horasTotales} goalHours={HORAS_OBJETIVO_TOTAL} />
+      </div>
+      <PracticasTable practicas={practicas} handleNotaChange={handleNotaChange} />
+    </div>
+  ), [practicas, handleNotaChange, criterios.horasTotales]);
   const profileContent = useMemo(() => <ProfileView studentDetails={studentDetails} isLoading={isStudentLoading} />, [studentDetails, isStudentLoading]);
   const calendarioContent = useMemo(() => <CalendarView myEnrollments={myEnrollments} allLanzamientos={allLanzamientos} />, [myEnrollments, allLanzamientos]);
 
@@ -221,7 +255,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
     
           {/* --- MOBILE VIEW --- */}
           <div className="md:hidden space-y-8">
-             {!isCalendarActive && (
+             {currentActiveTab === 'convocatorias' && (
                 <CondensedWelcomeCard
                     criterios={criterios} 
                     greeting={greeting}
@@ -232,7 +266,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
              
             {activeTabObject && (
               <section aria-labelledby={`mobile-section-title-${activeTabObject.id}`}>
-                {!isCalendarActive && (
+                {!isCalendarActive && currentActiveTab !== 'practicas' && (
                     <h2 id={`mobile-section-title-${activeTabObject.id}`} className="text-2xl font-bold text-slate-900 dark:text-slate-50 tracking-tight mb-4 flex items-center gap-3">
                         {activeTabObject.icon && <span className="material-icons !text-2xl text-slate-400 dark:text-slate-500">{activeTabObject.icon}</span>}
                         <span>{activeTabObject.title}</span>
