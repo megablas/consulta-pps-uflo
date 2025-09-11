@@ -1,80 +1,70 @@
-// Define the cache name and files to cache.
-// Using a versioned cache name is a best practice to manage updates.
+// sw.js para /consulta-pps-uflo/
+
 const CACHE_NAME = 'mi-panel-academico-cache-v6';
-// This list now uses absolute paths, making it robust for sub-path deployments.
-// Icons have been removed from this list, as the browser will fetch them via the manifest.
 const FILES_TO_CACHE = [
   '/consulta-pps-uflo/index.html',
   '/consulta-pps-uflo/manifest.json',
 ];
 
-// The install event is fired when the service worker is first installed.
+// Instala y precachea el shell mínimo
 self.addEventListener('install', (event) => {
-  console.log('[ServiceWorker] Install');
-  // We wait until the cache is populated before completing the installation.
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[ServiceWorker] Pre-caching app shell');
-      // Use addAll with a catch to prevent installation failure if an asset (like an icon) is missing.
-      return cache.addAll(FILES_TO_CACHE).catch(error => {
-        console.warn('[ServiceWorker] Failed to cache all initial assets. The app will still work offline, but some resources might be missing until fetched.', error);
-      });
-    })
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(FILES_TO_CACHE))
+      .catch((err) => {
+        // Precarga parcial: no fallar la instalación por un asset faltante
+        console.warn('[SW] Precarga parcial', err);
+      })
   );
-  // Force the waiting service worker to become the active service worker.
   self.skipWaiting();
 });
 
-// The activate event is fired when the service worker is activated.
-// It's a good place to clean up old caches.
+// Activa y purga caches viejas
 self.addEventListener('activate', (event) => {
-  console.log('[ServiceWorker] Activate');
   event.waitUntil(
-    caches.keys().then((keyList) => {
-      return Promise.all(keyList.map((key) => {
-        if (key !== CACHE_NAME) {
-          console.log('[ServiceWorker] Removing old cache', key);
-          return caches.delete(key);
-        }
-      }));
-    })
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys.map((key) => (key !== CACHE_NAME ? caches.delete(key) : undefined))
+      )
+    )
   );
-  // Ensures that any pages controlled by this service worker will be refreshed.
   self.clients.claim();
 });
 
-// The fetch event is fired for every network request.
+// Estrategia: Network-first con fallback a caché
 self.addEventListener('fetch', (event) => {
-  // We only want to handle GET requests.
+  // Ignora métodos no-GET y extensiones del navegador
   if (event.request.method !== 'GET' || event.request.url.startsWith('chrome-extension://')) {
     return;
   }
-  
-  // Strategy: Network falling back to cache
+
   event.respondWith(
-    fetch(event.request)
-      .then((networkResponse) => {
-        // If the fetch is successful, clone it and cache it for future offline use.
-        if (networkResponse.ok) {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
+    (async () => {
+      try {
+        // Intento de red primero
+        const networkResponse = await fetch(event.request);
+        // Cachea copia si es OK
+        if (networkResponse && networkResponse.ok) {
+          const copy = networkResponse.clone();
+          const cache = await caches.open(CACHE_NAME);
+          // No bloquea la respuesta
+          cache.put(event.request, copy).catch(() => {});
         }
         return networkResponse;
-      })
-      .catch(() => {
-        // If the network fails, try to serve from the cache.
-        return caches.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          // If the request is for a page and it's not in the cache, return the main index.html as a fallback (for SPA).
-          if (event.request.mode === 'navigate') {
-            return caches.match('/consulta-pps-uflo/index.html'); // Use the absolute path to the root HTML
-          }
-          return new Response(null, { status: 404, statusText: "Not Found" });
-        });
-      })
+      } catch (err) {
+        // Sin red: intenta caché
+        const cached = await caches.match(event.request);
+        if (cached) return cached;
+
+        // Para navegaciones, sirve el index como fallback de SPA
+        if (event.request.mode === 'navigate') {
+          const fallback = await caches.match('/consulta-pps-uflo/index.html');
+          if (fallback) return fallback;
+        }
+
+        // Último recurso: 404 vacía
+        return new Response(null, { status: 404, statusText: 'Not Found' });
+      }
+    })()
   );
 });
