@@ -254,8 +254,19 @@ const Auth: React.FC = () => {
             if (passwordTrimmed !== confirmPassword.trim()) {
                 throw new Error('Las contraseñas no coinciden.');
             }
-            if (missingFields.some(field => !newData[field as keyof EstudianteFields])) {
-                throw new Error('Por favor, completa toda la información requerida.');
+            
+            // Stricter validation for required fields
+            if (foundStudent && missingFields.length > 0) {
+                const fieldsStillMissing = missingFields.filter(field => {
+                    const value = newData[field as keyof EstudianteFields];
+                    if (value === undefined || value === null) return true;
+                    if (typeof value === 'string' && value.trim() === '') return true;
+                    return false;
+                });
+
+                if (fieldsStillMissing.length > 0) {
+                    throw new Error('Por favor, completa toda la información requerida para el registro.');
+                }
             }
 
             const salt = generateSalt();
