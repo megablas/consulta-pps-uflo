@@ -3,7 +3,7 @@ import React, { createContext, useState, useContext, useEffect, useCallback, Rea
 export type AuthUser = {
   legajo: string;
   nombre: string;
-  role?: 'Jefe' | 'SuperUser';
+  role?: 'Jefe' | 'SuperUser' | 'Directivo';
   orientaciones?: string[];
 };
 
@@ -11,6 +11,7 @@ interface AuthContextType {
   authenticatedUser: AuthUser | null;
   isSuperUserMode: boolean;
   isJefeMode: boolean;
+  isDirectivoMode: boolean;
   isAuthLoading: boolean;
   login: (user: AuthUser, rememberMe?: boolean) => void;
   logout: () => void;
@@ -57,9 +58,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const isSuperUserMode = authenticatedUser?.role === 'SuperUser' || authenticatedUser?.legajo === 'admin';
   const isJefeMode = authenticatedUser?.role === 'Jefe';
+  const isDirectivoMode = authenticatedUser?.role === 'Directivo';
 
   return (
-    <AuthContext.Provider value={{ authenticatedUser, isSuperUserMode, isJefeMode, isAuthLoading, login, logout }}>
+    <AuthContext.Provider value={{ authenticatedUser, isSuperUserMode, isJefeMode, isDirectivoMode, isAuthLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
