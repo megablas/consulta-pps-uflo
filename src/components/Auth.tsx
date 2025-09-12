@@ -38,6 +38,35 @@ const AuthInput: React.FC<AuthInputProps> = ({ id, type, value, onChange, placeh
   </div>
 );
 
+// Helper function to process the role from Airtable
+const getProcessedRole = (roleValue: any): 'Jefe' | 'SuperUser' | 'Directivo' | undefined => {
+    if (!roleValue) {
+        return undefined;
+    }
+
+    // Handle array from Lookup or Multiple Select fields
+    if (Array.isArray(roleValue)) {
+        // Take the first valid role found in the array
+        const firstRole = roleValue.find(r => typeof r === 'string' && r.trim() !== '');
+        if (!firstRole) return undefined;
+        roleValue = firstRole;
+    }
+
+    // Ensure it's a string and trim whitespace
+    if (typeof roleValue !== 'string') {
+        return undefined;
+    }
+    const trimmedRole = roleValue.trim();
+
+    // Check against valid roles
+    if (trimmedRole === 'Jefe' || trimmedRole === 'SuperUser' || trimmedRole === 'Directivo') {
+        return trimmedRole;
+    }
+
+    return undefined;
+};
+
+
 const Auth: React.FC = () => {
   const { login } = useAuth();
   const { showModal } = useModal();
@@ -202,10 +231,11 @@ const Auth: React.FC = () => {
             }
             const isValid = await verifyPassword(passwordTrimmed, user[FIELD_SALT_AUTH]!, user[FIELD_PASSWORD_HASH_AUTH]!);
             if (isValid) {
+                const processedRole = getProcessedRole(user[FIELD_ROLE_AUTH]);
                 login({ 
                   legajo: legajoTrimmed, 
                   nombre: user[FIELD_NOMBRE_AUTH]!,
-                  role: user[FIELD_ROLE_AUTH],
+                  role: processedRole,
                   orientaciones: user[FIELD_ORIENTACIONES_AUTH]?.split(',').map(o => o.trim())
                 }, rememberMe);
             } else {

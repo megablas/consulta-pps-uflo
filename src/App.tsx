@@ -13,10 +13,11 @@ import { PwaInstallProvider } from './contexts/PwaInstallContext';
 const AdminView = lazy(() => import('./views/AdminView'));
 const JefeView = lazy(() => import('./views/JefeView'));
 const StudentView = lazy(() => import('./views/StudentView'));
+const DirectivoView = lazy(() => import('./views/DirectivoView'));
 
 
 const App: React.FC = () => {
-  const { authenticatedUser, isAuthLoading, isSuperUserMode, isJefeMode } = useAuth();
+  const { authenticatedUser, isAuthLoading, isSuperUserMode, isJefeMode, isDirectivoMode } = useAuth();
 
   if (isAuthLoading) {
     return (
@@ -44,6 +45,8 @@ const App: React.FC = () => {
                   <AdminView />
                 ) : isJefeMode ? (
                   <JefeView />
+                ) : isDirectivoMode ? (
+                  <DirectivoView />
                 ) : (
                   <StudentView />
                 )}

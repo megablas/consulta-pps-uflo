@@ -418,13 +418,14 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
     '101-150 hs': { count: 0, students: [] },
     '151-200 hs': { count: 0, students: [] },
     '201-249 hs': { count: 0, students: [] },
+    '250+ hs': { count: 0, students: [] },
   };
 
   allActiveStudents.forEach(student => {
     const hours = studentTotalHoursById.get(student.id) || 0;
-    if (hours >= 250) return;
     const studentInfo = { legajo: student[FIELD_LEGAJO_ESTUDIANTES] || 'N/A', nombre: student[FIELD_NOMBRE_ESTUDIANTES] || `ID ${student.id}`, totalHoras: Math.round(hours) };
-    if (hours >= 201) hourBins['201-249 hs'].students.push(studentInfo);
+    if (hours >= 250) hourBins['250+ hs'].students.push(studentInfo);
+    else if (hours >= 201) hourBins['201-249 hs'].students.push(studentInfo);
     else if (hours >= 151) hourBins['151-200 hs'].students.push(studentInfo);
     else if (hours >= 101) hourBins['101-150 hs'].students.push(studentInfo);
     else if (hours >= 51) hourBins['51-100 hs'].students.push(studentInfo);

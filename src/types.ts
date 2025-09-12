@@ -54,7 +54,7 @@ export interface AuthUserFields {
   'Nombre'?: string;
   'PasswordHash'?: string;
   'Salt'?: string;
-  'Role'?: 'Jefe' | 'SuperUser';
+  'Role'?: 'Jefe' | 'SuperUser' | 'Directivo';
   'Orientaciones'?: string; // Comma-separated list
 }
 
