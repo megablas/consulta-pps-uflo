@@ -11,6 +11,9 @@ import {
     FIELD_ORIENTACION_LANZAMIENTOS,
     FIELD_NOMBRE_PPS_LANZAMIENTOS,
     FIELD_DIRECCION_LANZAMIENTOS,
+    FIELD_FECHA_INICIO_CONVOCATORIAS,
+    // FIX: Imported missing constant to resolve name error.
+    FIELD_NOMBRE_PPS_CONVOCATORIAS,
 } from '../constants';
 import { parseToUTCDate, getEspecialidadClasses, normalizeStringForComparison } from '../utils/formatters';
 import EmptyState from './EmptyState';
@@ -100,8 +103,35 @@ const CalendarView: React.FC<CalendarViewProps> = ({ myEnrollments, allLanzamien
         return myEnrollments
             .filter(e => normalizeStringForComparison(e[FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS]) === 'seleccionado')
             .map(enrollment => {
+                let pps: LanzamientoPPS | undefined;
                 const lanzamientoId = (enrollment[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])[0];
-                const pps = allLanzamientos.find(l => l.id === lanzamientoId);
+                
+                if (lanzamientoId) {
+                    pps = allLanzamientos.find(l => l.id === lanzamientoId);
+                }
+                
+                // Fallback logic if direct link fails or is missing
+                if (!pps) {
+                    const convPpsNameRaw = enrollment[FIELD_NOMBRE_PPS_CONVOCATORIAS];
+                    const ppsNameToMatch = Array.isArray(convPpsNameRaw) ? convPpsNameRaw[0] : convPpsNameRaw;
+                    const convStartDate = parseToUTCDate(enrollment[FIELD_FECHA_INICIO_CONVOCATORIAS]);
+    
+                    if (ppsNameToMatch && convStartDate) {
+                        pps = allLanzamientos.find(l => {
+                            const lanzamientoStartDate = parseToUTCDate(l[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+                            if (!lanzamientoStartDate) return false;
+                            
+                            const timeDiff = Math.abs(lanzamientoStartDate.getTime() - convStartDate.getTime());
+                            const daysDiff = timeDiff / (1000 * 3600 * 24);
+
+                            const normLanzamientoName = normalizeStringForComparison(l[FIELD_NOMBRE_PPS_LANZAMIENTOS]);
+                            const normConvocatoriaName = normalizeStringForComparison(ppsNameToMatch as string);
+                            const namesMatch = normLanzamientoName.includes(normConvocatoriaName) || normConvocatoriaName.includes(normLanzamientoName);
+                            
+                            return namesMatch && daysDiff <= 31;
+                        });
+                    }
+                }
                 
                 if (!pps) return null;
                 

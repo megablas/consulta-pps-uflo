@@ -149,6 +149,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
     refetchSolicitudes();
     refetchConvocatorias();
   }, [refetchStudent, refetchPracticas, refetchSolicitudes, refetchConvocatorias]);
+
+  useEffect(() => {
+    // When the user navigates to the "Informes" tab, refetch the data
+    // to ensure any newly added report links are displayed.
+    if (currentActiveTab === 'informes') {
+      refetchConvocatorias();
+    }
+  }, [currentActiveTab, refetchConvocatorias]);
   
   const selectedOrientacion = (studentDetails?.['Orientación Elegida'] || "") as Orientacion | "";
   const studentNameForPanel = studentDetails?.['Nombre'] || user.nombre;

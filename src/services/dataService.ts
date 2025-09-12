@@ -27,6 +27,10 @@ import {
   FIELD_LANZAMIENTO_VINCULADO_PRACTICAS,
   FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS,
   FIELD_NOTAS_INTERNAS_ESTUDIANTES,
+  FIELD_FECHA_INICIO_CONVOCATORIAS,
+  // FIX: Imported missing constant to resolve name error.
+  FIELD_NOMBRE_PPS_CONVOCATORIAS,
+  FIELD_ESTADO_PRACTICA,
 } from '../constants';
 import { normalizeStringForComparison, parseToUTCDate } from '../utils/formatters';
 
@@ -116,187 +120,274 @@ export const fetchSolicitudes = async (legajo: string, studentAirtableId: string
   return validationResult.data.map(r => ({ ...r.fields, id: r.id }));
 };
 
-export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: string | null, isCorrector: boolean): Promise<{ lanzamientos: LanzamientoPPS[], myEnrollments: Convocatoria[], allLanzamientos: LanzamientoPPS[] }> => {
-  const convocatoriasFormula = (studentAirtableId)
-    ? `OR(
-        {${FIELD_LEGAJO_CONVOCATORIAS}} = ${legajo},
-        FIND('${studentAirtableId}', ARRAYJOIN({${FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS}}))
-    )`
-    : undefined;
+export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: string | null, isSuperUserMode: boolean): Promise<{
+    lanzamientos: LanzamientoPPS[],
+    myEnrollments: Convocatoria[],
+    allLanzamientos: LanzamientoPPS[]
+}> => {
+  // This robust formula finds enrollments by precise record ID link OR by a text search of the legajo,
+  // ensuring all relevant records are found even with minor data inconsistencies.
+  const formula = studentAirtableId
+    ? `OR(FIND('${studentAirtableId}', ARRAYJOIN({${FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS}})), SEARCH('${legajo}', {${FIELD_LEGAJO_CONVOCATORIAS}} & ''))`
+    : `SEARCH('${legajo}', {${FIELD_LEGAJO_CONVOCATORIAS}} & '')`;
 
-  const [convocatoriasRes, lanzamientosRes] = await Promise.all([
-    fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS, [
-        FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
-        FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS,
-        FIELD_INFORME_SUBIDO_CONVOCATORIAS,
-        FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS,
-        FIELD_HORARIO_FORMULA_CONVOCATORIAS,
-    ], convocatoriasFormula),
-    fetchAllAirtableData<LanzamientoPPSFields>(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, [], undefined, [{ field: FIELD_FECHA_INICIO_LANZAMIENTOS, direction: 'desc' }])
-  ]);
 
-  const error = convocatoriasRes.error || lanzamientosRes.error;
-  if (error) {
-    const errorMsg = typeof error.error === 'string' ? error.error : error.error.message;
-    throw new Error(`Error fetching convocatorias data: ${errorMsg}`);
-  }
+  // Fetches ALL convocatorias a student is enrolled in, regardless of status.
+  const { records: convocatoriasResRecords, error: convocatoriasError } = await fetchAllAirtableData<ConvocatoriaFields>(
+    AIRTABLE_TABLE_NAME_CONVOCATORIAS, [], formula
+  );
+
+  // Fetches ALL lanzamientos. They will be filtered for the student view.
+  const { records: lanzamientosResRecords, error: lanzamientosError } = await fetchAllAirtableData<LanzamientoPPSFields>(
+      AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
+      [],
+      undefined,
+      [{ field: FIELD_FECHA_INICIO_LANZAMIENTOS, direction: 'desc' }]
+  );
   
-  const convocatoriasValidation = convocatoriaArraySchema.safeParse(convocatoriasRes.records);
-  if (!convocatoriasValidation.success) {
-      const formattedErrors = convocatoriasValidation.error.issues.map(issue => `  - Registro Convocatorias #${String(issue.path[0])}, Campo '${issue.path.slice(1).map(String).join('.')}': ${issue.message}`).join('\n');
-      console.error('[Zod Validation Error in Convocatorias]:', convocatoriasValidation.error.issues);
-      throw new Error(`Error de validación de datos en 'Convocatorias':\n${formattedErrors}`);
+  if (convocatoriasError || lanzamientosError) {
+    const errorMsg = (convocatoriasError || lanzamientosError)?.error;
+    const finalMessage = typeof errorMsg === 'string' ? errorMsg : errorMsg?.message || 'Error al cargar los datos de convocatorias.';
+    throw new Error(finalMessage);
   }
-  const lanzamientosValidation = lanzamientoPPSArraySchema.safeParse(lanzamientosRes.records);
+
+  const myEnrollmentsValidation = convocatoriaArraySchema.safeParse(convocatoriasResRecords);
+  if (!myEnrollmentsValidation.success) {
+      const formattedErrors = myEnrollmentsValidation.error.issues.map(issue => 
+        `  - Registro #${String(issue.path[0])}, Campo '${issue.path.slice(1).map(String).join('.')}': ${issue.message}`
+      ).join('\n');
+      console.error('[Zod Validation Error in MyEnrollments]:', myEnrollmentsValidation.error.issues);
+      throw new Error(`Error de validación de datos en 'Mis Inscripciones':\n${formattedErrors}`);
+  }
+
+  const myEnrollments = myEnrollmentsValidation.data.map(r => ({ ...r.fields, id: r.id }));
+
+  const lanzamientosValidation = lanzamientoPPSArraySchema.safeParse(lanzamientosResRecords);
   if (!lanzamientosValidation.success) {
-      const formattedErrors = lanzamientosValidation.error.issues.map(issue => `  - Registro Lanzamientos #${String(issue.path[0])}, Campo '${issue.path.slice(1).map(String).join('.')}': ${issue.message}`).join('\n');
-      console.error('[Zod Validation Error in Lanzamientos]:', lanzamientosValidation.error.issues);
-      throw new Error(`Error de validación de datos en 'Lanzamientos':\n${formattedErrors}`);
+    const formattedErrors = lanzamientosValidation.error.issues.map(issue => 
+      `  - Registro #${String(issue.path[0])}, Campo '${issue.path.slice(1).map(String).join('.')}': ${issue.message}`
+    ).join('\n');
+    console.error('[Zod Validation Error in Lanzamientos]:', lanzamientosValidation.error.issues);
+    throw new Error(`Error de validación de datos en 'Lanzamientos de PPS':\n${formattedErrors}`);
   }
-
-
-  const myEnrollments: Convocatoria[] = convocatoriasValidation.data.map(r => ({ ...r.fields, id: r.id }));
-  const allLanzamientos: LanzamientoPPS[] = lanzamientosValidation.data.map(r => ({ ...r.fields, id: r.id }));
   
-  const lanzamientos = allLanzamientos.filter(l => {
-      const ppsName = l[FIELD_NOMBRE_PPS_LANZAMIENTOS];
-      if (!(typeof ppsName === 'string' && ppsName.trim())) return false;
-      
-      const status = normalizeStringForComparison(l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]);
-      if (status === 'oculto' && !isCorrector) return false;
-
-      const isEnrolled = myEnrollments.some(e => (e[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || []).includes(l.id));
-      if (isEnrolled) return true;
-
-      if (isCorrector) return true; // Show all to admin if not filtered by student enrollment
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      if (status === 'abierta' || status === 'abierto') return true;
-      
-      const endDate = parseToUTCDate(l[FIELD_FECHA_FIN_LANZAMIENTOS]);
-      if (endDate && endDate.getTime() >= today.getTime()) return true;
-
-      if (status === 'cerrado' && endDate) {
-          const gracePeriodEndDate = new Date(endDate.getTime());
-          gracePeriodEndDate.setDate(gracePeriodEndDate.getDate() + 7);
-          if (today <= gracePeriodEndDate) return true;
-      }
-      
-      return false;
+  const allLanzamientosRecords = lanzamientosValidation.data.map(r => ({ ...r.fields, id: r.id }));
+  
+  const lanzamientos = isSuperUserMode ? allLanzamientosRecords : allLanzamientosRecords.filter(lanzamiento => {
+    const estado = normalizeStringForComparison(lanzamiento[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]);
+    
+    // For students, explicitly hide any 'Oculto' convocatorias. All others ('Abierta', 'Cerrado', etc.) will be shown.
+    if (estado === 'oculto') {
+        return false;
+    }
+    return true;
   });
 
-  return { lanzamientos, myEnrollments, allLanzamientos };
+  return { lanzamientos, myEnrollments, allLanzamientos: allLanzamientosRecords };
 };
 
 export const processInformeTasks = (myEnrollments: Convocatoria[], allLanzamientos: LanzamientoPPS[], practicas: Practica[]): InformeTask[] => {
-    return myEnrollments
-        .map((enrollment): InformeTask | null => {
-            const lanzamientoId = (enrollment[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])[0];
-            const lanzamiento = allLanzamientos.find(l => l.id === lanzamientoId);
-            
-            const isSeleccionado = normalizeStringForComparison(enrollment[FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS]) === 'seleccionado';
+  const tasks: InformeTask[] = [];
+  const processedLanzamientoIds = new Set<string>();
 
-            if (!lanzamiento || !lanzamiento[FIELD_INFORME_LANZAMIENTOS] || !lanzamiento[FIELD_FECHA_FIN_LANZAMIENTOS] || !isSeleccionado) {
-                return null;
-            }
+  // --- Path 1: Process from formal "Seleccionado" enrollments ---
+  const selectedEnrollments = myEnrollments.filter(e => normalizeStringForComparison(e[FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS]) === 'seleccionado');
 
-            // New, robust method: find by linked record
-            let practicaVinculada = practicas.find(p => (p[FIELD_LANZAMIENTO_VINCULADO_PRACTICAS] as string[] | undefined)?.[0] === lanzamientoId);
-            
-            // Fallback to old method if no linked record is found
-            if (!practicaVinculada) {
-                practicaVinculada = practicas.find(p => {
-                    const ppsName = (p[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS] as (string|number)[] | undefined)?.[0] ?? '';
+  for (const enrollment of selectedEnrollments) {
+    let pps: LanzamientoPPS | undefined;
+    const lanzamientoId = (enrollment[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])[0];
+    
+    if (lanzamientoId) {
+        pps = allLanzamientos.find(l => l.id === lanzamientoId);
+    } else {
+        // Fallback logic if direct link fails or is missing
+        const convPpsNameRaw = enrollment[FIELD_NOMBRE_PPS_CONVOCATORIAS];
+        const ppsNameToMatch = Array.isArray(convPpsNameRaw) ? convPpsNameRaw[0] : convPpsNameRaw;
+        const convStartDate = parseToUTCDate(enrollment[FIELD_FECHA_INICIO_CONVOCATORIAS]);
+
+        if (ppsNameToMatch && convStartDate) {
+            pps = allLanzamientos.find(l => {
+                const lanzamientoStartDate = parseToUTCDate(l[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+                if (!lanzamientoStartDate) return false;
+                
+                const timeDiff = Math.abs(lanzamientoStartDate.getTime() - convStartDate.getTime());
+                const daysDiff = timeDiff / (1000 * 3600 * 24);
+
+                const normLanzamientoName = normalizeStringForComparison(l[FIELD_NOMBRE_PPS_LANZAMIENTOS]);
+                const normConvocatoriaName = normalizeStringForComparison(ppsNameToMatch as string);
+                const namesMatch = normLanzamientoName.includes(normConvocatoriaName) || normConvocatoriaName.includes(normLanzamientoName);
+
+                return namesMatch && daysDiff <= 31;
+            });
+        }
+    }
+    
+    if (pps && pps[FIELD_INFORME_LANZAMIENTOS]) {
+        processedLanzamientoIds.add(pps.id);
+        
+        // Primary linking method for practica
+        let linkedPractica = practicas.find(p => ((p[FIELD_LANZAMIENTO_VINCULADO_PRACTICAS] as string[] | undefined)?.[0]) === pps!.id);
+
+        // Fallback linking method if direct link fails
+        if (!linkedPractica) {
+            const ppsName = pps[FIELD_NOMBRE_PPS_LANZAMIENTOS];
+            const ppsStartDate = parseToUTCDate(pps[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+
+            if (ppsName && ppsStartDate) {
+                const normalizedPpsName = normalizeStringForComparison(ppsName);
+                linkedPractica = practicas.find(p => {
+                    const practicaNameRaw = p[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
+                    const practicaName = Array.isArray(practicaNameRaw) ? practicaNameRaw[0] : practicaNameRaw;
+                    if (!practicaName || normalizeStringForComparison(practicaName as string) !== normalizedPpsName) {
+                        return false;
+                    }
+
                     const practicaStartDate = parseToUTCDate(p[FIELD_FECHA_INICIO_PRACTICAS]);
-                    const lanzamientoStartDate = parseToUTCDate(lanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS]);
-                    return normalizeStringForComparison(ppsName) === normalizeStringForComparison(lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS]) &&
-                           practicaStartDate?.getTime() === lanzamientoStartDate?.getTime();
+                    if (!practicaStartDate) return false;
+
+                    const timeDiff = Math.abs(practicaStartDate.getTime() - ppsStartDate.getTime());
+                    const daysDiff = timeDiff / (1000 * 3600 * 24);
+                    return daysDiff <= 31; // Match within a month's tolerance
                 });
             }
+        }
 
-            return {
-                convocatoriaId: enrollment.id,
-                practicaId: practicaVinculada?.id,
-                ppsName: lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'N/A',
-                informeLink: lanzamiento[FIELD_INFORME_LANZAMIENTOS],
-                fechaFinalizacion: lanzamiento[FIELD_FECHA_FIN_LANZAMIENTOS],
-                informeSubido: !!enrollment[FIELD_INFORME_SUBIDO_CONVOCATORIAS],
-                nota: practicaVinculada?.[FIELD_NOTA_PRACTICAS] || 'Sin calificar',
-                fechaEntregaInforme: enrollment[FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS],
-            };
-        })
-        .filter((task): task is InformeTask => task !== null)
-        .sort((a, b) => new Date(a.fechaFinalizacion).getTime() - new Date(b.fechaFinalizacion).getTime());
+        tasks.push({
+            convocatoriaId: enrollment.id,
+            practicaId: linkedPractica?.id,
+            ppsName: pps[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'Práctica sin nombre',
+            informeLink: pps[FIELD_INFORME_LANZAMIENTOS],
+            fechaFinalizacion: pps[FIELD_FECHA_FIN_LANZAMIENTOS] || new Date().toISOString(),
+            informeSubido: !!enrollment[FIELD_INFORME_SUBIDO_CONVOCATORIAS],
+            nota: linkedPractica?.[FIELD_NOTA_PRACTICAS],
+            fechaEntregaInforme: enrollment[FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS],
+        });
+    }
+  }
+
+  // --- Path 2: Process from "Finalizada" practices that might not have a formal enrollment ---
+  const finalizadaStatuses = ['finalizada', 'pps realizada', 'convenio realizado'];
+  for (const practica of practicas) {
+      const estadoPractica = normalizeStringForComparison(practica[FIELD_ESTADO_PRACTICA]);
+      if (!finalizadaStatuses.includes(estadoPractica)) {
+          continue;
+      }
+
+      let pps: LanzamientoPPS | undefined;
+      const lanzamientoId = (practica[FIELD_LANZAMIENTO_VINCULADO_PRACTICAS] as string[] | undefined)?.[0];
+      
+      if (lanzamientoId) {
+          if (processedLanzamientoIds.has(lanzamientoId)) continue; // Already processed via Path 1
+          pps = allLanzamientos.find(l => l.id === lanzamientoId);
+      } else {
+          const ppsNameRaw = practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
+          const ppsNameToMatch = Array.isArray(ppsNameRaw) ? ppsNameRaw[0] : ppsNameRaw;
+          const practicaStartDate = parseToUTCDate(practica[FIELD_FECHA_INICIO_PRACTICAS]);
+
+          if (ppsNameToMatch && practicaStartDate) {
+              pps = allLanzamientos.find(l => {
+                  if (processedLanzamientoIds.has(l.id)) return false;
+                  const lanzamientoStartDate = parseToUTCDate(l[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+                  if (!lanzamientoStartDate) return false;
+                  const timeDiff = Math.abs(lanzamientoStartDate.getTime() - practicaStartDate.getTime());
+                  const daysDiff = timeDiff / (1000 * 3600 * 24);
+                  return normalizeStringForComparison(l[FIELD_NOMBRE_PPS_LANZAMIENTOS]) === normalizeStringForComparison(ppsNameToMatch as string) && daysDiff <= 31;
+              });
+          }
+      }
+      
+      if (pps && pps[FIELD_INFORME_LANZAMIENTOS] && !processedLanzamientoIds.has(pps.id)) {
+          tasks.push({
+              convocatoriaId: `practica-${practica.id}`,
+              practicaId: practica.id,
+              ppsName: pps[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'Práctica sin nombre',
+              informeLink: pps[FIELD_INFORME_LANZAMIENTOS],
+              fechaFinalizacion: pps[FIELD_FECHA_FIN_LANZAMIENTOS] || new Date().toISOString(),
+              informeSubido: !!practica[FIELD_INFORME_SUBIDO_CONVOCATORIAS], 
+              nota: practica[FIELD_NOTA_PRACTICAS],
+          });
+          processedLanzamientoIds.add(pps.id);
+      }
+  }
+
+  // Sort tasks: pending first, then by deadline
+  return tasks.sort((a, b) => {
+    const aIsPending = !a.informeSubido;
+    const bIsPending = !b.informeSubido;
+    if (aIsPending && !bIsPending) return -1;
+    if (!aIsPending && bIsPending) return 1;
+
+    const dateA = parseToUTCDate(a.fechaFinalizacion)?.getTime() || 0;
+    const dateB = parseToUTCDate(b.fechaFinalizacion)?.getTime() || 0;
+    return dateA - dateB;
+  });
 };
 
-
-/**
- * Fetches the list of selected students for a specific PPS launch.
- * This function is now more robust. It fetches all "seleccionado" students and then filters
- * them on the client side by the linked record ID, avoiding complex and unreliable Airtable formulas.
- */
 export const fetchSeleccionados = async (lanzamientoId: string): Promise<GroupedSeleccionados | null> => {
-    // Step 1: Fetch all convocatorias where the status is 'seleccionado'. This is a simple and reliable query.
-    const formula = `LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = 'seleccionado'`;
-
-    const { records: allSeleccionados, error: convocatoriaError } = await fetchAllAirtableData<ConvocatoriaFields>(
-      AIRTABLE_TABLE_NAME_CONVOCATORIAS,
-      [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, FIELD_HORARIO_FORMULA_CONVOCATORIAS, FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS],
-      formula
+    // 1. Fetch ALL 'seleccionado' convocatorias at once
+    const { records: allSeleccionados, error: convError } = await fetchAllAirtableData<ConvocatoriaFields>(
+        AIRTABLE_TABLE_NAME_CONVOCATORIAS,
+        [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, FIELD_HORARIO_FORMULA_CONVOCATORIAS],
+        `LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = 'seleccionado'`
     );
 
-    if (convocatoriaError) {
-        console.error("fetchSeleccionados: Error fetching convocatoria records:", convocatoriaError);
-        throw new Error("No se pudo obtener la información de la convocatoria.");
+    if (convError) {
+        throw new Error('Error al buscar los alumnos seleccionados.');
     }
     
-    // Step 2: Filter these records on the client-side to find those matching the specific lanzamientoId.
-    const convocatoriaRecords = allSeleccionados.filter(record => 
-        (record.fields[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || []).includes(lanzamientoId)
+    // 2. Filter them in memory for the target lanzamiento
+    const relevantConvocatorias = allSeleccionados.filter(c => 
+        (c.fields[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || []).includes(lanzamientoId)
     );
 
-    if (convocatoriaRecords.length === 0) {
-        return null; // No selected students found for this launch.
+    if (relevantConvocatorias.length === 0) {
+        return null;
     }
 
-    // Step 3: Extract all unique student IDs and their corresponding horarios.
-    const studentHorarioMap = new Map<string, string>();
-    const studentIds = convocatoriaRecords.flatMap(record => (record.fields[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] || []).map(studentId => {
-      const horario = record.fields[FIELD_HORARIO_FORMULA_CONVOCATORIAS] || 'No especificado';
-      studentHorarioMap.set(studentId, horario);
-      return studentId;
-    }));
+    // 3. Collect all unique student IDs from the relevant convocatorias
+    const studentIds = [...new Set(relevantConvocatorias.flatMap(c => c.fields[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] || []))];
 
-    if (studentIds.length === 0) return null;
+    if (studentIds.length === 0) {
+        return null;
+    }
 
-    // Step 4: Fetch details for all unique students.
-    const uniqueStudentIds = [...new Set(studentIds)];
-    const studentFormula = `OR(${uniqueStudentIds.map(id => `RECORD_ID()='${id}'`).join(',')})`;
-    
+    // 4. Fetch details for only those students in a single batch
+    const studentFormula = `OR(${studentIds.map(id => `RECORD_ID()='${id}'`).join(',')})`;
     const { records: studentRecords, error: studentError } = await fetchAllAirtableData<EstudianteFields>(
-      AIRTABLE_TABLE_NAME_ESTUDIANTES,
-      [FIELD_NOMBRE_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES],
-      studentFormula
+        AIRTABLE_TABLE_NAME_ESTUDIANTES,
+        [FIELD_NOMBRE_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES],
+        studentFormula
     );
 
     if (studentError) {
-      console.error("fetchSeleccionados: Error fetching student records:", studentError);
-      throw new Error("No se pudo cargar la lista de estudiantes seleccionados.");
+        throw new Error('Error al obtener los datos de los estudiantes.');
     }
     
-    // Step 5: Map student details and group them by horario.
-    const studentInfoList = studentRecords.map(student => ({
-      nombre: student.fields[FIELD_NOMBRE_ESTUDIANTES] || 'Nombre no encontrado',
-      legajo: student.fields[FIELD_LEGAJO_ESTUDIANTES] || 'N/A',
-      horario: studentHorarioMap.get(student.id) || 'Horario no especificado',
-    }));
+    const studentMap = new Map(studentRecords.map(r => [r.id, r.fields]));
 
-    return studentInfoList.reduce((acc, student) => {
-      const { horario, ...rest } = student;
-      if (!acc[horario]) acc[horario] = [];
-      acc[horario].push(rest);
-      return acc;
-    }, {} as GroupedSeleccionados);
+    // 5. Group students by horario
+    const grouped: GroupedSeleccionados = {};
+
+    relevantConvocatorias.forEach(conv => {
+        const studentId = (conv.fields[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] || [])[0];
+        const student = studentId ? studentMap.get(studentId) : null;
+        
+        if (student) {
+            const horario = conv.fields[FIELD_HORARIO_FORMULA_CONVOCATORIAS] || 'No especificado';
+            if (!grouped[horario]) {
+                grouped[horario] = [];
+            }
+            grouped[horario].push({
+                nombre: student[FIELD_NOMBRE_ESTUDIANTES] || 'N/A',
+                legajo: student[FIELD_LEGAJO_ESTUDIANTES] || 'N/A',
+            });
+        }
+    });
+    
+    // Sort students within each group
+    for (const horario in grouped) {
+        grouped[horario].sort((a, b) => a.nombre.localeCompare(b.nombre));
+    }
+
+    return grouped;
 };
