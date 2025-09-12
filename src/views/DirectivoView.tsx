@@ -73,8 +73,7 @@ const DirectivoView: React.FC = () => {
     const allTabs = useMemo(() => {
         const metricsSubTabs = [
             { id: 'resumen', label: 'Resumen', icon: 'bar_chart' },
-            { id: 'estudiantes', label: 'Estudiantes', icon: 'school' },
-            { id: 'instituciones', label: 'Instituciones', icon: 'apartment' },
+            { id: 'timeline', label: 'Línea de Tiempo', icon: 'timeline' },
         ];
 
         const mainTabs = [
@@ -87,8 +86,7 @@ const DirectivoView: React.FC = () => {
                         <SubTabs tabs={metricsSubTabs} activeTabId={activeMetricsTabId} onTabChange={setActiveMetricsTabId} />
                         <div className="mt-6">
                             {activeMetricsTabId === 'resumen' && <MetricsDashboard onStudentSelect={openStudentPanel} />}
-                            {activeMetricsTabId === 'estudiantes' && <TimelineView />}
-                            {activeMetricsTabId === 'instituciones' && <InstitutionMetrics />}
+                            {activeMetricsTabId === 'timeline' && <TimelineView />}
                         </div>
                     </>
                 ),
