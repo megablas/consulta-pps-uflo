@@ -685,7 +685,7 @@ interface MetricsDashboardProps {
 const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSelect }) => {
   const [modalData, setModalData] = useState<ModalData | null>(null);
   const [proximosModalOpen, setProximosModalOpen] = useState(false);
-  const [targetYear] = useState<number>(2025);
+  const [targetYear] = useState<number>(new Date().getFullYear());
   const [activeTab, setActiveTab] = useState<'overview' | 'students' | 'institutions'>('overview');
 
   const openModal = useCallback((payload: ModalData) => setModalData(payload), []);
@@ -892,7 +892,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSelect }) 
                     className="bg-slate-50/50 dark:bg-slate-800/50"
                     onClick={() =>
                       openModal({
-                        title: 'Convenios Con Instituciones Nuevas (2025)',
+                        title: `Convenios Con Instituciones Nuevas (${targetYear})`,
                         students: metrics.nuevosConvenios.list,
                         headers: [
                           { key: 'nombre', label: 'Institución' },

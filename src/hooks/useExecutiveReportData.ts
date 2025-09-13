@@ -140,7 +140,7 @@ const calculateCumulativeMetrics = (
         const firstLaunchDate = allLanzamientos
             .filter(l => {
                 const launchDate = parseToUTCDate(l.fields[FIELD_FECHA_INICIO_LANZAMIENTOS]);
-                return launchDate && launchDate.getUTCFullYear() === 2025 && normalizeStringForComparison(l.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS]).startsWith(normalizeStringForComparison(i.fields[FIELD_NOMBRE_INSTITUCIONES]));
+                return launchDate && launchDate.getUTCFullYear() === yearStartDate.getUTCFullYear() && normalizeStringForComparison(l.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS]).startsWith(normalizeStringForComparison(i.fields[FIELD_NOMBRE_INSTITUCIONES]));
             })
             .map(l => parseToUTCDate(l.fields[FIELD_FECHA_INICIO_LANZAMIENTOS]))
             .filter((d): d is Date => d !== null)
@@ -173,7 +173,8 @@ export const useExecutiveReportData = (startDateStr: string, endDateStr: string,
             previousEnd.setUTCDate(previousEnd.getUTCDate() - 1);
             previousEnd.setUTCHours(23, 59, 59, 999);
             
-            const yearStart = new Date(Date.UTC(2025, 0, 1));
+            const reportYear = currentStart.getUTCFullYear();
+            const yearStart = new Date(Date.UTC(reportYear, 0, 1));
             
             const allData = await fetchAllDataForReport();
 
@@ -205,7 +206,7 @@ export const useExecutiveReportData = (startDateStr: string, endDateStr: string,
                     const firstLaunchDate = allData.lanzamientos
                         .filter(l => {
                             const launchDate = parseToUTCDate(l.fields[FIELD_FECHA_INICIO_LANZAMIENTOS]);
-                            return launchDate && launchDate.getUTCFullYear() === 2025 && normalizeStringForComparison(l.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS]).startsWith(normalizeStringForComparison(i.fields[FIELD_NOMBRE_INSTITUCIONES]));
+                            return launchDate && launchDate.getUTCFullYear() === reportYear && normalizeStringForComparison(l.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS]).startsWith(normalizeStringForComparison(i.fields[FIELD_NOMBRE_INSTITUCIONES]));
                         })
                         .map(l => parseToUTCDate(l.fields[FIELD_FECHA_INICIO_LANZAMIENTOS]))
                         .filter((d): d is Date => d !== null)
@@ -227,7 +228,7 @@ export const useExecutiveReportData = (startDateStr: string, endDateStr: string,
             return {
                 period: {
                     current: { start: formatDate(startDateStr), end: formatDate(endDateStr) },
-                    previous: { start: '01/01/2025', end: formatDate(previousEnd.toISOString()) },
+                    previous: { start: `01/01/${reportYear}`, end: formatDate(previousEnd.toISOString()) },
                 },
                 summary,
                 kpis: {
