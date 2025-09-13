@@ -17,6 +17,8 @@ const PrintableExecutiveReport: React.FC<PrintableExecutiveReportProps> = ({ dat
         { label: 'Cupos Totales Ofrecidos', key: 'totalOfferedSpots' },
         { label: 'Convenios Nuevos Firmados', key: 'newAgreements' },
     ];
+    
+    const reportYear = data.period.previous.start.split('/')[2];
 
     return (
         <div className="printable-executive-report bg-white p-8 font-sans">
@@ -33,9 +35,9 @@ const PrintableExecutiveReport: React.FC<PrintableExecutiveReportProps> = ({ dat
                     <div>
                         <h3 className="font-bold mb-1 text-base">Cómo funciona este reporte</h3>
                         <p className="text-xs leading-relaxed">
-                            Este panel compara dos "fotos" acumulativas del ciclo 2025 para mostrar la evolución entre las fechas seleccionadas.
+                            Este panel compara dos "fotos" acumulativas del ciclo {reportYear} para mostrar la evolución entre las fechas seleccionadas.
                             <ul className="list-disc pl-5 mt-2 space-y-1">
-                                <li><strong>Período Actual:</strong> Muestra el total acumulado desde el 1 de enero de 2025 hasta la <strong>Fecha de Fin</strong> que elijas.</li>
+                                <li><strong>Período Actual:</strong> Muestra el total acumulado desde el {data.period.previous.start} hasta la <strong>Fecha de Fin</strong> que elijas.</li>
                                 <li><strong>Período Anterior:</strong> Muestra la "foto" de los mismos datos acumulados, pero hasta el día <strong>anterior a la Fecha de Inicio</strong> seleccionada.</li>
                                 <li><strong>Evolución:</strong> Es la diferencia neta entre estas dos fotos, reflejando la actividad ocurrida dentro del rango de fechas que seleccionaste.</li>
                             </ul>
