@@ -14,6 +14,7 @@ import MetricsDashboard from '../components/MetricsDashboard';
 import TimelineView from '../components/TimelineView';
 import NuevosConvenios from '../components/NuevosConvenios';
 import ExecutiveReportGenerator from '../components/ExecutiveReportGenerator';
+import PenalizationManager from '../components/PenalizationManager';
 
 interface StudentTabInfo {
     id: string; // legajo
@@ -64,6 +65,7 @@ const AdminView: React.FC = () => {
         
         const herramientasSubTabs = [
             { id: 'repitentes', label: 'Repitentes', icon: 'history_edu' },
+            { id: 'penalizaciones', label: 'Penalizaciones', icon: 'gavel' },
             { id: 'search', label: 'Buscar Alumno', icon: 'person_search' },
             { id: 'insurance', label: 'Seguros', icon: 'shield' },
             { id: 'convenios', label: 'Convenios Nuevos', icon: 'handshake' },
@@ -114,6 +116,7 @@ const AdminView: React.FC = () => {
                         <SubTabs tabs={herramientasSubTabs} activeTabId={activeHerramientasTabId} onTabChange={setActiveHerramientasTabId} />
                          <div className="mt-6">
                             {activeHerramientasTabId === 'repitentes' && <RepitentesPanel />}
+                            {activeHerramientasTabId === 'penalizaciones' && <PenalizationManager />}
                             {activeHerramientasTabId === 'search' && <div className="p-4"><AdminSearch onStudentSelect={openStudentPanel} /></div>}
                             {activeHerramientasTabId === 'insurance' && <SeguroGenerator showModal={showModal} />}
                             {activeHerramientasTabId === 'convenios' && <NuevosConvenios />}

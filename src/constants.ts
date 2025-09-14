@@ -11,6 +11,7 @@ export const AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS = 'Lanzamientos de PPS';
 export const AIRTABLE_TABLE_NAME_CONVOCATORIAS = 'Convocatorias';
 export const AIRTABLE_TABLE_NAME_INSTITUCIONES = 'Instituciones';
 export const AIRTABLE_TABLE_NAME_FINALIZACION = 'Finalización de PPS';
+export const AIRTABLE_TABLE_NAME_PENALIZACIONES = 'Historial de Penalizaciones';
 
 
 // --- Fields for 'Estudiantes' table ---
@@ -107,6 +108,14 @@ export const FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS = 'Fecha_Entrega_Informe'
 
 // --- Fields for 'Finalizacion PPS' table ---
 export const FIELD_ESTUDIANTE_FINALIZACION = 'Nombre';
+
+// --- Fields for 'Historial de Penalizaciones' table ---
+export const FIELD_PENALIZACION_ESTUDIANTE_LINK = 'Estudiante';
+export const FIELD_PENALIZACION_TIPO = 'Tipo de Incumplimiento';
+export const FIELD_PENALIZACION_NOTAS = 'Notas';
+export const FIELD_PENALIZACION_FECHA = 'Fecha del Incidente';
+export const FIELD_PENALIZACION_PUNTAJE = 'Puntaje Penalización';
+export const FIELD_PENALIZACION_CONVOCATORIA_LINK = 'Convocatoria Afectada';
 
 
 // --- Academic criteria constants ---
