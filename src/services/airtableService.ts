@@ -275,10 +275,48 @@ const fetchAirtableData = async <TFields>(
     return { records: data.records, error: null };
 }
 
+const deleteAirtableRecord = async (
+  tableName: string,
+  recordId: string
+): Promise<{ success: boolean, error: AirtableErrorResponse | null }> => {
+  
+  const url = `${API_BASE}/${encodeURIComponent(tableName)}/${recordId}`;
+  
+  try {
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${AIRTABLE_PAT}`,
+      }
+    });
+
+    if (!response.ok) {
+       let errorData: AirtableErrorResponse;
+       try {
+           const jsonError = await response.json();
+           errorData = jsonError as AirtableErrorResponse;
+       } catch (e) {
+           const textError = await response.text().catch(() => "Could not read error response body.");
+           errorData = { error: { type: `HTTP_ERROR_${response.status}`, message: `Error ${response.status}: ${textError}` } };
+       }
+       console.error('[deleteAirtableRecord] Airtable API Error:', response.status, JSON.stringify(errorData));
+       return { success: false, error: errorData };
+    }
+
+    const data = await response.json() as { deleted: boolean; id: string };
+    return { success: data.deleted, error: null };
+
+  } catch (networkError) {
+    console.error('[deleteAirtableRecord] Network or Fetch Error:', networkError);
+    return { success: false, error: { error: { type: 'NETWORK_ERROR', message: 'No se pudo conectar con el servidor. Revisa tu conexión a internet.' } } };
+  }
+}
+
 export {
     createAirtableRecord,
     updateAirtableRecord,
     updateAirtableRecords,
     fetchAllAirtableData,
     fetchAirtableData,
+    deleteAirtableRecord,
 };

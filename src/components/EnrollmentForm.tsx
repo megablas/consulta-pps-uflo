@@ -378,6 +378,18 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
               />
             )}
 
+            <div className="flex items-start gap-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-500/30 text-yellow-800 dark:text-yellow-200 p-4 rounded-lg">
+                <div className="flex-shrink-0 mt-0.5">
+                    <span className="material-icons text-yellow-600 dark:text-yellow-400 !text-xl">warning_amber</span>
+                </div>
+                <div className="flex-grow">
+                    <h4 className="font-bold text-sm">Compromiso y Responsabilidad</h4>
+                    <p className="text-xs mt-1 leading-relaxed">
+                        Al inscribirte, asumes un compromiso con la institución y la facultad. Darse de baja sobre la fecha, ausentarse sin aviso o cualquier otra decisión que demuestre falta de responsabilidad, será tenido en cuenta en futuras convocatorias.
+                    </p>
+                </div>
+            </div>
+
             {/* Horarios Selection */}
             {showHorarios && (
               <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200/70 dark:border-slate-700 shadow-sm transition-all duration-300 hover:shadow-lg hover:border-slate-300/80 dark:hover:border-slate-600">

@@ -114,6 +114,19 @@ export interface ConvocatoriaFields {
   'Fecha_Entrega_Informe'?: string;
 }
 
+export interface PenalizacionFields {
+    'Estudiante'?: string[];
+    'Tipo de Incumplimiento'?: string;
+    'Notas'?: string;
+    'Fecha del Incidente'?: string; // Date string
+    'Puntaje Penalización'?: number;
+    'Convocatoria Afectada'?: string[];
+}
+
+export interface Penalizacion extends PenalizacionFields {
+    id: string;
+}
+
 export interface SolicitudPPS extends SolicitudPPSFields {
   id: string; // Added for React keys
 }
@@ -196,9 +209,9 @@ export interface StudentForReview {
     direccion: string;
     periodo: string;
     horario: string;
-    lugar: string;
-    duracion: string;
-    tutor: string;
+    lugar: string; // for excel
+    duracion: string; // for excel
+    tutor: string; // for excel
     orientacion: string;
 }
 
