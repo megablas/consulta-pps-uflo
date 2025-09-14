@@ -449,6 +449,29 @@ const CorreccionPanel: React.FC = () => {
     const pendientes = ppsFilteredGroups.filter(group => 
       group.students.some(s => !s.nota || s.nota === 'Sin calificar' || s.nota === 'Entregado (sin corregir)')
     );
+
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const oneMonthAgo = new Date(today);
+    oneMonthAgo.setUTCDate(oneMonthAgo.getUTCDate() - 30);
+
+    const getPpsCategory = (pps: InformeCorreccionPPS): number => {
+      const endDate = parseToUTCDate(pps.fechaFinalizacion);
+      if (!endDate) return 3; // Lowest priority if no date
+      if (endDate > today) return 2; // In Progress
+      if (endDate >= oneMonthAgo && endDate <= today) return 1; // Priority: Finished within the last month
+      return 3; // Older: Finished more than a month ago
+    };
+
+    pendientes.sort((a, b) => {
+      const categoryA = getPpsCategory(a);
+      const categoryB = getPpsCategory(b);
+      if (categoryA !== categoryB) return categoryA - categoryB;
+      const dateA = parseToUTCDate(a.fechaFinalizacion)?.getTime() || 0;
+      const dateB = parseToUTCDate(b.fechaFinalizacion)?.getTime() || 0;
+      return dateB - dateA;
+    });
+
     const finalizados = ppsFilteredGroups.filter(group => 
       group.students.every(s => s.nota && s.nota !== 'Sin calificar' && s.nota !== 'Entregado (sin corregir)')
     );
