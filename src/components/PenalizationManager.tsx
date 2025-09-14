@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import AdminSearch from './AdminSearch';
-import { fetchAllAirtableData, createAirtableRecord, fetchAirtableData, deleteAirtableRecord, updateAirtableRecord } from '../services/airtableService';
+import { fetchAllAirtableData, createAirtableRecord, deleteAirtableRecord, updateAirtableRecord } from '../services/airtableService';
 import type { EstudianteFields, Penalizacion, PenalizacionFields, ConvocatoriaFields, PracticaFields, LanzamientoPPSFields } from '../types';
 import {
   AIRTABLE_TABLE_NAME_ESTUDIANTES,
@@ -53,7 +53,7 @@ interface PenalizedStudent {
   legajo: string;
   nombre: string;
   totalScore: number;
-  penalties: (Penalizacion & { id: string })[];
+  penalties: (Penalizacion & { id: string; ppsName?: string; })[];
 }
 
 const AddPenaltyModal: React.FC<{
@@ -70,8 +70,8 @@ const AddPenaltyModal: React.FC<{
     const { data: relevantPPS, isLoading: isLoadingPPS } = useQuery({
         queryKey: ['relevantPPSForModal', student.id],
         queryFn: async () => {
-            const convocatoriasFormula = `AND(OR(FIND('${student.id}', ARRAYJOIN({${FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS}})), SEARCH('${student.legajo}', {${FIELD_LEGAJO_CONVOCATORIAS}} & '')), OR(LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = 'seleccionado', LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = 'inscripto'))`;
-            const practicasFormula = `AND(OR(FIND('${student.id}', ARRAYJOIN({${FIELD_ESTUDIANTE_LINK_PRACTICAS}})), SEARCH('${student.legajo}', {${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}} & '')), LOWER({${FIELD_ESTADO_PRACTICA}}) = 'en curso')`;
+            const convocatoriasFormula = `AND(SEARCH('${student.legajo}', {${FIELD_LEGAJO_CONVOCATORIAS}} & ''), OR(LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = 'seleccionado', LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = 'inscripto'))`;
+            const practicasFormula = `AND(SEARCH('${student.legajo}',{${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}}&''), LOWER({${FIELD_ESTADO_PRACTICA}}) = 'en curso')`;
             const [convocatoriasRes, practicasRes] = await Promise.all([
                 fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS, [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS], convocatoriasFormula),
                 fetchAllAirtableData<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS, [FIELD_LANZAMIENTO_VINCULADO_PRACTICAS], practicasFormula)
@@ -90,20 +90,53 @@ const AddPenaltyModal: React.FC<{
     const applyPenaltyMutation = useMutation({
         mutationFn: async (penaltyData: PenalizacionFields) => {
             const penaltyResult = await createAirtableRecord<PenalizacionFields>(AIRTABLE_TABLE_NAME_PENALIZACIONES, penaltyData);
-            if (penaltyResult.error) throw new Error(typeof penaltyResult.error.error === 'string' ? penaltyResult.error.error : penaltyResult.error.error.message);
-            const triggerTypes = ['Baja Anticipada', 'Baja sobre la Fecha / Ausencia en Inicio'];
+            if (penaltyResult.error) {
+                const errorMsg = typeof penaltyResult.error.error === 'string' ? penaltyResult.error.error : penaltyResult.error.error.message;
+                throw new Error(`Error al crear la penalización: ${errorMsg}`);
+            }
+
+            const triggerTypes = ['Baja Anticipada', 'Baja sobre la Fecha / Ausencia en Inicio', 'Abandono durante la PPS'];
             if (selectedPpsId && triggerTypes.includes(penaltyType)) {
                 const ppsId = selectedPpsId;
-                const convFormula = `AND(OR(FIND('${student.id}',ARRAYJOIN({${FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS}})),SEARCH('${student.legajo}',{${FIELD_LEGAJO_CONVOCATORIAS}}&'')),FIND('${ppsId}',ARRAYJOIN({${FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS}})),{${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}='Seleccionado')`;
-                const { records: convRecords } = await fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS, [], convFormula);
-                const { records: lanzamientoRecords } = await fetchAllAirtableData<LanzamientoPPSFields>(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, [FIELD_NOMBRE_PPS_LANZAMIENTOS], `RECORD_ID() = '${ppsId}'`);
-                const lanzamientoNombre = lanzamientoRecords[0]?.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS] || '';
-                const practicaFormula = `AND(OR(FIND('${student.id}',ARRAYJOIN({${FIELD_ESTUDIANTE_LINK_PRACTICAS}})),SEARCH('${student.legajo}',{${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}}&'')),OR(FIND('${ppsId}',ARRAYJOIN({${FIELD_LANZAMIENTO_VINCULADO_PRACTICAS}})),SEARCH(LOWER("${lanzamientoNombre.replace(/"/g, '\\"')}"),LOWER(ARRAYJOIN({${FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS}})))))`;
-                const { records: practicaRecords } = await fetchAllAirtableData<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS, [], practicaFormula);
+                
+                // --- Convocatoria Update Logic ---
+                const studentConvFormula = `SEARCH('${student.legajo}', {${FIELD_LEGAJO_CONVOCATORIAS}} & '')`;
+                const { records: allStudentConvRecords, error: convError } = await fetchAllAirtableData<ConvocatoriaFields>(
+                    AIRTABLE_TABLE_NAME_CONVOCATORIAS,
+                    [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS],
+                    studentConvFormula
+                );
+                const targetConv = !convError ? allStudentConvRecords.find(c => (c.fields[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || []).includes(ppsId)) : undefined;
+
+                // --- Practica Deletion Logic ---
+                const studentPracticaFormula = `SEARCH('${student.legajo}', {${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}} & '')`;
+                const { records: allStudentPracticaRecords, error: practicaError } = await fetchAllAirtableData<PracticaFields>(
+                    AIRTABLE_TABLE_NAME_PRACTICAS,
+                    [FIELD_LANZAMIENTO_VINCULADO_PRACTICAS],
+                    studentPracticaFormula
+                );
+                const targetPractica = !practicaError ? allStudentPracticaRecords.find(p => (p.fields[FIELD_LANZAMIENTO_VINCULADO_PRACTICAS] || []).includes(ppsId)) : undefined;
+
                 const sideEffectPromises = [];
-                if (convRecords[0]) sideEffectPromises.push(updateAirtableRecord(AIRTABLE_TABLE_NAME_CONVOCATORIAS, convRecords[0].id, { [FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS]: 'No Seleccionado' }));
-                if (practicaRecords[0]) sideEffectPromises.push(deleteAirtableRecord(AIRTABLE_TABLE_NAME_PRACTICAS, practicaRecords[0].id));
-                await Promise.all(sideEffectPromises);
+                if (targetConv) {
+                    sideEffectPromises.push(
+                        updateAirtableRecord(AIRTABLE_TABLE_NAME_CONVOCATORIAS, targetConv.id, { [FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS]: 'No Seleccionado' })
+                    );
+                } else {
+                     console.log('No se encontró convocatoria para actualizar estado a No Seleccionado.');
+                }
+
+                if (targetPractica) {
+                    sideEffectPromises.push(deleteAirtableRecord(AIRTABLE_TABLE_NAME_PRACTICAS, targetPractica.id));
+                } else {
+                     console.log('No se encontró práctica para eliminar.');
+                }
+                
+                if (sideEffectPromises.length > 0) {
+                    await Promise.all(sideEffectPromises);
+                } else {
+                    console.log('no cambio el estado, el error puede ser porque ya esta borrado el registro de la tabla practica');
+                }
             }
         },
         onSuccess: () => {
@@ -164,6 +197,7 @@ const AddPenaltyModal: React.FC<{
         </div>
     );
 };
+
 
 const PenalizedStudentCard: React.FC<{
   student: PenalizedStudent;
@@ -246,20 +280,26 @@ const PenalizedStudentCard: React.FC<{
               <div key={p.id} className="p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-start gap-4">
                 <span className="material-icons text-slate-400 dark:text-slate-500 mt-1">{getPenaltyIcon(p[FIELD_PENALIZACION_TIPO])}</span>
                 <div className="flex-grow">
-                  <div className="flex justify-between items-start">
+                  <div className="flex justify-between items-start gap-2">
                     <div>
                       <p className="font-semibold text-slate-800 dark:text-slate-100">{p[FIELD_PENALIZACION_TIPO]}</p>
-                      <p className={`text-sm font-bold ${scoreVisuals.textColor}`}>{p[FIELD_PENALIZACION_PUNTAJE]} puntos</p>
+                      {p.ppsName && <p className="text-xs text-slate-500 dark:text-slate-400">PPS: {p.ppsName}</p>}
                     </div>
-                    <div className="text-right flex-shrink-0 flex items-center gap-2">
-                      <span className="text-xs font-mono text-slate-500 dark:text-slate-400">{formatDate(p[FIELD_PENALIZACION_FECHA])}</span>
-                      <button onClick={() => onDelete(p.id)} disabled={deletingId === p.id} className="text-rose-500 hover:text-rose-700 disabled:text-slate-400 p-1 rounded-full hover:bg-rose-100 dark:hover:bg-rose-900/50" aria-label="Eliminar penalización">
-                        <span className="material-icons !text-base">{deletingId === p.id ? 'hourglass_top' : 'delete'}</span>
-                      </button>
-                    </div>
+                     <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">{formatDate(p[FIELD_PENALIZACION_FECHA])}</p>
                   </div>
-                  {p[FIELD_PENALIZACION_NOTAS] && <p className="text-xs mt-2 text-slate-600 dark:text-slate-300 whitespace-pre-wrap bg-slate-50 dark:bg-slate-700/50 p-2 rounded-md">{p[FIELD_PENALIZACION_NOTAS]}</p>}
+                   {p[FIELD_PENALIZACION_NOTAS] && <p className="mt-2 text-sm text-slate-600 dark:text-slate-300 border-l-2 border-slate-200 dark:border-slate-600 pl-2 italic">{p[FIELD_PENALIZACION_NOTAS]}</p>}
                 </div>
+                <button 
+                  onClick={() => onDelete(p.id)} 
+                  disabled={deletingId === p.id}
+                  className="p-1.5 rounded-full text-slate-400 hover:bg-rose-100 hover:text-rose-600 dark:hover:bg-rose-900/50 dark:hover:text-rose-400 disabled:opacity-50"
+                  aria-label="Eliminar penalización"
+                >
+                  {deletingId === p.id
+                    ? <div className="w-4 h-4 border-2 border-rose-400/50 border-t-rose-500 rounded-full animate-spin"/>
+                    : <span className="material-icons !text-base">delete_outline</span>
+                  }
+                </button>
               </div>
             ))}
           </div>
@@ -271,124 +311,122 @@ const PenalizedStudentCard: React.FC<{
 
 
 const PenalizationManager: React.FC = () => {
+    const [selectedStudent, setSelectedStudent] = useState<SelectedStudent | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const [toastInfo, setToastInfo] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [studentForModal, setStudentForModal] = useState<SelectedStudent | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const queryClient = useQueryClient();
 
-    const { data: penalizedStudents, isLoading, error } = useQuery<PenalizedStudent[]>({
+    const { data: penalizedStudents, isLoading } = useQuery<PenalizedStudent[]>({
         queryKey: ['allPenalizedStudents'],
         queryFn: async () => {
-            const [penaltiesRes, studentsRes] = await Promise.all([
-                fetchAllAirtableData<Penalizacion>(AIRTABLE_TABLE_NAME_PENALIZACIONES),
-                fetchAllAirtableData<EstudianteFields>(AIRTABLE_TABLE_NAME_ESTUDIANTES, [FIELD_LEGAJO_ESTUDIANTES, FIELD_NOMBRE_ESTUDIANTES])
+            const [penaltiesRes, studentsRes, lanzamientosRes] = await Promise.all([
+                fetchAllAirtableData<PenalizacionFields>(AIRTABLE_TABLE_NAME_PENALIZACIONES),
+                fetchAllAirtableData<EstudianteFields>(AIRTABLE_TABLE_NAME_ESTUDIANTES, [FIELD_LEGAJO_ESTUDIANTES, FIELD_NOMBRE_ESTUDIANTES]),
+                fetchAllAirtableData<LanzamientoPPSFields>(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, [FIELD_NOMBRE_PPS_LANZAMIENTOS])
             ]);
 
-            if (penaltiesRes.error || studentsRes.error) throw new Error("Failed to fetch data.");
-
-            const studentMap = new Map(studentsRes.records.map(r => [r.id, r.fields]));
+            const studentsMap = new Map<string, { legajo: string, nombre: string }>();
+            studentsRes.records.forEach(r => {
+                if(r.fields[FIELD_LEGAJO_ESTUDIANTES] && r.fields[FIELD_NOMBRE_ESTUDIANTES]) {
+                    studentsMap.set(r.id, { legajo: r.fields[FIELD_LEGAJO_ESTUDIANTES], nombre: r.fields[FIELD_NOMBRE_ESTUDIANTES] });
+                }
+            });
+            
+            const lanzamientosMap = new Map<string, string>();
+            lanzamientosRes.records.forEach(r => {
+                if(r.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS]) {
+                    lanzamientosMap.set(r.id, r.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS]);
+                }
+            });
+            
             const penaltiesByStudent = new Map<string, PenalizedStudent>();
-
             penaltiesRes.records.forEach(p => {
                 const studentId = (p.fields[FIELD_PENALIZACION_ESTUDIANTE_LINK] || [])[0];
-                if (!studentId) return;
-                
-                const studentInfo = studentMap.get(studentId);
+                const studentInfo = studentId ? studentsMap.get(studentId) : null;
                 if (!studentInfo) return;
 
                 if (!penaltiesByStudent.has(studentId)) {
                     penaltiesByStudent.set(studentId, {
                         id: studentId,
-                        legajo: studentInfo[FIELD_LEGAJO_ESTUDIANTES] || 'N/A',
-                        nombre: studentInfo[FIELD_NOMBRE_ESTUDIANTES] || 'N/A',
+                        legajo: studentInfo.legajo,
+                        nombre: studentInfo.nombre,
                         totalScore: 0,
                         penalties: [],
                     });
                 }
-                const studentGroup = penaltiesByStudent.get(studentId)!;
-                studentGroup.penalties.push({ ...p.fields, id: p.id });
-                studentGroup.totalScore += p.fields[FIELD_PENALIZACION_PUNTAJE] || 0;
+                const studentData = penaltiesByStudent.get(studentId)!;
+                const ppsId = (p.fields[FIELD_PENALIZACION_CONVOCATORIA_LINK] || [])[0];
+                const penaltyToAdd = {
+                    ...p.fields, 
+                    id: p.id, 
+                    ppsName: ppsId ? lanzamientosMap.get(ppsId) : undefined 
+                };
+                studentData.penalties.push(penaltyToAdd);
+                studentData.totalScore += p.fields[FIELD_PENALIZACION_PUNTAJE] || 0;
             });
-            
-            const sortedStudents = Array.from(penaltiesByStudent.values())
-                .sort((a, b) => b.totalScore - a.totalScore);
-            
-            sortedStudents.forEach(s => s.penalties.sort((a, b) => new Date(b[FIELD_PENALIZACION_FECHA]!).getTime() - new Date(a[FIELD_PENALIZACION_FECHA]!).getTime()));
-
-            return sortedStudents;
+            return Array.from(penaltiesByStudent.values()).sort((a,b) => b.totalScore - a.totalScore);
         }
     });
 
     const deleteMutation = useMutation({
-        mutationFn: async (penaltyId: string) => {
-            setDeletingId(penaltyId);
-            const result = await deleteAirtableRecord(AIRTABLE_TABLE_NAME_PENALIZACIONES, penaltyId);
-            if (!result.success) {
-                const errorMsg = typeof result.error?.error === 'string' 
-                    ? result.error.error 
-                    : result.error?.error.message || 'Error desconocido al eliminar.';
-                throw new Error(errorMsg);
-            }
-            return result;
-        },
+        mutationFn: (penaltyId: string) => deleteAirtableRecord(AIRTABLE_TABLE_NAME_PENALIZACIONES, penaltyId),
         onSuccess: () => {
-            setToastInfo({ message: 'Registro de penalización eliminado.', type: 'success' });
+            setToastInfo({ message: 'Penalización eliminada.', type: 'success' });
             queryClient.invalidateQueries({ queryKey: ['allPenalizedStudents'] });
         },
-        onError: (error: Error) => {
-            setToastInfo({ message: `Error al eliminar: ${error.message}`, type: 'error' });
+        onError: () => {
+            setToastInfo({ message: 'Error al eliminar la penalización.', type: 'error' });
         },
         onSettled: () => {
             setDeletingId(null);
-        },
+        }
     });
 
     const handleDelete = (penaltyId: string) => {
-        if (window.confirm('¿Estás seguro de que deseas eliminar este registro de penalización? Esta acción no se puede deshacer.')) {
+        if (window.confirm('¿Estás seguro de que quieres eliminar esta penalización?')) {
+            setDeletingId(penaltyId);
             deleteMutation.mutate(penaltyId);
         }
     };
-
-    const handleOpenAddModal = async (student: { legajo: string, nombre: string }) => {
-        const { records } = await fetchAirtableData<EstudianteFields>(AIRTABLE_TABLE_NAME_ESTUDIANTES, [], `{${FIELD_LEGAJO_ESTUDIANTES}} = '${student.legajo}'`, 1);
-        if (records.length > 0) {
-            setStudentForModal({ ...student, id: records[0].id });
-            setIsAddModalOpen(true);
-        } else {
-            setToastInfo({ message: 'No se pudo encontrar el estudiante.', type: 'error' });
-        }
-    };
+    
+    const handleStudentSelect = useCallback((student: { legajo: string; nombre: string }) => {
+        // We need to get the student's Airtable record ID, not just use the one from the list,
+        // as a student might not be in the `penalizedStudents` list yet.
+        fetchAllAirtableData<EstudianteFields>(AIRTABLE_TABLE_NAME_ESTUDIANTES, [], `{${FIELD_LEGAJO_ESTUDIANTES}} = '${student.legajo}'`).then(({records}) => {
+            if (records[0]) {
+                setSelectedStudent({ id: records[0].id, legajo: student.legajo, nombre: student.nombre });
+                setIsModalOpen(true);
+            } else {
+                setToastInfo({ message: 'No se pudo encontrar el registro del estudiante para aplicar la penalización.', type: 'error' });
+            }
+        });
+    }, []);
 
     return (
-        <div className="animate-fade-in-up space-y-6">
+        <div className="space-y-6">
             {toastInfo && <Toast message={toastInfo.message} type={toastInfo.type} onClose={() => setToastInfo(null)} />}
-            {studentForModal && <AddPenaltyModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} student={studentForModal} onSuccess={() => setToastInfo({ message: 'Penalización aplicada con éxito.', type: 'success' })} />}
+            {selectedStudent && <AddPenaltyModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} student={selectedStudent} onSuccess={() => setToastInfo({message: 'Penalización aplicada con éxito.', type: 'success'})}/>}
             
-            <Card title="Dashboard de Penalizaciones" icon="gavel" actions={
-                <div className="w-full max-w-sm"><AdminSearch onStudentSelect={handleOpenAddModal} /></div>
-            }>
-                {isLoading && <div className="py-8"><Loader /></div>}
-                {error && <EmptyState icon="error" title="Error" message={error.message} />}
-                {!isLoading && !error && (
-                    <div className="mt-6 border-t border-slate-200/60 dark:border-slate-700 pt-6">
-                        {penalizedStudents && penalizedStudents.length > 0 ? (
-                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                {penalizedStudents.map(student => (
-                                    <PenalizedStudentCard
-                                        key={student.id}
-                                        student={student}
-                                        onDelete={handleDelete}
-                                        deletingId={deletingId}
-                                    />
-                                ))}
-                            </div>
-                        ) : (
-                            <EmptyState icon="verified" title="Sin Penalizaciones" message="No hay estudiantes con penalizaciones registradas." />
-                        )}
-                    </div>
-                )}
+            <Card title="Panel de Penalizaciones" icon="gavel" description="Aplica y gestiona las penalizaciones por incumplimientos de los estudiantes.">
+                <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                     <AdminSearch onStudentSelect={handleStudentSelect} />
+                </div>
             </Card>
+
+            <div>
+                {isLoading ? <Loader /> : (
+                    penalizedStudents && penalizedStudents.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {penalizedStudents.map(student => (
+                                <PenalizedStudentCard key={student.id} student={student} onDelete={handleDelete} deletingId={deletingId} />
+                            ))}
+                        </div>
+                    ) : (
+                        <EmptyState icon="verified_user" title="Sin Penalizaciones" message="No hay estudiantes con penalizaciones registradas." />
+                    )
+                )}
+            </div>
         </div>
     );
 };
