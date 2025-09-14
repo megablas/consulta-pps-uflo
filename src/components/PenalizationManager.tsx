@@ -165,23 +165,109 @@ const AddPenaltyModal: React.FC<{
     );
 };
 
-const PenaltyHistoryItem: React.FC<{ penalty: Penalizacion & { id: string }, onDelete: () => void, isDeleting: boolean }> = ({ penalty, onDelete, isDeleting }) => (
-    <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-        <div className="flex justify-between items-start">
-            <div>
-                <p className="font-semibold text-slate-800 dark:text-slate-100">{penalty[FIELD_PENALIZACION_TIPO]}</p>
-                <p className="text-sm text-rose-600 dark:text-rose-400 font-bold">{penalty[FIELD_PENALIZACION_PUNTAJE]} puntos</p>
+const PenalizedStudentCard: React.FC<{
+  student: PenalizedStudent;
+  onDelete: (penaltyId: string) => void;
+  deletingId: string | null;
+}> = ({ student, onDelete, deletingId }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const scoreVisuals = useMemo(() => {
+    if (student.totalScore >= 21) {
+      return {
+        bgColor: 'bg-red-50 dark:bg-red-900/30',
+        borderColor: 'border-red-200 dark:border-red-600',
+        textColor: 'text-red-600 dark:text-red-400',
+        icon: 'local_fire_department',
+        ringColor: 'ring-red-500/20'
+      };
+    }
+    if (student.totalScore >= 11) {
+      return {
+        bgColor: 'bg-amber-50 dark:bg-amber-900/30',
+        borderColor: 'border-amber-200 dark:border-amber-600',
+        textColor: 'text-amber-600 dark:text-amber-400',
+        icon: 'warning_amber',
+        ringColor: 'ring-amber-500/20'
+      };
+    }
+    return {
+      bgColor: 'bg-yellow-50 dark:bg-yellow-900/30',
+      borderColor: 'border-yellow-200 dark:border-yellow-600',
+      textColor: 'text-yellow-700 dark:text-yellow-500',
+      icon: 'priority_high',
+      ringColor: 'ring-yellow-500/20'
+    };
+  }, [student.totalScore]);
+  
+  const getPenaltyIcon = (type: string | undefined) => {
+    if (!type) return 'gavel';
+    const normType = type.toLowerCase();
+    if (normType.includes('baja anticipada')) return 'event_busy';
+    if (normType.includes('baja sobre la fecha') || normType.includes('ausencia')) return 'no_accounts';
+    if (normType.includes('abandono')) return 'directions_run';
+    if (normType.includes('falta sin aviso')) return 'person_off';
+    return 'gavel';
+  };
+
+  return (
+    <div className={`rounded-xl border transition-all duration-300 ${isExpanded ? `shadow-lg ring-4 ${scoreVisuals.ringColor}` : 'shadow-sm'} ${scoreVisuals.borderColor}`}>
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full text-left p-4 flex justify-between items-center cursor-pointer"
+        aria-expanded={isExpanded}
+        aria-controls={`penalties-for-${student.legajo}`}
+      >
+        <div className="flex items-center gap-4">
+            <div className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full ${scoreVisuals.bgColor}`}>
+                <span className={`material-icons ${scoreVisuals.textColor}`}>{scoreVisuals.icon}</span>
             </div>
-            <div className="text-right">
-                <span className="text-xs font-mono text-slate-500 dark:text-slate-400">{formatDate(penalty[FIELD_PENALIZACION_FECHA])}</span>
-                <button onClick={onDelete} disabled={isDeleting} className="ml-2 text-rose-500 hover:text-rose-700 disabled:text-slate-400 p-1">
-                    <span className="material-icons !text-base">{isDeleting ? 'hourglass_top' : 'delete'}</span>
-                </button>
+            <div>
+                <p className="font-bold text-slate-800 dark:text-slate-100">{student.nombre}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 font-mono">Legajo: {student.legajo}</p>
             </div>
         </div>
-        {penalty[FIELD_PENALIZACION_NOTAS] && <p className="text-xs mt-2 text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{penalty[FIELD_PENALIZACION_NOTAS]}</p>}
+        <div className="flex items-center gap-4">
+            <div className="text-right">
+                <p className={`text-3xl font-black ${scoreVisuals.textColor}`}>{student.totalScore}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 -mt-1">puntos</p>
+            </div>
+            <span className={`material-icons text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+              expand_more
+            </span>
+        </div>
+      </button>
+
+      {isExpanded && (
+        <div id={`penalties-for-${student.legajo}`} className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20">
+          <h4 className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-3">Historial de Incumplimientos</h4>
+          <div className="space-y-3">
+            {student.penalties.map(p => (
+              <div key={p.id} className="p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-start gap-4">
+                <span className="material-icons text-slate-400 dark:text-slate-500 mt-1">{getPenaltyIcon(p[FIELD_PENALIZACION_TIPO])}</span>
+                <div className="flex-grow">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-semibold text-slate-800 dark:text-slate-100">{p[FIELD_PENALIZACION_TIPO]}</p>
+                      <p className={`text-sm font-bold ${scoreVisuals.textColor}`}>{p[FIELD_PENALIZACION_PUNTAJE]} puntos</p>
+                    </div>
+                    <div className="text-right flex-shrink-0 flex items-center gap-2">
+                      <span className="text-xs font-mono text-slate-500 dark:text-slate-400">{formatDate(p[FIELD_PENALIZACION_FECHA])}</span>
+                      <button onClick={() => onDelete(p.id)} disabled={deletingId === p.id} className="text-rose-500 hover:text-rose-700 disabled:text-slate-400 p-1 rounded-full hover:bg-rose-100 dark:hover:bg-rose-900/50" aria-label="Eliminar penalización">
+                        <span className="material-icons !text-base">{deletingId === p.id ? 'hourglass_top' : 'delete'}</span>
+                      </button>
+                    </div>
+                  </div>
+                  {p[FIELD_PENALIZACION_NOTAS] && <p className="text-xs mt-2 text-slate-600 dark:text-slate-300 whitespace-pre-wrap bg-slate-50 dark:bg-slate-700/50 p-2 rounded-md">{p[FIELD_PENALIZACION_NOTAS]}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
-);
+  );
+};
 
 
 const PenalizationManager: React.FC = () => {
@@ -285,22 +371,18 @@ const PenalizationManager: React.FC = () => {
                 {isLoading && <div className="py-8"><Loader /></div>}
                 {error && <EmptyState icon="error" title="Error" message={error.message} />}
                 {!isLoading && !error && (
-                    <div className="mt-6 border-t border-slate-200/60 dark:border-slate-700 pt-6 space-y-4">
+                    <div className="mt-6 border-t border-slate-200/60 dark:border-slate-700 pt-6">
                         {penalizedStudents && penalizedStudents.length > 0 ? (
-                            penalizedStudents.map(student => (
-                                <details key={student.id} className="bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 open:shadow-md">
-                                    <summary className="p-4 cursor-pointer flex justify-between items-center list-none">
-                                        <div className="font-semibold text-slate-800 dark:text-slate-100">{student.nombre} <span className="text-sm font-mono text-slate-500">({student.legajo})</span></div>
-                                        <div className="flex items-center gap-3">
-                                            <span className="font-bold text-rose-600 dark:text-rose-400 text-lg">{student.totalScore} pts</span>
-                                            <span className="material-icons text-slate-400">expand_more</span>
-                                        </div>
-                                    </summary>
-                                    <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 space-y-3">
-                                        {student.penalties.map(p => <PenaltyHistoryItem key={p.id} penalty={p} onDelete={() => handleDelete(p.id)} isDeleting={deletingId === p.id} />)}
-                                    </div>
-                                </details>
-                            ))
+                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                {penalizedStudents.map(student => (
+                                    <PenalizedStudentCard
+                                        key={student.id}
+                                        student={student}
+                                        onDelete={handleDelete}
+                                        deletingId={deletingId}
+                                    />
+                                ))}
+                            </div>
                         ) : (
                             <EmptyState icon="verified" title="Sin Penalizaciones" message="No hay estudiantes con penalizaciones registradas." />
                         )}
