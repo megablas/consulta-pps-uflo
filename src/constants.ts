@@ -79,6 +79,7 @@ export const FIELD_TELEFONO_INSTITUCION_LANZAMIENTOS = 'Teléfono (from Instituc
 // --- Fields for 'Instituciones' table ---
 export const FIELD_NOMBRE_INSTITUCIONES = 'Nombre';
 export const FIELD_TELEFONO_INSTITUCIONES = 'Teléfono';
+export const FIELD_DIRECCION_INSTITUCIONES = 'Dirección';
 export const FIELD_CONVENIO_NUEVO_INSTITUCIONES = 'Convenio Nuevo';
 
 

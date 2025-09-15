@@ -82,6 +82,7 @@ export interface InstitucionFields {
   [key: string]: any;
   'Nombre'?: string;
   'Teléfono'?: string;
+  'Dirección'?: string;
   [FIELD_CONVENIO_NUEVO_INSTITUCIONES]?: boolean;
 }
 
