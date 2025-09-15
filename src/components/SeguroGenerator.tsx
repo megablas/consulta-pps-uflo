@@ -4,7 +4,7 @@ import * as XLSX from 'xlsx';
 // Changed to `fetchAirtableData` to correctly limit the result to 1 record.
 import { fetchAllAirtableData, fetchAirtableData, updateAirtableRecords } from '../services/airtableService';
 import { formatDate, normalizeStringForComparison } from '../utils/formatters';
-import type { Convocatoria, ConvocatoriaFields, EstudianteFields, LanzamientoPPSFields } from '../types';
+import type { Convocatoria, ConvocatoriaFields, EstudianteFields, InstitucionFields, LanzamientoPPSFields } from '../types';
 import {
     AIRTABLE_TABLE_NAME_CONVOCATORIAS, FIELD_NOMBRE_PPS_CONVOCATORIAS,
     FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, FIELD_FECHA_INICIO_CONVOCATORIAS,
@@ -24,7 +24,10 @@ import {
     FIELD_HORAS_ACREDITADAS_LANZAMIENTOS,
     FIELD_PLANTILLA_SEGURO_LANZAMIENTOS,
     TEMPLATE_PPS_NAME,
-    EMAIL_SEGUROS
+    EMAIL_SEGUROS,
+    AIRTABLE_TABLE_NAME_INSTITUCIONES,
+    FIELD_NOMBRE_INSTITUCIONES,
+    FIELD_DIRECCION_INSTITUCIONES,
 } from '../constants';
 import Loader from './Loader';
 import EmptyState from './EmptyState';
@@ -202,6 +205,19 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
             if (studentError) throw new Error(`Error al obtener datos de estudiantes: ${typeof studentError.error === 'string' ? studentError.error : studentError.error.message}`);
             const studentMap = new Map(studentRecords.map(r => [r.id, r.fields]));
             
+            // NEW: Fetch institutions data to get the address
+            const { records: institutionRecords, error: institutionError } = await fetchAllAirtableData<InstitucionFields>(
+                AIRTABLE_TABLE_NAME_INSTITUCIONES,
+                [FIELD_NOMBRE_INSTITUCIONES, FIELD_DIRECCION_INSTITUCIONES]
+            );
+            if (institutionError) throw new Error(`Error al obtener datos de instituciones: ${typeof institutionError.error === 'string' ? institutionError.error : institutionError.error.message}`);
+            
+            // NEW: Create a map for easy lookup
+            const institutionMap = new Map(institutionRecords.map(r => [
+                normalizeStringForComparison(r.fields[FIELD_NOMBRE_INSTITUCIONES]), 
+                r.fields
+            ]));
+
             // Get all unique Lanzamiento IDs to fetch their authoritative data
             const allRelevantConvocatorias = [...studentIdToIndividualConvMap.values()];
             const lanzamientoIds = [...new Set(allRelevantConvocatorias.flatMap(c => c[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || []))];
@@ -229,7 +245,7 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                 lanzamientoMap = new Map(lanzamientoRecords.map(r => [r.id, r.fields]));
             }
 
-            // Build the final list for review using Lanzamientos as the source of truth
+            // Build the final list for review using Instituciones for address
             const studentsToReview = studentIds.map((studentId) => {
                 const student = studentMap.get(studentId);
                 const individualConv = studentIdToIndividualConvMap.get(studentId);
@@ -239,7 +255,11 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                 const ppsData = lanzamientoId ? lanzamientoMap.get(lanzamientoId) : null;
                 
                 const institucion = ppsData?.[FIELD_NOMBRE_PPS_LANZAMIENTOS] || individualConv[FIELD_NOMBRE_PPS_CONVOCATORIAS] || 'N/A';
-                const direccion = ppsData?.[FIELD_DIRECCION_LANZAMIENTOS] || individualConv[FIELD_DIRECCION_CONVOCATORIAS] || 'N/A';
+                
+                const normalizedInstitucionName = normalizeStringForComparison(institucion as string);
+                const institutionDetails = institutionMap.get(normalizedInstitucionName);
+                const direccion = institutionDetails?.[FIELD_DIRECCION_INSTITUCIONES] || 'Dirección no encontrada en Instituciones';
+
                 const fechaInicio = ppsData?.[FIELD_FECHA_INICIO_LANZAMIENTOS] || individualConv[FIELD_FECHA_INICIO_CONVOCATORIAS];
                 const fechaFin = ppsData?.[FIELD_FECHA_FIN_LANZAMIENTOS] || individualConv[FIELD_FECHA_FIN_CONVOCATORIAS];
                 const horario = individualConv[FIELD_HORARIO_FORMULA_CONVOCATORIAS] || ppsData?.[FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS] || 'N/A';
