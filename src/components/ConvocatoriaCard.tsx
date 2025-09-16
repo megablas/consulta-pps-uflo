@@ -3,7 +3,6 @@ import type { LanzamientoPPS } from '../types';
 import {
     FIELD_NOMBRE_PPS_LANZAMIENTOS,
     FIELD_ORIENTACION_LANZAMIENTOS,
-    FIELD_DIRECCION_LANZAMIENTOS,
     FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS,
 } from '../constants';
 import { getEspecialidadClasses, getStatusVisuals, normalizeStringForComparison } from '../utils/formatters';
@@ -17,6 +16,7 @@ interface ConvocatoriaCardProps {
   isVerSeleccionadosLoading: boolean;
   isCompleted: boolean;
   userGender?: 'Varon' | 'Mujer' | 'Otro';
+  direccion?: string;
 }
 
 // Tipos para mejor tipado
@@ -37,7 +37,8 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({
   enrollmentStatus, 
   isVerSeleccionadosLoading,
   isCompleted,
-  userGender
+  userGender,
+  direccion
 }) => {
   const { isSubmittingEnrollment, selectedLanzamientoForEnrollment } = useModal();
   const isEnrolling = isSubmittingEnrollment && selectedLanzamientoForEnrollment?.id === lanzamiento.id;
@@ -46,7 +47,6 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({
   const {
     [FIELD_NOMBRE_PPS_LANZAMIENTOS]: nombre,
     [FIELD_ORIENTACION_LANZAMIENTOS]: orientacion,
-    [FIELD_DIRECCION_LANZAMIENTOS]: direccion,
     [FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]: estadoConvocatoria,
   } = lanzamiento;
 

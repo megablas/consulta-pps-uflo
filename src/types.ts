@@ -280,23 +280,71 @@ export type TabId = 'convocatorias' | 'calendario' | 'informes' | 'solicitudes' 
 // Gender identifier for personalization
 export type UserGender = 'masculino' | 'femenino' | 'neutro';
 
+// -- Executive Report Types --
+// For Timeline View replication in reports
+export interface TimelineInstitution {
+    name: string;
+    cupos: number;
+    variants: string[];
+}
+export interface TimelineMonthData {
+    monthName: string;
+    ppsCount: number;
+    cuposTotal: number;
+    institutions: TimelineInstitution[];
+}
+
+export interface SingleYearKpis {
+    activeStudents: { current: number, previous: number };
+    studentsWithoutPpsExcludingRelevamiento: { current: number, previous: number };
+    studentsWithoutAnyPps: { current: number, previous: number };
+    finishedStudents: { current: number, previous: number };
+    newStudents: { current: number, previous: number };
+    newPpsLaunches: { current: number, previous: number };
+    totalOfferedSpots: { current: number, previous: number };
+    newAgreements: { current: number, previous: number };
+}
+
 export interface ExecutiveReportData {
+    reportType: 'singleYear';
+    year: number;
     period: {
         current: { start: string, end: string },
         previous: { start: string, end: string },
     };
     summary: string;
-    kpis: {
-        activeStudents: { current: number, previous: number };
-        studentsWithoutPpsExcludingRelevamiento: { current: number, previous: number };
-        studentsWithoutAnyPps: { current: number, previous: number };
-        finishedStudents: { current: number, previous: number };
-        newStudents: { current: number, previous: number };
-        newPpsLaunches: { current: number, previous: number };
-        totalOfferedSpots: { current: number, previous: number };
-        newAgreements: { current: number, previous: number };
-    };
-// FIX: Added 'date' and 'orientation' to the ppsLaunchedInPeriod type to match the data structure created in useExecutiveReportData.ts, fixing errors in PrintableExecutiveReport.tsx.
-    ppsLaunchedInPeriod: { name: string; spots: number; date: string; orientation: string; }[];
+    kpis: SingleYearKpis;
+    launchesByMonth: TimelineMonthData[];
     newAgreementsList: string[];
 }
+
+export interface ComparativeReportKpi {
+    year2024: number;
+    year2025: number;
+}
+export interface ComparativeExecutiveReportData {
+    reportType: 'comparative';
+    summary: string;
+    kpis: {
+        activeStudents: ComparativeReportKpi;
+        studentsWithoutPpsExcludingRelevamiento: ComparativeReportKpi;
+        studentsWithoutAnyPps: ComparativeReportKpi;
+        finishedStudents: ComparativeReportKpi;
+        newStudents: ComparativeReportKpi;
+        newPpsLaunches: ComparativeReportKpi;
+        totalOfferedSpots: ComparativeReportKpi;
+        newAgreements: ComparativeReportKpi;
+    };
+    launchesByMonth: {
+        year2024: TimelineMonthData[];
+        year2025: TimelineMonthData[];
+    };
+    newAgreements: {
+        year2024: string[];
+        year2025: string[];
+    };
+}
+
+export type AnyReportData = ExecutiveReportData | ComparativeExecutiveReportData;
+
+export type ReportType = '2024' | '2025' | 'comparative';

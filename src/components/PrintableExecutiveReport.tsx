@@ -1,12 +1,40 @@
 import React from 'react';
-import type { ExecutiveReportData } from '../types';
-import { getEspecialidadClasses } from '../utils/formatters';
+import type { AnyReportData, ExecutiveReportData, ComparativeExecutiveReportData, TimelineMonthData } from '../types';
 
-interface PrintableExecutiveReportProps {
-  data: ExecutiveReportData;
-}
+const PrintableTimeline: React.FC<{ launchesByMonth: TimelineMonthData[]; year: number }> = ({ launchesByMonth, year }) => {
+    if (launchesByMonth.length === 0) {
+        return <p className="text-sm text-slate-500 italic">No hay lanzamientos registrados para este período.</p>;
+    }
+    return (
+        <div className="space-y-4">
+            {launchesByMonth.map(month => (
+                <div key={month.monthName} className="printable-section">
+                    <h4 className="font-bold text-base bg-slate-100 p-2 border border-slate-200 rounded-t-md">
+                        {month.monthName} ({month.ppsCount} Inst. - {month.cuposTotal} Cupos)
+                    </h4>
+                    {year === 2024 && month.monthName === 'Agosto' && (
+                        <div className="p-2 border-x border-slate-200 bg-yellow-50 text-yellow-800 text-xs font-semibold text-center">
+                            -- Ingreso del nuevo coordinador --
+                        </div>
+                    )}
+                    <div className="border border-t-0 border-slate-200 p-2 rounded-b-md">
+                        <ul className="space-y-1 text-xs">
+                            {month.institutions.map(inst => (
+                                <li key={inst.name} className="flex justify-between items-start">
+                                    <span className="flex-1 pr-2">{inst.name}</span>
+                                    <span className="font-semibold">{inst.cupos}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+};
 
-const PrintableExecutiveReport: React.FC<PrintableExecutiveReportProps> = ({ data }) => {
+
+const SingleYearReport: React.FC<{ data: ExecutiveReportData }> = ({ data }) => {
     const kpiRows = [
         { label: 'Estudiantes Activos', key: 'activeStudents' },
         { label: 'Estudiantes sin PPS (excl. Relevamiento)', key: 'studentsWithoutPpsExcludingRelevamiento' },
@@ -17,15 +45,13 @@ const PrintableExecutiveReport: React.FC<PrintableExecutiveReportProps> = ({ dat
         { label: 'Cupos Totales Ofrecidos', key: 'totalOfferedSpots' },
         { label: 'Convenios Nuevos Firmados', key: 'newAgreements' },
     ];
-    
-    const reportYear = data.period.previous.start.split('/')[2];
 
     return (
-        <div className="printable-executive-report bg-white p-8 font-sans">
+        <>
             <header className="mb-8 printable-section">
-                <h1 className="text-3xl font-black text-slate-900 tracking-tight">Reporte de Prácticas Profesionales Supervisadas</h1>
+                <h1 className="text-3xl font-black text-slate-900 tracking-tight">Balance de Prácticas Profesionales Supervisadas</h1>
                 <p className="font-semibold text-slate-700 mt-1">
-                    Período: Del {data.period.current.start} al {data.period.current.end}
+                    Resumen Anual del Ciclo {data.year}
                 </p>
             </header>
 
@@ -35,11 +61,11 @@ const PrintableExecutiveReport: React.FC<PrintableExecutiveReportProps> = ({ dat
                     <div>
                         <h3 className="font-bold mb-1 text-base">Cómo funciona este reporte</h3>
                         <p className="text-xs leading-relaxed">
-                            Este panel compara dos "fotos" acumulativas del ciclo {reportYear} para mostrar la evolución entre las fechas seleccionadas.
+                            Este panel compara dos momentos para mostrar la evolución durante el ciclo {data.year}.
                             <ul className="list-disc pl-5 mt-2 space-y-1">
-                                <li><strong>Período Actual:</strong> Muestra el total acumulado desde el {data.period.previous.start} hasta la <strong>Fecha de Fin</strong> que elijas.</li>
-                                <li><strong>Período Anterior:</strong> Muestra la "foto" de los mismos datos acumulados, pero hasta el día <strong>anterior a la Fecha de Inicio</strong> seleccionada.</li>
-                                <li><strong>Evolución:</strong> Es la diferencia neta entre estas dos fotos, reflejando la actividad ocurrida dentro del rango de fechas que seleccionaste.</li>
+                                <li><strong>Total Acumulado ({data.year}):</strong> Muestra el estado actual al <strong>{data.period.current.end}</strong>.</li>
+                                <li><strong>Cierre Ciclo Anterior:</strong> Muestra el estado al finalizar el ciclo anterior (<strong>{data.period.previous.end}</strong>).</li>
+                                <li><strong>Evolución ({data.year}):</strong> Es la diferencia neta, reflejando la actividad ocurrida exclusivamente durante el ciclo {data.year}.</li>
                             </ul>
                         </p>
                     </div>
@@ -57,9 +83,9 @@ const PrintableExecutiveReport: React.FC<PrintableExecutiveReportProps> = ({ dat
                     <thead className="bg-slate-100">
                         <tr>
                             <th className="p-3 text-left font-bold text-slate-600">Indicador</th>
-                            <th className="p-3 text-center font-bold text-slate-600">Período Actual</th>
-                            <th className="p-3 text-center font-bold text-slate-600">Período Anterior</th>
-                            <th className="p-3 text-center font-bold text-slate-600">Evolución</th>
+                            <th className="p-3 text-center font-bold text-slate-600">Total Acumulado ({data.year})</th>
+                            <th className="p-3 text-center font-bold text-slate-600">Cierre Ciclo Anterior</th>
+                            <th className="p-3 text-center font-bold text-slate-600">Evolución ({data.year})</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -82,7 +108,7 @@ const PrintableExecutiveReport: React.FC<PrintableExecutiveReportProps> = ({ dat
                                         {evolution !== 0 ? (
                                             <div className="flex items-center justify-center gap-1">
                                                 <span className="material-icons !text-base">{evolutionIcon}</span>
-                                                <span>{evolution} ({percentageChange.toFixed(0)}%)</span>
+                                                <span>{evolution > 0 ? '+' : ''}{evolution} ({percentageChange.toFixed(0)}%)</span>
                                             </div>
                                         ) : (
                                             <span>-</span>
@@ -94,55 +120,142 @@ const PrintableExecutiveReport: React.FC<PrintableExecutiveReportProps> = ({ dat
                     </tbody>
                 </table>
             </section>
-            
+        </>
+    );
+};
+
+const ComparativeReport: React.FC<{ data: ComparativeExecutiveReportData }> = ({ data }) => {
+     const kpiRows = [
+        { label: 'Estudiantes Activos', key: 'activeStudents' },
+        { label: 'Estudiantes Finalizados (Ciclo)', key: 'finishedStudents' },
+        { label: 'PPS Nuevas Lanzadas', key: 'newPpsLaunches' },
+        { label: 'Cupos Totales Ofrecidos', key: 'totalOfferedSpots' },
+        { label: 'Convenios Nuevos Firmados', key: 'newAgreements' },
+    ];
+    return (
+         <>
+            <header className="mb-8 printable-section">
+                <h1 className="text-3xl font-black text-slate-900 tracking-tight">Reporte Comparativo de Prácticas Profesionales</h1>
+                <p className="font-semibold text-slate-700 mt-1">
+                    Análisis Comparativo Anual: 2024 vs. 2025
+                </p>
+            </header>
+             <section className="mb-10 printable-section">
+                <h2 className="text-2xl font-bold text-slate-800 border-b-2 border-slate-200 pb-2 mb-4">Resumen Ejecutivo</h2>
+                <div className="prose" dangerouslySetInnerHTML={{ __html: data.summary }} />
+            </section>
             <section className="mb-10 printable-section">
-                <h2 className="text-2xl font-bold text-slate-800 border-b-2 border-slate-200 pb-2 mb-4">Nuevos Convenios en el Período</h2>
-                {data.newAgreementsList.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {data.newAgreementsList.map((convenio, index) => (
-                            <div key={index} className="flex items-center gap-3 p-3 bg-slate-50/50 rounded-lg border border-slate-200">
-                                <span className="material-icons text-emerald-500">verified</span>
-                                <span className="text-slate-700 font-medium">{convenio}</span>
-                            </div>
-                        ))}
+                <h2 className="text-2xl font-bold text-slate-800 border-b-2 border-slate-200 pb-2 mb-4">Panel Comparativo de KPIs</h2>
+                 <table className="w-full text-sm">
+                    <thead className="bg-slate-100">
+                        <tr>
+                            <th className="p-3 text-left font-bold text-slate-600">Indicador</th>
+                            <th className="p-3 text-center font-bold text-slate-600">Balance 2024</th>
+                            <th className="p-3 text-center font-bold text-slate-600">Balance 2025</th>
+                            <th className="p-3 text-center font-bold text-slate-600">Evolución</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                         {kpiRows.map(row => {
+                            const kpiData = data.kpis[row.key as keyof typeof data.kpis];
+                            const evolution = kpiData.year2025 - kpiData.year2024;
+                            const percentageChange = kpiData.year2024 > 0 ? (evolution / kpiData.year2024) * 100 : (evolution > 0 ? 100 : 0);
+                            
+                            const isPositive = evolution > 0;
+                            const isNegative = evolution < 0;
+                            const evolutionColor = isPositive ? 'text-emerald-700' : isNegative ? 'text-rose-700' : 'text-slate-600';
+                            const evolutionIcon = isPositive ? 'arrow_upward' : isNegative ? 'arrow_downward' : 'remove';
+                            
+                            return (
+                                <tr key={row.key} className="border-b border-slate-200">
+                                    <td className="p-3 font-semibold text-slate-800">{row.label}</td>
+                                    <td className="p-3 text-center font-bold text-2xl text-slate-700">{kpiData.year2024}</td>
+                                    <td className="p-3 text-center font-bold text-2xl text-slate-900">{kpiData.year2025}</td>
+                                    <td className={`p-3 text-center font-semibold ${evolutionColor}`}>
+                                        {evolution !== 0 ? (
+                                            <div className="flex items-center justify-center gap-1">
+                                                <span className="material-icons !text-base">{evolutionIcon}</span>
+                                                <span>{evolution > 0 ? '+' : ''}{evolution} ({percentageChange.toFixed(0)}%)</span>
+                                            </div>
+                                        ) : (
+                                            <span>-</span>
+                                        )}
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </section>
+         </>
+    );
+}
+
+// FIX: Added missing interface for component props.
+interface PrintableExecutiveReportProps {
+    data: AnyReportData;
+}
+
+const PrintableExecutiveReport: React.FC<PrintableExecutiveReportProps> = ({ data }) => {
+    
+    return (
+        <div className="printable-executive-report bg-white p-8 font-sans">
+            <style>{`
+                @media print {
+                  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                  .printable-section { break-inside: avoid; }
+                }
+            `}</style>
+            
+            {data.reportType === 'comparative' ? (
+                <ComparativeReport data={data} />
+            ) : (
+                <SingleYearReport data={data} />
+            )}
+
+            {/* Shared Sections for both report types */}
+            <section className="mb-10 printable-section">
+                <h2 className="text-2xl font-bold text-slate-800 border-b-2 border-slate-200 pb-2 mb-4">Nuevos Convenios</h2>
+                <div className="grid grid-cols-2 gap-x-8">
+                    <div>
+                        <h3 className="font-bold text-lg text-slate-700 mb-2">2024 ({data.reportType === 'comparative' ? data.newAgreements.year2024.length : data.newAgreementsList.length})</h3>
+                         {(data.reportType === 'comparative' && data.newAgreements.year2024.length > 0) ? (
+                            <ul className="list-disc pl-5 text-sm text-slate-600">
+                                {data.newAgreements.year2024.map((c, i) => <li key={i}>{c}</li>)}
+                            </ul>
+                        ) : data.reportType !== 'comparative' && data.newAgreementsList.length > 0 ? (
+                            <ul className="list-disc pl-5 text-sm text-slate-600">
+                                {data.newAgreementsList.map((c, i) => <li key={i}>{c}</li>)}
+                            </ul>
+                        ) : <p className="text-sm text-slate-500 italic">No hay datos.</p>}
                     </div>
-                ) : (
-                    <p className="text-slate-500">No se firmaron nuevos convenios en el período seleccionado.</p>
-                )}
+                     <div>
+                        <h3 className="font-bold text-lg text-slate-700 mb-2">2025 ({data.reportType === 'comparative' ? data.newAgreements.year2025.length : 'N/A'})</h3>
+                        {(data.reportType === 'comparative' && data.newAgreements.year2025.length > 0) ? (
+                            <ul className="list-disc pl-5 text-sm text-slate-600">
+                                {data.newAgreements.year2025.map((c, i) => <li key={i}>{c}</li>)}
+                            </ul>
+                        ) : <p className="text-sm text-slate-500 italic">No hay datos.</p>}
+                    </div>
+                </div>
             </section>
-            
+
             <section className="mb-10 printable-section">
-                <h2 className="text-2xl font-bold text-slate-800 border-b-2 border-slate-200 pb-2 mb-4">PPS Lanzadas en el Período</h2>
-                {data.ppsLaunchedInPeriod.length > 0 ? (
-                    <table className="w-full text-sm">
-                        <thead className="bg-slate-100">
-                            <tr>
-                                <th className="p-3 text-left font-bold text-slate-600">Fecha</th>
-                                <th className="p-3 text-left font-bold text-slate-600">Institución / PPS</th>
-                                <th className="p-3 text-left font-bold text-slate-600">Orientación</th>
-                                <th className="p-3 text-center font-bold text-slate-600">Cupos</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {data.ppsLaunchedInPeriod.map((pps, index) => {
-                                const especialidadVisuals = getEspecialidadClasses(pps.orientation);
-                                return (
-                                    <tr key={index} className="border-b border-slate-200">
-                                        <td className="p-3 text-slate-700 whitespace-nowrap">{pps.date}</td>
-                                        <td className="p-3 font-semibold text-slate-800">{pps.name}</td>
-                                        <td className="p-3">
-                                            <span className={`${especialidadVisuals.tag} shadow-sm`}>{pps.orientation}</span>
-                                        </td>
-                                        <td className="p-3 text-center font-bold text-slate-900">{pps.spots}</td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                ) : (
-                    <p className="text-slate-500">No se lanzaron nuevas PPS en el período seleccionado.</p>
-                )}
+                <h2 className="text-2xl font-bold text-slate-800 border-b-2 border-slate-200 pb-2 mb-4">Línea de Tiempo de PPS Lanzadas</h2>
+                <div className="grid grid-cols-2 gap-x-8">
+                    {/* 2024 */}
+                    <div>
+                        <h3 className="font-bold text-lg text-slate-700 mb-2">2024</h3>
+                        <PrintableTimeline year={2024} launchesByMonth={data.reportType === 'comparative' ? data.launchesByMonth.year2024 : data.launchesByMonth} />
+                    </div>
+                    {/* 2025 */}
+                     <div>
+                        <h3 className="font-bold text-lg text-slate-700 mb-2">2025</h3>
+                        <PrintableTimeline year={2025} launchesByMonth={data.reportType === 'comparative' ? data.launchesByMonth.year2025 : []} />
+                    </div>
+                </div>
             </section>
+
 
             <footer className="mt-12 text-center text-xs text-gray-500">
                 <p>Reporte generado desde Mi Panel Académico el {new Date().toLocaleDateString('es-ES')}.</p>

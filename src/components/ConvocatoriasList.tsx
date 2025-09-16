@@ -9,7 +9,8 @@ import {
     FIELD_ORIENTACION_LANZAMIENTOS,
     FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS,
     FIELD_ESPECIALIDAD_PRACTICAS,
-    FIELD_LANZAMIENTO_VINCULADO_PRACTICAS
+    FIELD_LANZAMIENTO_VINCULADO_PRACTICAS,
+    FIELD_DIRECCION_LANZAMIENTOS,
 } from '../constants';
 import EmptyState from './EmptyState';
 import { useModal } from '../contexts/ModalContext';
@@ -22,9 +23,10 @@ interface ConvocatoriasListProps {
   practicas: Practica[];
   student: EstudianteFields | null;
   onInscribir: (lanzamiento: LanzamientoPPS) => void;
+  institutionAddressMap: Map<string, string>;
 }
 
-const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myEnrollments, practicas, student, onInscribir }) => {
+const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myEnrollments, practicas, student, onInscribir, institutionAddressMap }) => {
     const { openSeleccionadosModal, showModal } = useModal();
     
     const seleccionadosMutation = useMutation({
@@ -77,6 +79,11 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myE
                 return normalizeStringForComparison(practicaInstitucion) === normalizeStringForComparison(lanzamientoInstitucion) &&
                        normalizeStringForComparison(practicaOrientacion) === normalizeStringForComparison(lanzamientoOrientacion);
             });
+
+            const lanzamientoDireccion = lanzamiento[FIELD_DIRECCION_LANZAMIENTOS];
+            const institutionName = lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS];
+            const fallbackDireccion = institutionName ? institutionAddressMap.get(normalizeStringForComparison(institutionName)) : undefined;
+            const finalDireccion = lanzamientoDireccion || fallbackDireccion;
             
             return (
               <ConvocatoriaCard 
@@ -88,6 +95,7 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myE
                   isVerSeleccionadosLoading={seleccionadosMutation.isPending && seleccionadosMutation.variables?.id === lanzamiento.id}
                   isCompleted={isCompleted}
                   userGender={student?.['Género']}
+                  direccion={finalDireccion}
               />
             );
           })}

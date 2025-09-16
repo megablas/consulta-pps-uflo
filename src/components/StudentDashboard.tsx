@@ -1,26 +1,26 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import CriteriosPanel from '../components/CriteriosPanel';
-import PracticasTable from '../components/PracticasTable';
-import SolicitudesList from '../components/SolicitudesList';
-import EmptyState from '../components/EmptyState';
-import Tabs from '../components/Tabs';
-import Card from '../components/Card';
-import WelcomeBanner from '../components/WelcomeBanner';
-import ConvocatoriasList from '../components/ConvocatoriasList';
-import InformesList from '../components/InformesList';
-import WhatsAppExportButton from '../components/WhatsAppExportButton';
+import CriteriosPanel from './CriteriosPanel';
+import PracticasTable from './PracticasTable';
+import SolicitudesList from './SolicitudesList';
+import EmptyState from './EmptyState';
+import Tabs from './Tabs';
+import Card from './Card';
+import WelcomeBanner from './WelcomeBanner';
+import ConvocatoriasList from './ConvocatoriasList';
+import InformesList from './InformesList';
+import WhatsAppExportButton from './WhatsAppExportButton';
 import { useAuth } from '../contexts/AuthContext';
 import type { AuthUser } from '../contexts/AuthContext';
 import type { TabId, Orientacion } from '../types';
 import { calculateCriterios } from '../utils/criteriaCalculations';
-import DashboardLoadingSkeleton from '../components/DashboardLoadingSkeleton';
-import ErrorState from '../components/ErrorState';
+import DashboardLoadingSkeleton from './DashboardLoadingSkeleton';
+import ErrorState from './ErrorState';
 import { useStudentData } from '../hooks/useStudentData';
 import { useStudentPracticas } from '../hooks/useStudentPracticas';
 import { useStudentSolicitudes } from '../hooks/useStudentSolicitudes';
 import { useConvocatorias } from '../hooks/useConvocatorias';
 import { processInformeTasks } from '../services/dataService';
-import ProfileView from '../components/ProfileView';
+import ProfileView from './ProfileView';
 import PrintableReport from './PrintableReport';
 
 interface StudentDashboardProps {
@@ -40,7 +40,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   const { solicitudes, isSolicitudesLoading, solicitudesError, refetchSolicitudes } = useStudentSolicitudes(user.legajo, studentAirtableId);
   const { 
     lanzamientos, myEnrollments, allLanzamientos, isConvocatoriasLoading, convocatoriasError,
-    enrollStudent, confirmInforme, refetchConvocatorias 
+    enrollStudent, confirmInforme, refetchConvocatorias, institutionAddressMap
   } = useConvocatorias(user.legajo, studentAirtableId, isSuperUserMode);
 
   // --- DERIVED STATE & MEMOIZATION ---
@@ -80,7 +80,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   
   const studentDataTabs = useMemo(() => {
     let tabs = [
-      { id: 'convocatorias' as TabId, label: `Convocatorias`, icon: 'campaign', content: <ConvocatoriasList lanzamientos={lanzamientos} myEnrollments={myEnrollments} practicas={practicas} student={studentDetails} onInscribir={enrollStudent.mutate} />, badge: lanzamientos.length > 0 ? lanzamientos.length : undefined },
+      // FIX: Pass the required `institutionAddressMap` prop to ConvocatoriasList.
+      { id: 'convocatorias' as TabId, label: `Convocatorias`, icon: 'campaign', content: <ConvocatoriasList lanzamientos={lanzamientos} myEnrollments={myEnrollments} practicas={practicas} student={studentDetails} onInscribir={enrollStudent.mutate} institutionAddressMap={institutionAddressMap} />, badge: lanzamientos.length > 0 ? lanzamientos.length : undefined },
       { id: 'informes' as TabId, label: `Informes`, icon: 'assignment_turned_in', content: <InformesList tasks={informeTasks} onConfirmar={confirmInforme.mutate} />, badge: informeTasks.length > 0 ? informeTasks.length : undefined },
       { id: 'solicitudes' as TabId, label: `Mis Solicitudes`, icon: 'list_alt', content: <SolicitudesList solicitudes={solicitudes} />, badge: solicitudes.length > 0 ? solicitudes.length : undefined },
       { id: 'practicas' as TabId, label: `Mis Prácticas`, icon: 'work_history', content: <PracticasTable practicas={practicas} handleNotaChange={handleNotaChange} />, badge: practicas.length > 0 ? practicas.length : undefined }
@@ -101,7 +102,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
     });
     return tabs;
 
-  }, [solicitudes, practicas, lanzamientos, myEnrollments, informeTasks, studentDetails, confirmInforme.mutate, handleNotaChange, enrollStudent.mutate, showExportButton, isStudentLoading]);
+  }, [solicitudes, practicas, lanzamientos, myEnrollments, informeTasks, studentDetails, confirmInforme.mutate, handleNotaChange, enrollStudent.mutate, showExportButton, isStudentLoading, institutionAddressMap]);
   
   // Effect to reset active tab if it's no longer in the list of available tabs (e.g., after filtering for admin view).
   useEffect(() => {

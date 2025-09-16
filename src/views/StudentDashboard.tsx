@@ -131,7 +131,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   const { solicitudes, isSolicitudesLoading, solicitudesError, refetchSolicitudes } = useStudentSolicitudes(user.legajo, studentAirtableId);
   const { 
     lanzamientos, myEnrollments, allLanzamientos, isConvocatoriasLoading, convocatoriasError,
-    enrollStudent, confirmInforme, refetchConvocatorias 
+    enrollStudent, confirmInforme, refetchConvocatorias, institutionAddressMap
   } = useConvocatorias(user.legajo, studentAirtableId, isSuperUserMode);
 
   // --- DERIVED STATE & MEMOIZATION ---
@@ -180,7 +180,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
 
   // --- TAB DEFINITIONS ---
   // Memoize tab content to prevent re-renders on tab change
-  const convocatoriasContent = useMemo(() => <ConvocatoriasList lanzamientos={lanzamientos} myEnrollments={myEnrollments} practicas={practicas} student={studentDetails} onInscribir={enrollStudent.mutate} />, [lanzamientos, myEnrollments, practicas, studentDetails, enrollStudent.mutate]);
+  const convocatoriasContent = useMemo(() => <ConvocatoriasList lanzamientos={lanzamientos} myEnrollments={myEnrollments} practicas={practicas} student={studentDetails} onInscribir={enrollStudent.mutate} institutionAddressMap={institutionAddressMap} />, [lanzamientos, myEnrollments, practicas, studentDetails, enrollStudent.mutate, institutionAddressMap]);
   const informesContent = useMemo(() => <InformesList tasks={informeTasks} onConfirmar={confirmInforme.mutate} />, [informeTasks, confirmInforme.mutate]);
   const solicitudesContent = useMemo(() => <SolicitudesList solicitudes={solicitudes} />, [solicitudes]);
   const practicasContent = useMemo(() => (

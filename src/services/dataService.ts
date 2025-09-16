@@ -2,7 +2,8 @@ import { fetchAllAirtableData } from './airtableService';
 import {
   Practica, SolicitudPPS, LanzamientoPPS, Convocatoria, InformeTask, CriteriosCalculados, UserGender,
   PracticaFields, SolicitudPPSFields, LanzamientoPPSFields, ConvocatoriaFields, EstudianteFields,
-  GroupedSeleccionados
+  GroupedSeleccionados,
+  InstitucionFields
 } from '../types';
 import {
     solicitudPPSArraySchema,
@@ -31,6 +32,9 @@ import {
   // FIX: Imported missing constant to resolve name error.
   FIELD_NOMBRE_PPS_CONVOCATORIAS,
   FIELD_ESTADO_PRACTICA,
+  AIRTABLE_TABLE_NAME_INSTITUCIONES,
+  FIELD_NOMBRE_INSTITUCIONES,
+  FIELD_DIRECCION_INSTITUCIONES,
 } from '../constants';
 import { normalizeStringForComparison, parseToUTCDate } from '../utils/formatters';
 
@@ -123,7 +127,8 @@ export const fetchSolicitudes = async (legajo: string, studentAirtableId: string
 export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: string | null, isSuperUserMode: boolean): Promise<{
     lanzamientos: LanzamientoPPS[],
     myEnrollments: Convocatoria[],
-    allLanzamientos: LanzamientoPPS[]
+    allLanzamientos: LanzamientoPPS[],
+    institutionAddressMap: Map<string, string>,
 }> => {
   // This robust formula finds enrollments by precise record ID link OR by a text search of the legajo,
   // ensuring all relevant records are found even with minor data inconsistencies.
@@ -133,25 +138,29 @@ export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: 
 
 
   // Fetches ALL convocatorias a student is enrolled in, regardless of status.
-  const { records: convocatoriasResRecords, error: convocatoriasError } = await fetchAllAirtableData<ConvocatoriaFields>(
-    AIRTABLE_TABLE_NAME_CONVOCATORIAS, [], formula
-  );
-
-  // Fetches ALL lanzamientos. They will be filtered for the student view.
-  const { records: lanzamientosResRecords, error: lanzamientosError } = await fetchAllAirtableData<LanzamientoPPSFields>(
-      AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
-      [],
-      undefined,
-      [{ field: FIELD_FECHA_INICIO_LANZAMIENTOS, direction: 'desc' }]
-  );
+  const [convocatoriasRes, lanzamientosRes, institutionsRes] = await Promise.all([
+      fetchAllAirtableData<ConvocatoriaFields>(
+        AIRTABLE_TABLE_NAME_CONVOCATORIAS, [], formula
+      ),
+      fetchAllAirtableData<LanzamientoPPSFields>(
+          AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
+          [],
+          undefined,
+          [{ field: FIELD_FECHA_INICIO_LANZAMIENTOS, direction: 'desc' }]
+      ),
+      fetchAllAirtableData<InstitucionFields>(
+          AIRTABLE_TABLE_NAME_INSTITUCIONES,
+          [FIELD_NOMBRE_INSTITUCIONES, FIELD_DIRECCION_INSTITUCIONES]
+      )
+  ]);
   
-  if (convocatoriasError || lanzamientosError) {
-    const errorMsg = (convocatoriasError || lanzamientosError)?.error;
+  if (convocatoriasRes.error || lanzamientosRes.error || institutionsRes.error) {
+    const errorMsg = (convocatoriasRes.error || lanzamientosRes.error || institutionsRes.error)?.error;
     const finalMessage = typeof errorMsg === 'string' ? errorMsg : errorMsg?.message || 'Error al cargar los datos de convocatorias.';
     throw new Error(finalMessage);
   }
 
-  const myEnrollmentsValidation = convocatoriaArraySchema.safeParse(convocatoriasResRecords);
+  const myEnrollmentsValidation = convocatoriaArraySchema.safeParse(convocatoriasRes.records);
   if (!myEnrollmentsValidation.success) {
       const formattedErrors = myEnrollmentsValidation.error.issues.map(issue => 
         `  - Registro #${String(issue.path[0])}, Campo '${issue.path.slice(1).map(String).join('.')}': ${issue.message}`
@@ -162,7 +171,7 @@ export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: 
 
   const myEnrollments = myEnrollmentsValidation.data.map(r => ({ ...r.fields, id: r.id }));
 
-  const lanzamientosValidation = lanzamientoPPSArraySchema.safeParse(lanzamientosResRecords);
+  const lanzamientosValidation = lanzamientoPPSArraySchema.safeParse(lanzamientosRes.records);
   if (!lanzamientosValidation.success) {
     const formattedErrors = lanzamientosValidation.error.issues.map(issue => 
       `  - Registro #${String(issue.path[0])}, Campo '${issue.path.slice(1).map(String).join('.')}': ${issue.message}`
@@ -183,7 +192,18 @@ export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: 
     return true;
   });
 
-  return { lanzamientos, myEnrollments, allLanzamientos: allLanzamientosRecords };
+  const institutionAddressMap = new Map<string, string>();
+  if (institutionsRes.records) {
+      institutionsRes.records.forEach(record => {
+          const name = record.fields[FIELD_NOMBRE_INSTITUCIONES];
+          const address = record.fields[FIELD_DIRECCION_INSTITUCIONES];
+          if (name && address) {
+              institutionAddressMap.set(normalizeStringForComparison(name), address);
+          }
+      });
+  }
+
+  return { lanzamientos, myEnrollments, allLanzamientos: allLanzamientosRecords, institutionAddressMap };
 };
 
 export const processInformeTasks = (myEnrollments: Convocatoria[], allLanzamientos: LanzamientoPPS[], practicas: Practica[]): InformeTask[] => {
