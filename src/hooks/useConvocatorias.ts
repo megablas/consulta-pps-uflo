@@ -40,7 +40,7 @@ export const useConvocatorias = (legajo: string, studentAirtableId: string | nul
         enabled: !!studentAirtableId || isSuperUserMode,
     });
     
-    const { lanzamientos = [], myEnrollments = [], allLanzamientos = [] } = convocatoriasData || {};
+    const { lanzamientos = [], myEnrollments = [], allLanzamientos = [], institutionAddressMap = new Map() } = convocatoriasData || {};
 
     const enrollmentMutation = useMutation({
         mutationFn: ({ formData, selectedLanzamiento }: { formData: any, selectedLanzamiento: LanzamientoPPS }) => {
@@ -172,6 +172,7 @@ export const useConvocatorias = (legajo: string, studentAirtableId: string | nul
         lanzamientos,
         myEnrollments,
         allLanzamientos,
+        institutionAddressMap,
         isConvocatoriasLoading,
         convocatoriasError,
         enrollStudent,
