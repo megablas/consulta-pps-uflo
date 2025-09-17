@@ -9,7 +9,7 @@ const PrintableTimeline: React.FC<{ launchesByMonth: TimelineMonthData[]; year: 
         <div className="space-y-4">
             {launchesByMonth.map(month => (
                 <div key={month.monthName} className="printable-section">
-                    <h4 className="font-bold text-base bg-slate-100 p-2 border border-slate-200 rounded-t-md">
+                    <h4 className="font-bold text-base bg-slate-100 p-3 border border-slate-300 rounded-t-lg">
                         {month.monthName} ({month.ppsCount} Inst. - {month.cuposTotal} Cupos)
                     </h4>
                     {year === 2024 && month.monthName === 'Agosto' && (
@@ -17,7 +17,7 @@ const PrintableTimeline: React.FC<{ launchesByMonth: TimelineMonthData[]; year: 
                             -- Ingreso del nuevo coordinador --
                         </div>
                     )}
-                    <div className="border border-t-0 border-slate-200 p-2 rounded-b-md">
+                    <div className="border border-t-0 border-slate-300 p-3 rounded-b-md">
                         <ul className="space-y-1 text-xs">
                             {month.institutions.map(inst => (
                                 <li key={inst.name} className="flex justify-between items-start">
@@ -48,9 +48,9 @@ const SingleYearReport: React.FC<{ data: ExecutiveReportData }> = ({ data }) => 
 
     return (
         <>
-            <header className="mb-8 printable-section">
-                <h1 className="text-3xl font-black text-slate-900 tracking-tight">Balance de Prácticas Profesionales Supervisadas</h1>
-                <p className="font-semibold text-slate-700 mt-1">
+            <header className="mb-10 printable-section text-center">
+                <h1 className="text-4xl font-black text-slate-900 tracking-tight">Balance de Prácticas Profesionales</h1>
+                <p className="text-xl font-semibold text-slate-700 mt-2">
                     Resumen Anual del Ciclo {data.year}
                 </p>
             </header>
@@ -73,12 +73,12 @@ const SingleYearReport: React.FC<{ data: ExecutiveReportData }> = ({ data }) => 
             </section>
 
             <section className="mb-10 printable-section">
-                <h2 className="text-2xl font-bold text-slate-800 border-b-2 border-slate-200 pb-2 mb-4">Resumen Ejecutivo</h2>
+                <h2 className="text-2xl font-extrabold text-slate-800 border-b-2 border-slate-300 pb-3 mb-5 tracking-tight">Resumen Ejecutivo</h2>
                 <div className="prose" dangerouslySetInnerHTML={{ __html: data.summary }} />
             </section>
 
             <section className="mb-10 printable-section">
-                <h2 className="text-2xl font-bold text-slate-800 border-b-2 border-slate-200 pb-2 mb-4">Panel de Indicadores Clave (KPIs)</h2>
+                <h2 className="text-2xl font-extrabold text-slate-800 border-b-2 border-slate-300 pb-3 mb-5 tracking-tight">Panel de Indicadores Clave (KPIs)</h2>
                 <table className="w-full text-sm">
                     <thead className="bg-slate-100">
                         <tr>
@@ -134,18 +134,18 @@ const ComparativeReport: React.FC<{ data: ComparativeExecutiveReportData }> = ({
     ];
     return (
          <>
-            <header className="mb-8 printable-section">
-                <h1 className="text-3xl font-black text-slate-900 tracking-tight">Reporte Comparativo de Prácticas Profesionales</h1>
-                <p className="font-semibold text-slate-700 mt-1">
+            <header className="mb-10 printable-section">
+                <h1 className="text-4xl font-black text-slate-900 tracking-tight">Reporte Comparativo de Prácticas Profesionales</h1>
+                <p className="text-lg text-slate-600 mt-2 tracking-wide">
                     Análisis Comparativo Anual: 2024 vs. 2025
                 </p>
             </header>
              <section className="mb-10 printable-section">
-                <h2 className="text-2xl font-bold text-slate-800 border-b-2 border-slate-200 pb-2 mb-4">Resumen Ejecutivo</h2>
+                <h2 className="text-2xl font-extrabold text-slate-800 border-b-2 border-slate-300 pb-3 mb-5 tracking-tight">Resumen Ejecutivo</h2>
                 <div className="prose" dangerouslySetInnerHTML={{ __html: data.summary }} />
             </section>
             <section className="mb-10 printable-section">
-                <h2 className="text-2xl font-bold text-slate-800 border-b-2 border-slate-200 pb-2 mb-4">Panel Comparativo de KPIs</h2>
+                <h2 className="text-2xl font-extrabold text-slate-800 border-b-2 border-slate-300 pb-3 mb-5 tracking-tight">Panel Comparativo de KPIs</h2>
                  <table className="w-full text-sm">
                     <thead className="bg-slate-100">
                         <tr>
@@ -215,10 +215,10 @@ const PrintableExecutiveReport: React.FC<PrintableExecutiveReportProps> = ({ dat
 
             {/* Shared Sections for both report types */}
             <section className="mb-10 printable-section">
-                <h2 className="text-2xl font-bold text-slate-800 border-b-2 border-slate-200 pb-2 mb-4">Nuevos Convenios</h2>
+                <h2 className="text-2xl font-extrabold text-slate-800 border-b-2 border-slate-300 pb-3 mb-5 tracking-tight">Nuevos Convenios</h2>
                 <div className="grid grid-cols-2 gap-x-8">
                     <div>
-                        <h3 className="font-bold text-lg text-slate-700 mb-2">2024 ({data.reportType === 'comparative' ? data.newAgreements.year2024.length : data.newAgreementsList.length})</h3>
+                        <h3 className="font-extrabold text-lg text-slate-800 mb-3 tracking-tight">2024 ({data.reportType === 'comparative' ? data.newAgreements.year2024.length : data.newAgreementsList.length})</h3>
                          {(data.reportType === 'comparative' && data.newAgreements.year2024.length > 0) ? (
                             <ul className="list-disc pl-5 text-sm text-slate-600">
                                 {data.newAgreements.year2024.map((c, i) => <li key={i}>{c}</li>)}
@@ -230,7 +230,7 @@ const PrintableExecutiveReport: React.FC<PrintableExecutiveReportProps> = ({ dat
                         ) : <p className="text-sm text-slate-500 italic">No hay datos.</p>}
                     </div>
                      <div>
-                        <h3 className="font-bold text-lg text-slate-700 mb-2">2025 ({data.reportType === 'comparative' ? data.newAgreements.year2025.length : 'N/A'})</h3>
+                        <h3 className="font-extrabold text-lg text-slate-800 mb-3 tracking-tight">2025 ({data.reportType === 'comparative' ? data.newAgreements.year2025.length : 'N/A'})</h3>
                         {(data.reportType === 'comparative' && data.newAgreements.year2025.length > 0) ? (
                             <ul className="list-disc pl-5 text-sm text-slate-600">
                                 {data.newAgreements.year2025.map((c, i) => <li key={i}>{c}</li>)}
@@ -241,16 +241,16 @@ const PrintableExecutiveReport: React.FC<PrintableExecutiveReportProps> = ({ dat
             </section>
 
             <section className="mb-10 printable-section">
-                <h2 className="text-2xl font-bold text-slate-800 border-b-2 border-slate-200 pb-2 mb-4">Línea de Tiempo de PPS Lanzadas</h2>
+                <h2 className="text-2xl font-extrabold text-slate-800 border-b-2 border-slate-300 pb-3 mb-5 tracking-tight">Línea de Tiempo de PPS Lanzadas</h2>
                 <div className="grid grid-cols-2 gap-x-8">
                     {/* 2024 */}
                     <div>
-                        <h3 className="font-bold text-lg text-slate-700 mb-2">2024</h3>
+                        <h3 className="font-extrabold text-lg text-slate-800 mb-3 tracking-tight">2024</h3>
                         <PrintableTimeline year={2024} launchesByMonth={data.reportType === 'comparative' ? data.launchesByMonth.year2024 : data.launchesByMonth} />
                     </div>
                     {/* 2025 */}
                      <div>
-                        <h3 className="font-bold text-lg text-slate-700 mb-2">2025</h3>
+                        <h3 className="font-extrabold text-lg text-slate-800 mb-3 tracking-tight">2025</h3>
                         <PrintableTimeline year={2025} launchesByMonth={data.reportType === 'comparative' ? data.launchesByMonth.year2025 : []} />
                     </div>
                 </div>

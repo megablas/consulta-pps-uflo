@@ -19,6 +19,10 @@ import { fetchAllAirtableData } from '../services/airtableService';
 import { parseToUTCDate, formatDate, normalizeStringForComparison } from '../utils/formatters';
 import type { EstudianteFields, PracticaFields, LanzamientoPPSFields, InstitucionFields, ExecutiveReportData, AirtableRecord, ReportType, AnyReportData, TimelineMonthData, ComparativeExecutiveReportData } from '../types';
 
+const getGroupName = (name: string | undefined): string => {
+    if (!name) return 'Sin Nombre';
+    return name.split(' - ')[0].trim();
+};
 
 const fetchAllDataForReport = async () => {
     const [estudiantesRes, practicasRes, lanzamientosRes, institucionesRes] = await Promise.all([
@@ -146,11 +150,6 @@ const calculateFlowMetrics = (
         finishedStudents,
         newAgreements: newAgreements.length,
     };
-};
-
-const getGroupName = (name: string | undefined): string => {
-    if (!name) return 'Sin Nombre';
-    return name.split(' - ')[0].trim();
 };
 
 const processLaunchesForYear = (
@@ -318,7 +317,7 @@ export const useExecutiveReportData = ({ reportType, enabled }: { reportType: Re
                 const currentStock = getMetricsSnapshot(snapshotDate, allData.estudiantes, allData.practicas);
                 const previousStock = getMetricsSnapshot(previousYearEnd, allData.estudiantes, allData.practicas);
                 
-                const newAgreementsList = allData.instituciones
+                const newAgreementsList = Array.from(new Set(allData.instituciones
                     .filter(i => {
                         const isMarkedAsNew = i.fields[FIELD_CONVENIO_NUEVO_INSTITUCIONES];
                         if (!isMarkedAsNew) return false;
@@ -329,8 +328,8 @@ export const useExecutiveReportData = ({ reportType, enabled }: { reportType: Re
                             .sort((a, b) => a.getTime() - b.getTime())[0];
                         return firstLaunchDate && firstLaunchDate.getUTCFullYear() === year;
                     })
-                    .map(i => i.fields[FIELD_NOMBRE_INSTITUCIONES] || 'N/A')
-                    .sort();
+                    .map(i => getGroupName(i.fields[FIELD_NOMBRE_INSTITUCIONES]))
+                )).sort();
                 
                 const summary = `<p>Análisis del ciclo ${year}. La "foto" actual es al ${formatDate(snapshotDate.toISOString())}, comparada con el cierre del ciclo anterior (${formatDate(previousYearEnd.toISOString())}). Se observó un cambio en estudiantes activos de ${previousStock.activeStudents} a ${currentStock.activeStudents}. Durante el ciclo, ingresaron ${flowMetrics.newStudents} estudiantes y finalizaron ${flowMetrics.finishedStudents}. Se lanzaron ${launchMetrics.totalLaunchesForYear} PPS y se firmaron ${newAgreementsList.length} convenios nuevos.</p>`;
                 
