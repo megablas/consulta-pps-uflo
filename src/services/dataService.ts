@@ -182,14 +182,12 @@ export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: 
   
   const allLanzamientosRecords = lanzamientosValidation.data.map(r => ({ ...r.fields, id: r.id }));
   
-  const lanzamientos = isSuperUserMode ? allLanzamientosRecords : allLanzamientosRecords.filter(lanzamiento => {
+  // FIX: The filtering of 'Oculto' PPS should apply to everyone viewing a student's dashboard,
+  // including admins, to accurately reflect what the student sees.
+  // Admin-specific management views (like ConvocatoriaStatusManager) fetch their own unfiltered data.
+  const lanzamientos = allLanzamientosRecords.filter(lanzamiento => {
     const estado = normalizeStringForComparison(lanzamiento[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]);
-    
-    // For students, explicitly hide any 'Oculto' convocatorias. All others ('Abierta', 'Cerrado', etc.) will be shown.
-    if (estado === 'oculto') {
-        return false;
-    }
-    return true;
+    return estado !== 'oculto';
   });
 
   const institutionAddressMap = new Map<string, string>();
