@@ -66,6 +66,7 @@ interface GroupedInstitutionInfo {
 
 const NuevosConvenios: React.FC = () => {
     const queryClient = useQueryClient();
+    const [targetYear, setTargetYear] = useState(new Date().getFullYear());
     const { data, isLoading, error } = useQuery({
         queryKey: ['nuevosConveniosData'],
         queryFn: fetchConveniosData,
@@ -88,12 +89,23 @@ const NuevosConvenios: React.FC = () => {
         });
     };
 
+    const availableYears = useMemo(() => {
+        if (!data?.launches) return [new Date().getFullYear()];
+        const years = new Set(data.launches.map(launch => {
+            const date = parseToUTCDate(launch[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+            return date ? date.getUTCFullYear() : null;
+        }).filter((y): y is number => y !== null));
+        return Array.from(years).sort((a, b) => b - a);
+    }, [data]);
+
     const { confirmedNewConvenios, suggestedNewConvenios } = useMemo((): {
         confirmedNewConvenios: GroupedInstitutionInfo[],
         suggestedNewConvenios: GroupedInstitutionInfo[]
     } => {
         if (!data) return { confirmedNewConvenios: [], suggestedNewConvenios: [] };
         
+        const previousYear = targetYear - 1;
+
         const getGroupName = (name: string | undefined): string => {
             if (!name) return 'Sin Nombre';
             return name.split(' - ')[0].trim();
@@ -111,27 +123,27 @@ const NuevosConvenios: React.FC = () => {
             }
         });
 
-        const institutions2024GroupNames = new Set<string>();
+        const institutionsPreviousYearGroupNames = new Set<string>();
         data.launches.forEach(launch => {
             const date = parseToUTCDate(launch[FIELD_FECHA_INICIO_LANZAMIENTOS]);
-            if (date?.getUTCFullYear() === 2024 && launch[FIELD_NOMBRE_PPS_LANZAMIENTOS]) {
-                institutions2024GroupNames.add(normalizeStringForComparison(getGroupName(launch[FIELD_NOMBRE_PPS_LANZAMIENTOS])));
+            if (date?.getUTCFullYear() === previousYear && launch[FIELD_NOMBRE_PPS_LANZAMIENTOS]) {
+                institutionsPreviousYearGroupNames.add(normalizeStringForComparison(getGroupName(launch[FIELD_NOMBRE_PPS_LANZAMIENTOS])));
             }
         });
 
-        const groups2025 = new Map<string, { totalCupos: number; subPps: { name: string; cupos: number }[]; }>();
+        const groupsTargetYear = new Map<string, { totalCupos: number; subPps: { name: string; cupos: number }[]; }>();
         data.launches.forEach(launch => {
             const date = parseToUTCDate(launch[FIELD_FECHA_INICIO_LANZAMIENTOS]);
             const originalName = launch[FIELD_NOMBRE_PPS_LANZAMIENTOS];
-            if (date?.getUTCFullYear() === 2025 && originalName) {
+            if (date?.getUTCFullYear() === targetYear && originalName) {
                 const groupName = getGroupName(originalName);
                 const normGroupName = normalizeStringForComparison(groupName);
                 
-                if (!groups2025.has(normGroupName)) {
-                    groups2025.set(normGroupName, { totalCupos: 0, subPps: [] });
+                if (!groupsTargetYear.has(normGroupName)) {
+                    groupsTargetYear.set(normGroupName, { totalCupos: 0, subPps: [] });
                 }
                 
-                const group = groups2025.get(normGroupName)!;
+                const group = groupsTargetYear.get(normGroupName)!;
                 const cupos = launch[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0;
                 group.totalCupos += cupos;
                 group.subPps.push({ name: originalName, cupos });
@@ -141,7 +153,7 @@ const NuevosConvenios: React.FC = () => {
         const confirmed: GroupedInstitutionInfo[] = [];
         const suggested: GroupedInstitutionInfo[] = [];
 
-        for (const [normGroupName, groupData] of groups2025.entries()) {
+        for (const [normGroupName, groupData] of groupsTargetYear.entries()) {
             const groupName = getGroupName(groupData.subPps[0].name);
             let representativeInst = institutionMap.get(normGroupName);
             if (!representativeInst) {
@@ -161,7 +173,7 @@ const NuevosConvenios: React.FC = () => {
 
             if (representativeInst.isNew) {
                 confirmed.push(finalGroupData);
-            } else if (!institutions2024GroupNames.has(normGroupName)) {
+            } else if (!institutionsPreviousYearGroupNames.has(normGroupName)) {
                 suggested.push(finalGroupData);
             }
         }
@@ -170,7 +182,7 @@ const NuevosConvenios: React.FC = () => {
             confirmedNewConvenios: confirmed.sort((a,b) => a.groupName.localeCompare(b.groupName)),
             suggestedNewConvenios: suggested.sort((a,b) => a.groupName.localeCompare(b.groupName)),
         };
-    }, [data]);
+    }, [data, targetYear]);
     
     useEffect(() => {
         if (data?.institutions) {
@@ -285,10 +297,26 @@ const NuevosConvenios: React.FC = () => {
         <div className="animate-fade-in-up space-y-8">
             {toastInfo && <Toast message={toastInfo.message} type={toastInfo.type} onClose={() => setToastInfo(null)} />}
             
+             <div className="p-4 bg-slate-50/70 dark:bg-slate-800/50 rounded-xl border border-slate-200/60 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Herramienta de Convenios Nuevos</h2>
+                <div className="relative w-full sm:w-48">
+                     <label htmlFor="year-selector" className="sr-only">Seleccionar año</label>
+                     <select 
+                        id="year-selector"
+                        value={targetYear} 
+                        onChange={e => setTargetYear(Number(e.target.value))}
+                        className="w-full appearance-none pl-4 pr-10 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors"
+                     >
+                         {availableYears.map(year => <option key={year} value={year}>{year}</option>)}
+                     </select>
+                     <span className="absolute right-3 top-1/2 -translate-y-1/2 material-icons text-slate-400 dark:text-slate-500 pointer-events-none">expand_more</span>
+                </div>
+            </div>
+
             <Card
                 icon="fact_check"
-                title="Convenios Nuevos Confirmados"
-                description="Esta es la lista de instituciones marcadas como nuevos convenios para el ciclo 2025. Desmarca una para que vuelva a aparecer como sugerencia."
+                title={`Convenios Nuevos Confirmados (${targetYear})`}
+                description={`Esta es la lista de instituciones marcadas como nuevos convenios para el ciclo ${targetYear}. Desmarca una para que vuelva a aparecer como sugerencia.`}
             >
                 {confirmedNewConvenios.length > 0 ? (
                     <div className="mt-6 border-t border-slate-200 dark:border-slate-700 pt-6">
@@ -299,7 +327,7 @@ const NuevosConvenios: React.FC = () => {
                         <EmptyState 
                             icon="checklist"
                             title="Sin Convenios Confirmados"
-                            message="Aún no se ha confirmado ningún convenio nuevo para 2025. Las sugerencias aparecerán abajo."
+                            message={`Aún no se ha confirmado ningún convenio nuevo para ${targetYear}. Las sugerencias aparecerán abajo.`}
                         />
                     </div>
                 )}
@@ -307,7 +335,7 @@ const NuevosConvenios: React.FC = () => {
 
             <Card
                 icon="lightbulb"
-                title="Sugerencias para Revisar"
+                title={`Sugerencias para Revisar (${targetYear})`}
                 description={`Hemos identificado ${suggestedNewConvenios.length} instituciones que podrían ser convenios nuevos. Marca las que quieres confirmar.`}
             >
                 {suggestedNewConvenios.length > 0 ? (
@@ -319,7 +347,7 @@ const NuevosConvenios: React.FC = () => {
                         <EmptyState 
                             icon="celebration"
                             title="No hay sugerencias nuevas"
-                            message="Parece que todas las instituciones nuevas para 2025 ya han sido confirmadas."
+                            message={`Parece que todas las instituciones nuevas para ${targetYear} ya han sido confirmadas o no se encontraron nuevas oportunidades en comparación con ${targetYear - 1}.`}
                         />
                     </div>
                 )}
