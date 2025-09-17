@@ -135,7 +135,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   } = useConvocatorias(user.legajo, studentAirtableId, isSuperUserMode);
 
   // --- DERIVED STATE & MEMOIZATION ---
-  const [internalActiveTab, setInternalActiveTab] = useState<TabId>(showExportButton ? 'practicas' : 'convocatorias');
+  const [internalActiveTab, setInternalActiveTab] = useState<TabId>('convocatorias');
   const currentActiveTab = activeTab ?? internalActiveTab;
   const setCurrentActiveTab = onTabChange ?? setInternalActiveTab;
   const isCalendarActive = currentActiveTab === 'calendario';
@@ -205,7 +205,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
     ];
 
     if (showExportButton) {
-      return tabs.filter(tab => tab.id === 'informes' || tab.id === 'solicitudes' || tab.id === 'practicas');
+      // Admin/Jefe view of a student. User wants 'Convocatorias', 'Informes', 'Solicitudes', 'Prácticas'.
+      return tabs.filter(tab => tab.id === 'convocatorias' || tab.id === 'informes' || tab.id === 'solicitudes' || tab.id === 'practicas');
     }
     
     tabs.push({
