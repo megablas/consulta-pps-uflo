@@ -15,7 +15,7 @@ interface SubTabsProps {
 const SubTabs: React.FC<SubTabsProps> = ({ tabs, activeTabId, onTabChange }) => {
   return (
     <div className="border-b border-slate-200/80 dark:border-slate-700/60">
-      <nav className="-mb-px flex space-x-6" aria-label="Sub-tabs">
+      <nav className="-mb-px flex space-x-6 overflow-x-auto" aria-label="Sub-tabs">
         {tabs.map(tab => (
           <button
             key={tab.id}
