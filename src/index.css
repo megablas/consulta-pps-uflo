@@ -253,21 +253,32 @@ html.dark body {
 }
 
 @media print {
-  body {
-    background: none !important;
-    font-size: 10pt;
-    color: #000;
+  /* Hide everything on the page by default */
+  body * {
+    visibility: hidden;
   }
-  .no-print {
-    display: none !important;
+
+  /* Reveal only the element with the .print-only class and all of its children */
+  .print-only, .print-only * {
+    visibility: visible;
   }
+
+  /* Position the .print-only container to take up the full page */
   .print-only {
-    display: block !important;
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
   }
+
+  /* General print body styles */
+  body {
+    background: white !important; /* Ensure solid white background */
+    font-size: 10pt;
+    color: #000;
+  }
+  
+  /* Specific styles for report content, kept from original */
   .printable-executive-report {
     box-shadow: none !important;
     border: none !important;
@@ -305,6 +316,5 @@ html.dark body {
   }
   .print-chart-container {
     page-break-inside: avoid;
-    /* Charts might need specific handling if they are SVGs to ensure they scale correctly */
   }
 }
