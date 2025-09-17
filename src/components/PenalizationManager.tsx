@@ -98,25 +98,19 @@ const AddPenaltyModal: React.FC<{
             const triggerTypes = ['Baja Anticipada', 'Baja sobre la Fecha / Ausencia en Inicio', 'Abandono durante la PPS'];
             if (selectedPpsId && triggerTypes.includes(penaltyType)) {
                 const ppsId = selectedPpsId;
+
+                // --- Find target records using precise formulas ---
+                const studentConvFormula = `AND(FIND('${student.id}', ARRAYJOIN({${FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS}})), FIND('${ppsId}', ARRAYJOIN({${FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS}})))`;
+                const studentPracticaFormula = `AND(FIND('${student.id}', ARRAYJOIN({${FIELD_ESTUDIANTE_LINK_PRACTICAS}})), FIND('${ppsId}', ARRAYJOIN({${FIELD_LANZAMIENTO_VINCULADO_PRACTICAS}})))`;
+
+                const [convocatoriasRes, practicasRes] = await Promise.all([
+                    fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS, [], studentConvFormula),
+                    fetchAllAirtableData<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS, [], studentPracticaFormula)
+                ]);
+
+                const targetConv = convocatoriasRes.records.length > 0 ? convocatoriasRes.records[0] : undefined;
+                const targetPractica = practicasRes.records.length > 0 ? practicasRes.records[0] : undefined;
                 
-                // --- Convocatoria Update Logic ---
-                const studentConvFormula = `SEARCH('${student.legajo}', {${FIELD_LEGAJO_CONVOCATORIAS}} & '')`;
-                const { records: allStudentConvRecords, error: convError } = await fetchAllAirtableData<ConvocatoriaFields>(
-                    AIRTABLE_TABLE_NAME_CONVOCATORIAS,
-                    [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS],
-                    studentConvFormula
-                );
-                const targetConv = !convError ? allStudentConvRecords.find(c => (c.fields[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || []).includes(ppsId)) : undefined;
-
-                // --- Practica Deletion Logic ---
-                const studentPracticaFormula = `SEARCH('${student.legajo}', {${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}} & '')`;
-                const { records: allStudentPracticaRecords, error: practicaError } = await fetchAllAirtableData<PracticaFields>(
-                    AIRTABLE_TABLE_NAME_PRACTICAS,
-                    [FIELD_LANZAMIENTO_VINCULADO_PRACTICAS],
-                    studentPracticaFormula
-                );
-                const targetPractica = !practicaError ? allStudentPracticaRecords.find(p => (p.fields[FIELD_LANZAMIENTO_VINCULADO_PRACTICAS] || []).includes(ppsId)) : undefined;
-
                 const sideEffectPromises = [];
                 if (targetConv) {
                     sideEffectPromises.push(
@@ -135,7 +129,7 @@ const AddPenaltyModal: React.FC<{
                 if (sideEffectPromises.length > 0) {
                     await Promise.all(sideEffectPromises);
                 } else {
-                    console.log('no cambio el estado, el error puede ser porque ya esta borrado el registro de la tabla practica');
+                    console.log('No se encontraron registros asociados para modificar.');
                 }
             }
         },

@@ -11,10 +11,12 @@ import {
     FIELD_ESPECIALIDAD_PRACTICAS,
     FIELD_LANZAMIENTO_VINCULADO_PRACTICAS,
     FIELD_DIRECCION_LANZAMIENTOS,
+    FIELD_FECHA_INICIO_PRACTICAS,
+    FIELD_FECHA_INICIO_LANZAMIENTOS,
 } from '../constants';
 import EmptyState from './EmptyState';
 import { useModal } from '../contexts/ModalContext';
-import { normalizeStringForComparison } from '../utils/formatters';
+import { normalizeStringForComparison, parseToUTCDate } from '../utils/formatters';
 import { fetchSeleccionados } from '../services/dataService';
 
 interface ConvocatoriasListProps {
@@ -64,20 +66,29 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myE
                     return linkedLanzamientoId === lanzamiento.id;
                 }
 
-                // Fallback to old method for existing data
+                // Fallback to old method for existing data, now with date matching for more precision
                 const practicaInstitucionRaw = practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
                 const practicaInstitucion = Array.isArray(practicaInstitucionRaw) ? practicaInstitucionRaw[0] : practicaInstitucionRaw;
                 const practicaOrientacion = practica[FIELD_ESPECIALIDAD_PRACTICAS];
+                const practicaFechaInicio = parseToUTCDate(practica[FIELD_FECHA_INICIO_PRACTICAS]);
 
                 const lanzamientoInstitucion = lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS];
                 const lanzamientoOrientacion = lanzamiento[FIELD_ORIENTACION_LANZAMIENTOS];
+                const lanzamientoFechaInicio = parseToUTCDate(lanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS]);
 
-                if (!practicaInstitucion || !practicaOrientacion || !lanzamientoInstitucion || !lanzamientoOrientacion) {
+                if (!practicaInstitucion || !practicaOrientacion || !lanzamientoInstitucion || !lanzamientoOrientacion || !practicaFechaInicio || !lanzamientoFechaInicio) {
                     return false;
                 }
+                
+                const namesMatch = normalizeStringForComparison(practicaInstitucion as string) === normalizeStringForComparison(lanzamientoInstitucion);
+                const orientationsMatch = normalizeStringForComparison(practicaOrientacion) === normalizeStringForComparison(lanzamientoOrientacion);
+                
+                // Calculate the difference in days
+                const timeDiff = Math.abs(practicaFechaInicio.getTime() - lanzamientoFechaInicio.getTime());
+                const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
 
-                return normalizeStringForComparison(practicaInstitucion) === normalizeStringForComparison(lanzamientoInstitucion) &&
-                       normalizeStringForComparison(practicaOrientacion) === normalizeStringForComparison(lanzamientoOrientacion);
+                // A match requires name, orientation, and a start date within a 31-day tolerance window.
+                return namesMatch && orientationsMatch && daysDiff <= 31;
             });
 
             const lanzamientoDireccion = lanzamiento[FIELD_DIRECCION_LANZAMIENTOS];
