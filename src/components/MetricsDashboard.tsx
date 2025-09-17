@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchAllAirtableData } from '../services/airtableService';
 import type {
@@ -657,20 +657,72 @@ const Tabs: React.FC<{ active: string; onChange: (t: string) => void }> = ({ act
     { key: 'students', label: 'Estudiantes', icon: 'groups' },
     { key: 'institutions', label: 'Instituciones', icon: 'apartment' },
   ];
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const activeTabInfo = tabs.find(t => t.key === active) || tabs[0];
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelect = (key: string) => {
+    onChange(key);
+    setIsDropdownOpen(false);
+  };
+  
   return (
     <div className="mt-4">
-      <div className="inline-flex p-1 rounded-xl border bg-white dark:bg-slate-800/50 dark:border-slate-700">
+       {/* Mobile Dropdown */}
+      <div ref={dropdownRef} className="relative lg:hidden">
+        <button
+          type="button"
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          className="w-full flex items-center justify-between p-3 rounded-xl border bg-white dark:bg-slate-800/50 dark:border-slate-700 shadow-sm"
+          aria-haspopup="true"
+          aria-expanded={isDropdownOpen}
+        >
+          <div className="flex items-center gap-3">
+            <span className="material-icons !text-xl text-blue-600 dark:text-blue-400">{activeTabInfo.icon}</span>
+            <span className="font-semibold text-slate-800 dark:text-slate-100">{activeTabInfo.label}</span>
+          </div>
+          <span className={`material-icons text-slate-500 dark:text-slate-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}>expand_more</span>
+        </button>
+        {isDropdownOpen && (
+          <div className="absolute top-full mt-2 w-full bg-white dark:bg-slate-800 rounded-xl shadow-lg border dark:border-slate-700 z-10 animate-fade-in-up" style={{ animationDuration: '200ms' }}>
+            {tabs.map(t => (
+              <button
+                key={t.key}
+                onClick={() => handleSelect(t.key)}
+                className="w-full text-left flex items-center gap-3 p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 first:rounded-t-xl last:rounded-b-xl"
+                role="menuitem"
+              >
+                <span className="material-icons !text-xl text-slate-500 dark:text-slate-400">{t.icon}</span>
+                <span className="font-medium text-slate-700 dark:text-slate-200">{t.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Tabs */}
+      <div className="hidden lg:inline-flex p-1 rounded-xl border bg-white dark:bg-slate-800/50 dark:border-slate-700">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => onChange(t.key)}
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-300 dark:focus-visible:ring-offset-slate-800 ${
-              active === t.key ? 'bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+              active === t.key ? 'bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 shadow-sm' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
             }`}
             aria-pressed={active === t.key}
           >
             <span className="material-icons !text-base">{t.icon}</span>
-            {t.label}
+            <span className="whitespace-nowrap">{t.label}</span>
           </button>
         ))}
       </div>
@@ -924,7 +976,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSelect }) 
                 </div>
               </Card>
 
-              <Card icon="signal_cellular_alt" title="Distribución por Horas" description="Progreso de horas acumuladas de los estudiantes activos.">
+              <Card icon="signal_cellular_alt" title="Distribución por Horas" description="Progreso de horas acumuladas de los estudiantes activos." className="hidden lg:block">
                   <div className="mt-4">
                       <Histogram
                         data={metrics.distribucionHoras}
@@ -1058,21 +1110,23 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSelect }) 
                     description="Desde primera postulación a primera PPS."
                     isLoading={false}
                   />
-                  <Histogram
-                    data={metrics.distribucionHoras}
-                    title="Distribución de Alumnos por Horas"
-                    onBarClick={(label, students) =>
-                      openModal({
-                        title: `Alumnos en el rango: ${label}`,
-                        students,
-                        headers: [
-                          { key: 'nombre', label: 'Nombre' },
-                          { key: 'legajo', label: 'Legajo' },
-                          { key: 'totalHoras', label: 'Horas Totales' },
-                        ],
-                      })
-                    }
-                  />
+                  <div className="hidden lg:block">
+                    <Histogram
+                      data={metrics.distribucionHoras}
+                      title="Distribución de Alumnos por Horas"
+                      onBarClick={(label, students) =>
+                        openModal({
+                          title: `Alumnos en el rango: ${label}`,
+                          students,
+                          headers: [
+                            { key: 'nombre', label: 'Nombre' },
+                            { key: 'legajo', label: 'Legajo' },
+                            { key: 'totalHoras', label: 'Horas Totales' },
+                          ],
+                        })
+                      }
+                    />
+                  </div>
                 </div>
               </Card>
             </div>
