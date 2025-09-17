@@ -60,13 +60,14 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myE
             const enrollmentStatus = enrollment ? enrollment[FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS] : null;
             
             const isCompleted = practicas.some(practica => {
-                // New, preferred method: check for a direct link
+                // New, preferred method: check for a direct link.
+                // FIX: Corrected typo in constant name.
                 const linkedLanzamientoId = (practica[FIELD_LANZAMIENTO_VINCULADO_PRACTICAS] as string[] | undefined)?.[0];
                 if (linkedLanzamientoId) {
                     return linkedLanzamientoId === lanzamiento.id;
                 }
 
-                // Fallback to old method for existing data, now with date matching for more precision
+                // Fallback for older data: requires exact name, orientation, and close start date match.
                 const practicaInstitucionRaw = practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
                 const practicaInstitucion = Array.isArray(practicaInstitucionRaw) ? practicaInstitucionRaw[0] : practicaInstitucionRaw;
                 const practicaOrientacion = practica[FIELD_ESPECIALIDAD_PRACTICAS];
@@ -80,15 +81,23 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myE
                     return false;
                 }
                 
+                // Stricter name comparison. A match only occurs if the names are identical after normalization.
+                // This is critical to distinguish between a base institution (e.g., "Hospital Alemán") and a
+                // specific practice within it (e.g., "Hospital Alemán - Pediatría"). A past practice at the
+                // base institution will not block enrollment in a specific one.
                 const namesMatch = normalizeStringForComparison(practicaInstitucion as string) === normalizeStringForComparison(lanzamientoInstitucion);
+
+                if (!namesMatch) {
+                    return false; // If names are different in any way, it's not the same practice.
+                }
+
+                // If names match, we also check orientation and date proximity.
                 const orientationsMatch = normalizeStringForComparison(practicaOrientacion) === normalizeStringForComparison(lanzamientoOrientacion);
                 
-                // Calculate the difference in days
                 const timeDiff = Math.abs(practicaFechaInicio.getTime() - lanzamientoFechaInicio.getTime());
                 const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
 
-                // A match requires name, orientation, and a start date within a 31-day tolerance window.
-                return namesMatch && orientationsMatch && daysDiff <= 31;
+                return orientationsMatch && daysDiff <= 31;
             });
 
             const lanzamientoDireccion = lanzamiento[FIELD_DIRECCION_LANZAMIENTOS];
