@@ -1,11 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchPracticas } from '../services/dataService';
-import { updateAirtableRecord } from '../services/airtableService';
+import { db } from '../lib/db';
 import type { AirtableRecord, AirtableErrorResponse } from '../types';
-import { 
-    AIRTABLE_TABLE_NAME_PRACTICAS, FIELD_NOTA_PRACTICAS, 
-    AIRTABLE_TABLE_NAME_CONVOCATORIAS, FIELD_INFORME_SUBIDO_CONVOCATORIAS 
-} from '../constants';
 import { useModal } from '../contexts/ModalContext';
 
 export const useStudentPracticas = (legajo: string) => {
@@ -23,19 +19,19 @@ export const useStudentPracticas = (legajo: string) => {
     });
 
     const updateNota = useMutation<
-        { record: AirtableRecord<any> | null; error: AirtableErrorResponse | null }[],
+        // FIX: Removed incorrect `| boolean` from the mutation's return type.
+        (AirtableRecord<any> | null)[],
         Error,
         { practicaId: string; nota: string; convocatoriaId?: string }
     >({
         mutationFn: ({ practicaId, nota, convocatoriaId }) => {
-            if (nota === 'No Entregado' && convocatoriaId) {
-                return Promise.all([
-                    updateAirtableRecord(AIRTABLE_TABLE_NAME_CONVOCATORIAS, convocatoriaId, { [FIELD_INFORME_SUBIDO_CONVOCATORIAS]: false }),
-                    updateAirtableRecord(AIRTABLE_TABLE_NAME_PRACTICAS, practicaId, { [FIELD_NOTA_PRACTICAS]: 'No Entregado' })
-                ]);
-            }
             const valueToSend = nota === 'Sin calificar' ? null : nota;
-            return updateAirtableRecord(AIRTABLE_TABLE_NAME_PRACTICAS, practicaId, { [FIELD_NOTA_PRACTICAS]: valueToSend }).then(res => [res]);
+            const promises = [db.practicas.update(practicaId, { nota: valueToSend })];
+            
+            if (nota === 'No Entregado' && convocatoriaId) {
+                promises.push(db.convocatorias.update(convocatoriaId, { informeSubido: false }));
+            }
+            return Promise.all(promises);
         },
         onSuccess: (_, variables) => {
             if (variables.nota === 'No Entregado') {

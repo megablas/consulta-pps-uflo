@@ -1,31 +1,19 @@
 import React, { useState, useMemo } from 'react';
-import type { Convocatoria, LanzamientoPPS } from '../types';
+import type { Convocatoria, LanzamientoPPS, CalendarEvent } from '../types';
 import {
-    // FIX: Corrected typo in constant name
     FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
     FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS,
     FIELD_FECHA_INICIO_LANZAMIENTOS,
     FIELD_FECHA_FIN_LANZAMIENTOS,
-    FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS,
     FIELD_HORARIO_FORMULA_CONVOCATORIAS,
     FIELD_ORIENTACION_LANZAMIENTOS,
     FIELD_NOMBRE_PPS_LANZAMIENTOS,
     FIELD_DIRECCION_LANZAMIENTOS,
     FIELD_FECHA_INICIO_CONVOCATORIAS,
-    // FIX: Imported missing constant to resolve name error.
     FIELD_NOMBRE_PPS_CONVOCATORIAS,
 } from '../constants';
 import { parseToUTCDate, getEspecialidadClasses, normalizeStringForComparison } from '../utils/formatters';
 import EmptyState from './EmptyState';
-
-interface CalendarEvent {
-  id: string;
-  name: string;
-  schedule: string;
-  orientation: string;
-  location: string;
-  colorClasses: { dot: string; tag: string };
-}
 
 const WEEK_DAYS_FULL = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const WEEK_DAYS_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];

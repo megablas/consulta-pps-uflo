@@ -1,11 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { fetchAllAirtableData, updateAirtableRecord, updateAirtableRecords, createAirtableRecord } from '../services/airtableService';
+import { db } from '../lib/db';
 import type { InformeCorreccionPPS, InformeCorreccionStudent, ConvocatoriaFields, PracticaFields, EstudianteFields, LanzamientoPPSFields, FlatCorreccionStudent, AirtableRecord } from '../types';
 import {
-  AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
-  AIRTABLE_TABLE_NAME_CONVOCATORIAS,
-  AIRTABLE_TABLE_NAME_PRACTICAS,
-  AIRTABLE_TABLE_NAME_ESTUDIANTES,
   FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS as FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS,
   FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
   FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS,
@@ -69,46 +65,25 @@ const CorreccionPanel: React.FC = () => {
 
     try {
       const [lanzamientosRes, convocatoriasRes, practicasRes, estudiantesRes] = await Promise.all([
-        fetchAllAirtableData<LanzamientoPPSFields>(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, [
-          FIELD_NOMBRE_PPS_LANZAMIENTOS,
-          FIELD_ORIENTACION_LANZAMIENTOS,
-          FIELD_INFORME_LANZAMIENTOS,
-          FIELD_FECHA_FIN_LANZAMIENTOS,
-          FIELD_FECHA_INICIO_LANZAMIENTOS,
-          FIELD_HORAS_ACREDITADAS_LANZAMIENTOS,
-        ]),
-        fetchAllAirtableData<ConvocatoriaFields>(AIRTABLE_TABLE_NAME_CONVOCATORIAS),
-        fetchAllAirtableData<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS, [
-            FIELD_NOMBRE_BUSQUEDA_PRACTICAS,
-            FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS,
-            FIELD_FECHA_INICIO_PRACTICAS,
-            FIELD_NOTA_PRACTICAS,
-            FIELD_LANZAMIENTO_VINCULADO_PRACTICAS,
-            FIELD_ESTUDIANTE_LINK_PRACTICAS,
-            FIELD_ESPECIALIDAD_PRACTICAS,
-            FIELD_FECHA_FIN_PRACTICAS
-        ]),
-        fetchAllAirtableData<EstudianteFields>(AIRTABLE_TABLE_NAME_ESTUDIANTES, [FIELD_NOMBRE_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES])
+        db.lanzamientos.getAll(),
+        db.convocatorias.getAll(),
+        db.practicas.getAll(),
+        db.estudiantes.getAll()
       ]);
 
-      if (lanzamientosRes.error || convocatoriasRes.error || practicasRes.error || estudiantesRes.error) {
-        throw new Error('Error al cargar los datos necesarios para la corrección.');
-      }
-
-      const estudiantesMapById = new Map(estudiantesRes.records.map(r => [r.id, r.fields]));
+      const estudiantesMapById = new Map(estudiantesRes.map(r => [r.id, r.fields]));
       const legajoToStudentIdMap = new Map<string, string>();
-      estudiantesRes.records.forEach(r => {
+      estudiantesRes.forEach(r => {
         if (r.fields[FIELD_LEGAJO_ESTUDIANTES]) {
           legajoToStudentIdMap.set(String(r.fields[FIELD_LEGAJO_ESTUDIANTES]), r.id);
         }
       });
       
-      const allPracticas = practicasRes.records.map(r => ({ ...r, id: r.id, fields: r.fields as PracticaFields }));
-      const allLanzamientos = lanzamientosRes.records;
+      const allPracticas = practicasRes.map(r => ({ ...r, id: r.id, fields: r.fields as PracticaFields }));
+      const allLanzamientos = lanzamientosRes;
       
       const practicasMap = new Map<string, AirtableRecord<PracticaFields>>();
 
-      // Pass 1: Prioritize perfectly linked practices and those with grades
       for (const practicaRecord of allPracticas) {
           const studentId = (practicaRecord.fields[FIELD_ESTUDIANTE_LINK_PRACTICAS] as string[] | undefined)?.[0];
           const lanzamientoId = (practicaRecord.fields[FIELD_LANZAMIENTO_VINCULADO_PRACTICAS] as string[] | undefined)?.[0];
@@ -122,7 +97,6 @@ const CorreccionPanel: React.FC = () => {
           }
       }
       
-      // Pass 2: Attempt to map unlinked practices using fallback logic
       for (const practicaRecord of allPracticas) {
           const linkedStudentId = (practicaRecord.fields[FIELD_ESTUDIANTE_LINK_PRACTICAS] as string[] | undefined)?.[0];
           const linkedLanzamientoId = (practicaRecord.fields[FIELD_LANZAMIENTO_VINCULADO_PRACTICAS] as string[] | undefined)?.[0];
@@ -168,7 +142,7 @@ const CorreccionPanel: React.FC = () => {
       }
 
       const ppsGroups = new Map<string, InformeCorreccionPPS>();
-      const validConvocatorias = convocatoriasRes.records.filter(conv => {
+      const validConvocatorias = convocatoriasRes.filter(conv => {
         const estado = normalizeStringForComparison(conv.fields[FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS]);
         return estado !== 'inscripto' && estado !== 'no seleccionado';
       });
@@ -255,53 +229,49 @@ const CorreccionPanel: React.FC = () => {
     if (!currentPracticaId) {
         setUpdatingNotaId(`creating-${student.studentId}`);
         
-        // If a Lanzamiento has multiple orientations (e.g., "Laboral, Comunitaria"),
-        // the Practica's "Especialidad" field (likely a single-select) can only take one.
-        // We'll take the first one from the list.
         const firstOrientation = (student.orientacion || '').split(',')[0].trim();
 
-        const newPracticaFields: Partial<PracticaFields> = {
-            [FIELD_ESTUDIANTE_LINK_PRACTICAS]: [student.studentId],
-            [FIELD_LANZAMIENTO_VINCULADO_PRACTICAS]: [student.lanzamientoId],
-            [FIELD_ESPECIALIDAD_PRACTICAS]: firstOrientation,
-            [FIELD_FECHA_INICIO_PRACTICAS]: student.fechaInicio,
-            [FIELD_FECHA_FIN_PRACTICAS]: student.fechaFinalizacionPPS,
-        };
-        
-        const { record: newPracticaRecord, error: createError } = await createAirtableRecord<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS, newPracticaFields);
+        try {
+            const newPracticaRecord = await db.practicas.create({
+                estudianteLink: [student.studentId],
+                lanzamientoVinculado: [student.lanzamientoId],
+                especialidad: firstOrientation,
+                fechaInicio: student.fechaInicio,
+                fechaFin: student.fechaFinalizacionPPS,
+            });
 
-        if (createError || !newPracticaRecord) {
-            setToastInfo({ message: 'Error: No se pudo crear el registro de práctica para calificar.', type: 'error' });
+            if (!newPracticaRecord) throw new Error("La creación del registro de práctica no devolvió un resultado.");
+            
+            currentPracticaId = newPracticaRecord.id;
+
+            setAllPpsGroups(prev => {
+                const newGroups = new Map(prev);
+                const ppsGroup = newGroups.get(student.lanzamientoId);
+                if (ppsGroup) {
+                    const studentToUpdate = ppsGroup.students.find(s => s.studentId === student.studentId);
+                    if (studentToUpdate) {
+                        studentToUpdate.practicaId = newPracticaRecord.id;
+                    }
+                }
+                return newGroups;
+            });
+        } catch (error: any) {
+            setToastInfo({ message: `Error: No se pudo crear el registro de práctica. ${error.message}`, type: 'error' });
             setUpdatingNotaId(null);
             return;
         }
-        currentPracticaId = newPracticaRecord.id;
-
-        setAllPpsGroups(prev => {
-            const newGroups = new Map(prev);
-            const ppsGroup = newGroups.get(student.lanzamientoId);
-            if (ppsGroup) {
-                const studentToUpdate = ppsGroup.students.find(s => s.studentId === student.studentId);
-                if (studentToUpdate) {
-                    studentToUpdate.practicaId = newPracticaRecord.id;
-                }
-            }
-            return newGroups;
-        });
     }
 
     setUpdatingNotaId(currentPracticaId);
 
-    if (newNota === 'No Entregado' && student.convocatoriaId) {
-        await updateAirtableRecord(AIRTABLE_TABLE_NAME_CONVOCATORIAS, student.convocatoriaId, { [FIELD_INFORME_SUBIDO_CONVOCATORIAS]: false });
-    }
-    
-    const valueToSend = newNota === 'Sin calificar' ? null : newNota;
-    const { error } = await updateAirtableRecord(AIRTABLE_TABLE_NAME_PRACTICAS, currentPracticaId, { [FIELD_NOTA_PRACTICAS]: valueToSend });
+    try {
+        if (newNota === 'No Entregado' && student.convocatoriaId) {
+            await db.convocatorias.update(student.convocatoriaId, { informeSubido: false });
+        }
+        
+        const valueToSend = newNota === 'Sin calificar' ? null : newNota;
+        await db.practicas.update(currentPracticaId, { nota: valueToSend });
 
-    if (error) {
-        setToastInfo({ message: 'Error al guardar la nota.', type: 'error' });
-    } else {
         setToastInfo({ message: 'Nota guardada exitosamente.', type: 'success' });
         setAllPpsGroups(prev => {
             const newGroups = new Map(prev);
@@ -317,9 +287,11 @@ const CorreccionPanel: React.FC = () => {
             }
             return newGroups;
         });
+    } catch(error: any) {
+        setToastInfo({ message: `Error al guardar la nota. ${error.message}`, type: 'error' });
+    } finally {
+        setUpdatingNotaId(null);
     }
-
-    setUpdatingNotaId(null);
 }, []);
   
   const handleSelectionChange = useCallback((lanzamientoId: string, practicaId: string) => {
@@ -358,14 +330,11 @@ const CorreccionPanel: React.FC = () => {
       
       const recordsToUpdate = selectedPracticaIds.map(id => ({
           id,
-          fields: { [FIELD_NOTA_PRACTICAS]: newNota }
+          fields: { nota: newNota }
       }));
 
-      const { error } = await updateAirtableRecords(AIRTABLE_TABLE_NAME_PRACTICAS, recordsToUpdate);
-
-      if (error) {
-          setToastInfo({ message: `Error al actualizar ${selectedPracticaIds.length} notas.`, type: 'error' });
-      } else {
+      try {
+          await db.practicas.updateMany(recordsToUpdate);
           setToastInfo({ message: `${selectedPracticaIds.length} notas actualizadas a "${newNota}".`, type: 'success' });
           setAllPpsGroups(prev => {
               const newGroups = new Map(prev);
@@ -384,9 +353,11 @@ const CorreccionPanel: React.FC = () => {
               newSelection.delete(lanzamientoId);
               return newSelection;
           });
+      } catch (error: any) {
+          setToastInfo({ message: `Error al actualizar notas: ${error.message}`, type: 'error' });
+      } finally {
+        setBatchUpdatingLanzamientoId(null);
       }
-
-      setBatchUpdatingLanzamientoId(null);
   }, [selectedStudents]);
 
   const managerData = useMemo(() => {
@@ -522,23 +493,23 @@ const CorreccionPanel: React.FC = () => {
             <CollapsibleSection title="Finalizados" count={managerData.finalizados.length}>
                {managerData.finalizados.length > 0 ? (
                 <div className="space-y-4">
-                  {managerData.finalizados.map(group => (
-                     <InformeCorreccionCard 
-                        key={group.lanzamientoId} 
-                        ppsGroup={group} 
-                        onNotaChange={handleNotaChange} 
-                        updatingNotaId={updatingNotaId}
-                        selectedStudents={selectedStudents.get(group.lanzamientoId) || new Set()}
-                        onSelectionChange={(practicaId) => handleSelectionChange(group.lanzamientoId, practicaId)}
-                        onSelectAll={(practicaIds, select) => handleSelectAll(group.lanzamientoId, practicaIds, select)}
-                        onBatchUpdate={(newNota) => handleBatchUpdate(group.lanzamientoId, newNota)}
-                        isBatchUpdating={batchUpdatingLanzamientoId === group.lanzamientoId}
-                        searchTerm={searchTerm}
-                     />
+                   {managerData.finalizados.map(group => (
+                    <InformeCorreccionCard 
+                      key={group.lanzamientoId} 
+                      ppsGroup={group} 
+                      onNotaChange={handleNotaChange} 
+                      updatingNotaId={updatingNotaId}
+                      selectedStudents={selectedStudents.get(group.lanzamientoId) || new Set()}
+                      onSelectionChange={(practicaId) => handleSelectionChange(group.lanzamientoId, practicaId)}
+                      onSelectAll={(practicaIds, select) => handleSelectAll(group.lanzamientoId, practicaIds, select)}
+                      onBatchUpdate={(newNota) => handleBatchUpdate(group.lanzamientoId, newNota)}
+                      isBatchUpdating={batchUpdatingLanzamientoId === group.lanzamientoId}
+                      searchTerm={searchTerm}
+                    />
                   ))}
                 </div>
               ) : (
-                 <p className="text-slate-500 dark:text-slate-400 text-sm">Aún no se ha finalizado la corrección de ninguna PPS.</p>
+                 <p className="text-slate-500 dark:text-slate-400 text-sm">No hay prácticas finalizadas en esta categoría.</p>
               )}
             </CollapsibleSection>
           </>
@@ -546,17 +517,16 @@ const CorreccionPanel: React.FC = () => {
       </div>
     );
   };
-  
-  const CollapsibleSection: React.FC<{ title: string; count: number; children: React.ReactNode; defaultOpen?: boolean; }> = ({ title, count, children, defaultOpen = false }) => (
+
+  const CollapsibleSection: React.FC<{ title: string; count: number; children: React.ReactNode; defaultOpen?: boolean }> = ({ title, count, children, defaultOpen = false }) => (
     <details className="group" open={defaultOpen}>
-      <summary className="list-none flex items-center gap-3 cursor-pointer mb-4">
-        <span className="material-icons text-slate-400 dark:text-slate-500 transition-transform duration-300 group-open:rotate-90">chevron_right</span>
+      <summary className="list-none flex items-center gap-3 cursor-pointer mb-4 p-1">
         <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{title}</h3>
-        <span className="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold px-2.5 py-1 rounded-full">{count}</span>
+        <span className="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold px-2 py-1 rounded-full">{count}</span>
+        <div className="flex-grow border-b-2 border-slate-200/60 dark:border-slate-700/60"></div>
+        <span className="material-icons text-slate-400 dark:text-slate-500 transition-transform duration-300 group-open:rotate-180">expand_more</span>
       </summary>
-      <div className="pl-8">
-        {children}
-      </div>
+      {children}
     </details>
   );
 
@@ -564,57 +534,43 @@ const CorreccionPanel: React.FC = () => {
     <div className="animate-fade-in-up space-y-6">
       {toastInfo && <Toast message={toastInfo.message} type={toastInfo.type} onClose={() => setToastInfo(null)} />}
       
-      {!isJefeMode && (
-        <div className="border-b border-slate-200 dark:border-slate-700">
-            <nav className="-mb-px flex space-x-4" aria-label="Managers">
-            {(Object.keys(managerConfig) as Manager[]).map(manager => (
-                <button
-                key={manager}
-                onClick={() => setActiveManager(manager)}
-                className={`whitespace-nowrap py-3 px-1 border-b-2 text-sm font-medium transition-colors duration-200 ${
-                    activeManager === manager
-                    ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400'
-                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600'
-                }`}
-                >
-                {managerConfig[manager].label}
-                </button>
-            ))}
-            </nav>
-        </div>
-      )}
+      <div className="p-4 bg-slate-50/70 dark:bg-slate-800/50 rounded-xl border border-slate-200/60 dark:border-slate-700">
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
+            
+            {!isJefeMode && (
+                <div className="w-full sm:w-auto p-1 bg-slate-200 dark:bg-slate-700 rounded-lg flex items-center ring-1 ring-slate-300/50 dark:ring-slate-600/50">
+                    {Object.entries(managerConfig).map(([key, config]) => (
+                        <button key={key} onClick={() => setActiveManager(key as Manager)} className={`w-full sm:w-auto px-4 py-2 text-sm font-semibold rounded-md transition-all duration-300 ${activeManager === key ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100/50 dark:hover:bg-slate-600/50'}`}>
+                            {config.label}
+                        </button>
+                    ))}
+                </div>
+            )}
 
-       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-           <div className="p-1 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center ring-1 ring-slate-200/50 dark:ring-slate-700">
-               <button 
-                  onClick={() => setViewMode('byPps')}
-                  className={`w-full px-4 py-1.5 text-sm font-semibold rounded-md transition-all duration-300 ${viewMode === 'byPps' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 hover:text-slate-700 dark:hover:text-slate-100'}`}
-                >
-                  Vista por PPS
-                </button>
-                <button 
-                  onClick={() => setViewMode('flatList')}
-                  className={`w-full px-4 py-1.5 text-sm font-semibold rounded-md transition-all duration-300 flex items-center gap-2 ${viewMode === 'flatList' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 hover:text-slate-700 dark:hover:text-slate-100'}`}
-                >
-                  <span>Corrección Rápida</span>
-                  {managerData.totalSinCorregir > 0 && (
-                     <span className="bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 text-xs font-bold px-2 py-0.5 rounded-full">{managerData.totalSinCorregir}</span>
-                  )}
-                </button>
-           </div>
-           <div className="relative w-full sm:w-80">
-              <input
-                type="search"
-                placeholder="Buscar por PPS o Alumno..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-300/80 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all hover:border-slate-400 dark:focus:border-blue-400 dark:hover:border-slate-500"
-              />
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 material-icons text-slate-400 dark:text-slate-500 !text-lg">
-                search
-              </span>
+            <div className="w-full sm:w-auto p-1 bg-slate-200 dark:bg-slate-700 rounded-lg flex items-center ring-1 ring-slate-300/50 dark:ring-slate-600/50">
+                 <button onClick={() => setViewMode('byPps')} className={`w-full sm:w-auto px-3 py-2 text-sm font-semibold rounded-md transition-colors duration-300 flex items-center gap-2 ${viewMode === 'byPps' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}>
+                    <span className="material-icons !text-base">view_agenda</span>
+                    Por PPS
+                 </button>
+                 <button onClick={() => setViewMode('flatList')} className={`w-full sm:w-auto px-3 py-2 text-sm font-semibold rounded-md transition-colors duration-300 flex items-center gap-2 ${viewMode === 'flatList' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}>
+                    <span className="material-icons !text-base">grading</span>
+                    Corrección Rápida
+                    {managerData.totalSinCorregir > 0 && <span className="text-xs font-bold bg-rose-500 text-white w-5 h-5 flex items-center justify-center rounded-full animate-pulse">{managerData.totalSinCorregir}</span>}
+                 </button>
             </div>
-       </div>
+            
+             <div className="relative w-full sm:w-72">
+                <input
+                    type="text"
+                    placeholder="Buscar por alumno o PPS..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors"
+                />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 material-icons text-slate-400 dark:text-slate-500">search</span>
+            </div>
+        </div>
+      </div>
 
       {renderContent()}
     </div>

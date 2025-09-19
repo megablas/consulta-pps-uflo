@@ -35,7 +35,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
 
   // --- CUSTOM HOOKS FOR DATA FETCHING AND MUTATIONS ---
-  const { studentDetails, studentAirtableId, isStudentLoading, studentError, updateOrientation, refetchStudent } = useStudentData(user.legajo);
+  // FIX: Destructure `updateInternalNotes` from the hook to pass it down to ProfileView.
+  const { studentDetails, studentAirtableId, isStudentLoading, studentError, updateOrientation, updateInternalNotes, refetchStudent } = useStudentData(user.legajo);
   const { practicas, isPracticasLoading, practicasError, updateNota, refetchPracticas } = useStudentPracticas(user.legajo);
   const { solicitudes, isSolicitudesLoading, solicitudesError, refetchSolicitudes } = useStudentSolicitudes(user.legajo, studentAirtableId);
   const { 
@@ -97,12 +98,13 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
         id: 'profile' as TabId,
         label: 'Mi Perfil',
         icon: 'person',
-        content: <ProfileView studentDetails={studentDetails} isLoading={isStudentLoading} />,
+        // FIX: Pass props to ProfileView to fix type error. The component was refactored to accept props instead of using context directly.
+        content: <ProfileView studentDetails={studentDetails} isLoading={isStudentLoading} updateInternalNotes={updateInternalNotes} />,
         badge: undefined
     });
     return tabs;
 
-  }, [solicitudes, practicas, lanzamientos, myEnrollments, informeTasks, studentDetails, confirmInforme.mutate, handleNotaChange, enrollStudent.mutate, showExportButton, isStudentLoading, institutionAddressMap]);
+  }, [solicitudes, practicas, lanzamientos, myEnrollments, informeTasks, studentDetails, confirmInforme, handleNotaChange, enrollStudent, showExportButton, isStudentLoading, institutionAddressMap, updateInternalNotes]);
   
   // Effect to reset active tab if it's no longer in the list of available tabs (e.g., after filtering for admin view).
   useEffect(() => {
