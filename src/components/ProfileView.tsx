@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import Card from './Card';
-import { EstudianteFields } from '../types';
 import {
   FIELD_NOMBRE_ESTUDIANTES,
   FIELD_LEGAJO_ESTUDIANTES,
@@ -11,12 +10,8 @@ import {
 } from '../constants';
 import { SkeletonBox } from './Skeletons';
 import { useAuth } from '../contexts/AuthContext';
-import { useStudentData } from '../hooks/useStudentData'; // Assuming a hook for data mutations
-
-interface ProfileViewProps {
-  studentDetails: EstudianteFields | null;
-  isLoading: boolean;
-}
+import type { EstudianteFields } from '../types';
+import type { UseMutationResult } from '@tanstack/react-query';
 
 const InfoRow: React.FC<{ icon: string; label: string; value?: string | number | null }> = ({ icon, label, value }) => {
   if (!value) return null;
@@ -41,11 +36,17 @@ const ProfileViewSkeleton: React.FC = () => (
     </div>
 );
 
+// FIX: Added a props interface to make the component prop-driven.
+interface ProfileViewProps {
+  studentDetails: EstudianteFields | null;
+  isLoading: boolean;
+  updateInternalNotes: UseMutationResult<any, Error, string, unknown>;
+}
 
-const ProfileView: React.FC<ProfileViewProps> = ({ studentDetails, isLoading }) => {
+
+const ProfileView: React.FC<ProfileViewProps> = ({ studentDetails, isLoading, updateInternalNotes }) => {
   const { isSuperUserMode, isJefeMode } = useAuth();
-  const legajo = studentDetails?.[FIELD_LEGAJO_ESTUDIANTES] || '';
-  const { updateInternalNotes } = useStudentData(legajo);
+  
   const [internalNotes, setInternalNotes] = useState('');
   const [isNotesChanged, setIsNotesChanged] = useState(false);
 
@@ -72,6 +73,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ studentDetails, isLoading }) 
 
   const {
     [FIELD_NOMBRE_ESTUDIANTES]: nombre,
+    [FIELD_LEGAJO_ESTUDIANTES]: legajo,
     [FIELD_DNI_ESTUDIANTES]: dni,
     [FIELD_CORREO_ESTUDIANTES]: correo,
     [FIELD_TELEFONO_ESTUDIANTES]: telefono,

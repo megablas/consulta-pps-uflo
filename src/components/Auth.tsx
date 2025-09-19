@@ -1,9 +1,9 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { fetchAirtableData, createAirtableRecord, updateAirtableRecord } from '../services/airtableService';
+import { db } from '../lib/db';
 import { generateSalt, hashPassword, verifyPassword } from '../utils/auth';
 import { 
-    AIRTABLE_TABLE_NAME_AUTH_USERS, FIELD_LEGAJO_AUTH, FIELD_PASSWORD_HASH_AUTH, FIELD_SALT_AUTH, FIELD_NOMBRE_AUTH,
-    AIRTABLE_TABLE_NAME_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES, FIELD_NOMBRE_ESTUDIANTES, 
+    FIELD_LEGAJO_AUTH, FIELD_PASSWORD_HASH_AUTH, FIELD_SALT_AUTH, FIELD_NOMBRE_AUTH,
+    FIELD_LEGAJO_ESTUDIANTES, FIELD_NOMBRE_ESTUDIANTES, 
     FIELD_DNI_ESTUDIANTES, FIELD_FECHA_NACIMIENTO_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES,
     FIELD_ROLE_AUTH, FIELD_ORIENTACIONES_AUTH
 } from '../constants';
@@ -103,39 +103,29 @@ const Auth: React.FC = () => {
     setError(null);
 
     try {
-        // Check Auth Users table first
-        const { records: existingUser, error: existingUserError } = await fetchAirtableData<AuthUserFields>(
-            AIRTABLE_TABLE_NAME_AUTH_USERS,
-            [FIELD_LEGAJO_AUTH, FIELD_PASSWORD_HASH_AUTH, FIELD_NOMBRE_AUTH],
-            `{${FIELD_LEGAJO_AUTH}} = '${legajoToVerify}'`,
-            1
-        );
-
-        if (existingUserError) console.warn("No se pudo consultar 'Auth Users':", existingUserError.error);
+        const existingUser = await db.authUsers.get({
+            filterByFormula: `{${FIELD_LEGAJO_AUTH}} = '${legajoToVerify}'`,
+            maxRecords: 1
+        });
         
         if (existingUser.length > 0) {
             const userAuthRecord = existingUser[0];
-            // If user exists and has a password, they can't register again.
             if (userAuthRecord.fields[FIELD_PASSWORD_HASH_AUTH]) {
                 setLegajoMessage('Ya existe una cuenta para este legajo.');
                 setLegajoCheckState('error');
                 return;
             } else {
-                // User exists but has no password (pre-provisioned account)
-                setFoundAuthUser({ id: userAuthRecord.id, ...userAuthRecord });
+                setFoundAuthUser(userAuthRecord);
                 setLegajoMessage(`¡Hola, ${userAuthRecord.fields[FIELD_NOMBRE_AUTH]}! Completa tu contraseña para activar tu cuenta.`);
                 setLegajoCheckState('success');
-                return; // Stop here, no need to check Estudiantes table
+                return;
             }
         }
 
-        // If no user in Auth, check Estudiantes table for a new registration
-        const { records: studentRecords, error: studentError } = await fetchAirtableData<EstudianteFields>(
-            AIRTABLE_TABLE_NAME_ESTUDIANTES,
-            [FIELD_NOMBRE_ESTUDIANTES, FIELD_DNI_ESTUDIANTES, FIELD_FECHA_NACIMIENTO_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES],
-            `{${FIELD_LEGAJO_ESTUDIANTES}} = '${legajoToVerify}'`, 1
-        );
-        if (studentError) throw new Error(`Error al buscar en 'Estudiantes': ${typeof studentError.error === 'string' ? studentError.error : studentError.error.message}`);
+        const studentRecords = await db.estudiantes.get({
+            filterByFormula: `{${FIELD_LEGAJO_ESTUDIANTES}} = '${legajoToVerify}'`,
+            maxRecords: 1
+        });
         
         if (studentRecords.length === 0) {
             setLegajoMessage('No se encontró un estudiante con este legajo.');
@@ -144,7 +134,7 @@ const Auth: React.FC = () => {
         }
 
         const student = studentRecords[0];
-        setFoundStudent({ id: student.id, ...student });
+        setFoundStudent(student);
 
         const missing: string[] = [];
         if (!student.fields[FIELD_DNI_ESTUDIANTES]) missing.push(FIELD_DNI_ESTUDIANTES);
@@ -187,13 +177,10 @@ const Auth: React.FC = () => {
   const handleNewDataChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     if (name === FIELD_DNI_ESTUDIANTES) {
-      // The DNI field in Airtable expects a Number. We process the input to only allow digits.
       const numericString = value.replace(/\D/g, '');
       if (numericString === '') {
-        // Handle case where input is cleared
         setNewData(prev => ({ ...prev, [name]: null }));
       } else {
-        // Store as a number
         setNewData(prev => ({ ...prev, [name]: parseInt(numericString, 10) }));
       }
     } else {
@@ -222,10 +209,11 @@ const Auth: React.FC = () => {
     if (mode === 'login') {
         try {
             if (!legajoTrimmed || !passwordTrimmed) throw new Error('Por favor, completa todos los campos.');
-            const { records, error: fetchError } = await fetchAirtableData<AuthUserFields>(
-                AIRTABLE_TABLE_NAME_AUTH_USERS, [FIELD_PASSWORD_HASH_AUTH, FIELD_SALT_AUTH, FIELD_NOMBRE_AUTH, FIELD_ROLE_AUTH, FIELD_ORIENTACIONES_AUTH], `{${FIELD_LEGAJO_AUTH}} = '${legajoTrimmed}'`, 1
-            );
-            if (fetchError) throw new Error('Error al conectar con el servidor.');
+            const records = await db.authUsers.get({
+                filterByFormula: `{${FIELD_LEGAJO_AUTH}} = '${legajoTrimmed}'`,
+                maxRecords: 1
+            });
+            
             if (records.length === 0) throw new Error('Legajo o contraseña incorrectos.');
             
             const user = records[0].fields;
@@ -258,7 +246,6 @@ const Auth: React.FC = () => {
                 throw new Error('Las contraseñas no coinciden.');
             }
             
-            // Stricter validation for required fields
             if (foundStudent && missingFields.length > 0) {
                 const fieldsStillMissing = missingFields.filter(field => {
                     const value = newData[field as keyof EstudianteFields];
@@ -277,32 +264,25 @@ const Auth: React.FC = () => {
             
             let userName = '';
 
-            if (foundAuthUser) { // Update pre-provisioned user
-                const { error: updateError } = await updateAirtableRecord(
-                    AIRTABLE_TABLE_NAME_AUTH_USERS,
-                    foundAuthUser.id,
-                    {
-                        [FIELD_PASSWORD_HASH_AUTH]: passwordHash,
-                        [FIELD_SALT_AUTH]: salt
-                    }
-                );
-                if (updateError) throw new Error(`No se pudo activar la cuenta: ${typeof updateError.error === 'string' ? updateError.error : updateError.error.message}`);
+            if (foundAuthUser) {
+                await db.authUsers.update(foundAuthUser.id, { passwordHash, salt });
                 userName = foundAuthUser.fields[FIELD_NOMBRE_AUTH]!;
-            } else if (foundStudent) { // Create new user from Estudiantes
+            } else if (foundStudent) {
                 if (Object.keys(newData).length > 0) {
-                    const { error: updateError } = await updateAirtableRecord(
-                        AIRTABLE_TABLE_NAME_ESTUDIANTES, foundStudent.id, newData
-                    );
-                    if (updateError) throw new Error(`No se pudo actualizar tu información: ${typeof updateError.error === 'string' ? updateError.error : updateError.error.message}`);
+                    await db.estudiantes.update(foundStudent.id, {
+                        dni: newData[FIELD_DNI_ESTUDIANTES],
+                        fechaNacimiento: newData[FIELD_FECHA_NACIMIENTO_ESTUDIANTES],
+                        correo: newData[FIELD_CORREO_ESTUDIANTES],
+                        telefono: newData[FIELD_TELEFONO_ESTUDIANTES],
+                    });
                 }
 
-                const { record, error: createError } = await createAirtableRecord<AuthUserFields>(AIRTABLE_TABLE_NAME_AUTH_USERS, {
-                    [FIELD_LEGAJO_AUTH]: legajoTrimmed,
-                    [FIELD_NOMBRE_AUTH]: foundStudent.fields[FIELD_NOMBRE_ESTUDIANTES],
-                    [FIELD_PASSWORD_HASH_AUTH]: passwordHash,
-                    [FIELD_SALT_AUTH]: salt
+                await db.authUsers.create({
+                    legajo: legajoTrimmed,
+                    nombre: foundStudent.fields[FIELD_NOMBRE_ESTUDIANTES],
+                    passwordHash,
+                    salt
                 });
-                if (createError || !record) throw new Error(typeof createError?.error === 'string' ? createError.error : createError?.error.message || 'No se pudo crear la cuenta.');
                 userName = foundStudent.fields[FIELD_NOMBRE_ESTUDIANTES]!;
             }
 
@@ -335,11 +315,7 @@ const Auth: React.FC = () => {
             const salt = generateSalt();
             const passwordHash = await hashPassword(passwordTrimmed, salt);
 
-            const { error: updateError } = await updateAirtableRecord(AIRTABLE_TABLE_NAME_AUTH_USERS, foundAuthUser.id, {
-                [FIELD_PASSWORD_HASH_AUTH]: passwordHash,
-                [FIELD_SALT_AUTH]: salt
-            });
-            if (updateError) throw new Error(`No se pudo restablecer la contraseña: ${typeof updateError.error === 'string' ? updateError.error : updateError.error.message}`);
+            await db.authUsers.update(foundAuthUser.id, { passwordHash, salt });
             
             login({ legajo: legajoTrimmed, nombre: foundAuthUser.fields[FIELD_NOMBRE_AUTH]!, role: getProcessedRole(foundAuthUser.fields[FIELD_ROLE_AUTH]) }, rememberMe);
             showModal('¡Éxito!', 'Tu contraseña ha sido restablecida y has iniciado sesión.');
@@ -366,16 +342,14 @@ const Auth: React.FC = () => {
     }
 
     try {
-        const { records: authRecords, error: authError } = await fetchAirtableData<AuthUserFields>(
-            AIRTABLE_TABLE_NAME_AUTH_USERS, [], `{${FIELD_LEGAJO_AUTH}} = '${legajoTrimmed}'`, 1
-        );
-        if (authError) throw new Error('Error al conectar con el servidor.');
+        const authRecords = await db.authUsers.get({
+            filterByFormula: `{${FIELD_LEGAJO_AUTH}} = '${legajoTrimmed}'`, maxRecords: 1
+        });
         if (authRecords.length === 0) throw new Error('No existe una cuenta para este legajo. Por favor, regístrate.');
         
-        const { records: studentRecords, error: studentError } = await fetchAirtableData<EstudianteFields>(
-            AIRTABLE_TABLE_NAME_ESTUDIANTES, [FIELD_DNI_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES, FIELD_NOMBRE_ESTUDIANTES], `{${FIELD_LEGAJO_ESTUDIANTES}} = '${legajoTrimmed}'`, 1
-        );
-        if (studentError) throw new Error('Error al verificar tu identidad.');
+        const studentRecords = await db.estudiantes.get({
+            filterByFormula: `{${FIELD_LEGAJO_ESTUDIANTES}} = '${legajoTrimmed}'`, maxRecords: 1
+        });
         if (studentRecords.length === 0) throw new Error('No se encontraron datos de estudiante para verificar. Contacta al coordinador.');
         
         setFoundAuthUser(authRecords[0]);

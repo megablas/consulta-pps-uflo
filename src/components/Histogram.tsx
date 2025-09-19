@@ -16,13 +16,13 @@ const Histogram: React.FC<HistogramProps> = ({ data, title, onBarClick }) => {
   
   return (
     <div>
-      <h3 className="font-bold text-slate-800 text-center mb-4">{title}</h3>
-      <div className="flex justify-around items-end h-48 gap-2 px-2 border-b border-l border-slate-200 pb-2">
+      <h3 className="font-bold text-slate-800 dark:text-slate-100 text-center mb-4">{title}</h3>
+      <div className="flex justify-around items-end h-48 gap-2 px-2 border-b border-l border-slate-200 dark:border-slate-700 pb-2">
         {data.map((bin, index) => {
           const heightPercentage = maxValue > 0 ? (bin.value / maxValue) * 100 : 0;
           return (
             <div key={bin.label} className="flex-1 flex flex-col items-center justify-end h-full group relative">
-                <span className="absolute -top-5 text-xs font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <span className="absolute -top-5 text-xs font-bold text-slate-700 dark:text-slate-200 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded-md">
                     {bin.value}
                 </span>
                 <button
@@ -41,7 +41,7 @@ const Histogram: React.FC<HistogramProps> = ({ data, title, onBarClick }) => {
                     >
                     </div>
                 </button>
-              <div className="text-center text-xs text-slate-500 mt-1.5 whitespace-nowrap">{bin.label}</div>
+              <div className="text-center text-xs text-slate-500 dark:text-slate-400 mt-1.5 whitespace-nowrap">{bin.label}</div>
             </div>
           );
         })}

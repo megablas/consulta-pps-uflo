@@ -1,9 +1,8 @@
-import { fetchAllAirtableData } from './airtableService';
+import { db } from '../lib/db';
 import {
-  Practica, SolicitudPPS, LanzamientoPPS, Convocatoria, InformeTask, CriteriosCalculados, UserGender,
-  PracticaFields, SolicitudPPSFields, LanzamientoPPSFields, ConvocatoriaFields, EstudianteFields,
-  GroupedSeleccionados,
-  InstitucionFields
+  Practica, SolicitudPPS, LanzamientoPPS, Convocatoria, InformeTask,
+  EstudianteFields,
+  GroupedSeleccionados
 } from '../types';
 import {
     solicitudPPSArraySchema,
@@ -13,9 +12,6 @@ import {
     estudianteSchema
 } from '../schemas';
 import {
-  AIRTABLE_TABLE_NAME_PRACTICAS, AIRTABLE_TABLE_NAME_PPS, AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
-  AIRTABLE_TABLE_NAME_CONVOCATORIAS, AIRTABLE_TABLE_NAME_ESTUDIANTES,
-  FIELD_NOMBRE_BUSQUEDA_PRACTICAS, FIELD_LEGAJO_PPS,
   FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS, FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
   FIELD_NOMBRE_PPS_LANZAMIENTOS, FIELD_INFORME_LANZAMIENTOS, FIELD_FECHA_FIN_LANZAMIENTOS,
   FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS, FIELD_INFORME_SUBIDO_CONVOCATORIAS,
@@ -27,31 +23,24 @@ import {
   FIELD_NOMBRE_ESTUDIANTES,
   FIELD_LANZAMIENTO_VINCULADO_PRACTICAS,
   FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS,
-  FIELD_NOTAS_INTERNAS_ESTUDIANTES,
   FIELD_FECHA_INICIO_CONVOCATORIAS,
-  // FIX: Imported missing constant to resolve name error.
   FIELD_NOMBRE_PPS_CONVOCATORIAS,
   FIELD_ESTADO_PRACTICA,
-  AIRTABLE_TABLE_NAME_INSTITUCIONES,
   FIELD_NOMBRE_INSTITUCIONES,
   FIELD_DIRECCION_INSTITUCIONES,
+  FIELD_NOMBRE_BUSQUEDA_PRACTICAS,
+  // FIX: Imported the missing constant to resolve the error.
+  FIELD_LEGAJO_PPS,
 } from '../constants';
 import { normalizeStringForComparison, parseToUTCDate } from '../utils/formatters';
 
-export const fetchStudentData = async (legajo: string): Promise<{ studentDetails: EstudianteFields | null; studentAirtableId: string | null; userGender: UserGender }> => {
-  const { records, error } = await fetchAllAirtableData<EstudianteFields>(
-    AIRTABLE_TABLE_NAME_ESTUDIANTES, [], `{${FIELD_LEGAJO_ESTUDIANTES}} = '${legajo}'`
-  );
-
-  if (error) {
-    const errorMsg = typeof error.error === 'string' ? error.error : error.error.message;
-    throw new Error(`Error fetching student data from Airtable: ${errorMsg}`);
-  }
+export const fetchStudentData = async (legajo: string): Promise<{ studentDetails: EstudianteFields | null; studentAirtableId: string | null; }> => {
+  const records = await db.estudiantes.get({ filterByFormula: `{${FIELD_LEGAJO_ESTUDIANTES}} = '${legajo}'`, maxRecords: 1 });
   
   const studentRecord = records[0];
 
   if (!studentRecord) {
-    return { studentDetails: null, studentAirtableId: null, userGender: 'neutro' };
+    return { studentDetails: null, studentAirtableId: null };
   }
 
   const validationResult = estudianteSchema.safeParse(studentRecord);
@@ -67,22 +56,11 @@ export const fetchStudentData = async (legajo: string): Promise<{ studentDetails
   const studentDetails = validatedStudent.fields;
   const studentAirtableId = validatedStudent.id;
   
-  const gender = studentDetails?.[FIELD_GENERO_ESTUDIANTES];
-  let userGender: UserGender = 'neutro';
-  if (gender === 'Mujer') userGender = 'femenino';
-  else if (gender === 'Varon') userGender = 'masculino';
-  
-  return { studentDetails, studentAirtableId, userGender };
+  return { studentDetails, studentAirtableId };
 };
 
 export const fetchPracticas = async (legajo: string): Promise<Practica[]> => {
-  const { records, error } = await fetchAllAirtableData<PracticaFields>(
-    AIRTABLE_TABLE_NAME_PRACTICAS, [], `SEARCH('${legajo}', {${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}} & '')`
-  );
-  if (error) {
-    const errorMsg = typeof error.error === 'string' ? error.error : error.error.message;
-    throw new Error(`Error fetching practicas: ${errorMsg}`);
-  }
+  const records = await db.practicas.getAll({ filterByFormula: `SEARCH('${legajo}', {${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}} & '')` });
 
   const validationResult = practicaArraySchema.safeParse(records);
   if (!validationResult.success) {
@@ -97,20 +75,11 @@ export const fetchPracticas = async (legajo: string): Promise<Practica[]> => {
 };
 
 export const fetchSolicitudes = async (legajo: string, studentAirtableId: string | null): Promise<SolicitudPPS[]> => {
-  // The formula is changed to use the student's `legajo` number, which is more reliable
-  // and consistent with how other data types like `Practicas` are fetched.
   const formula = `SEARCH('${legajo}', {${FIELD_LEGAJO_PPS}} & '')`;
-
-  const { records, error } = await fetchAllAirtableData<SolicitudPPSFields>(
-    AIRTABLE_TABLE_NAME_PPS, 
-    [], 
-    formula, 
-    [{ field: FIELD_ULTIMA_ACTUALIZACION_PPS, direction: 'desc' }]
-  );
-  if (error) {
-    const errorMsg = typeof error.error === 'string' ? error.error : error.error.message;
-    throw new Error(`Error fetching solicitudes: ${errorMsg}`);
-  }
+  const records = await db.solicitudes.getAll({ 
+    filterByFormula: formula, 
+    sort: [{ field: FIELD_ULTIMA_ACTUALIZACION_PPS, direction: 'desc' }]
+  });
   
   const validationResult = solicitudPPSArraySchema.safeParse(records);
   if (!validationResult.success) {
@@ -130,37 +99,17 @@ export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: 
     allLanzamientos: LanzamientoPPS[],
     institutionAddressMap: Map<string, string>,
 }> => {
-  // This robust formula finds enrollments by precise record ID link OR by a text search of the legajo,
-  // ensuring all relevant records are found even with minor data inconsistencies.
   const formula = studentAirtableId
     ? `OR(FIND('${studentAirtableId}', ARRAYJOIN({${FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS}})), SEARCH('${legajo}', {${FIELD_LEGAJO_CONVOCATORIAS}} & ''))`
     : `SEARCH('${legajo}', {${FIELD_LEGAJO_CONVOCATORIAS}} & '')`;
 
-
-  // Fetches ALL convocatorias a student is enrolled in, regardless of status.
-  const [convocatoriasRes, lanzamientosRes, institutionsRes] = await Promise.all([
-      fetchAllAirtableData<ConvocatoriaFields>(
-        AIRTABLE_TABLE_NAME_CONVOCATORIAS, [], formula
-      ),
-      fetchAllAirtableData<LanzamientoPPSFields>(
-          AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
-          [],
-          undefined,
-          [{ field: FIELD_FECHA_INICIO_LANZAMIENTOS, direction: 'desc' }]
-      ),
-      fetchAllAirtableData<InstitucionFields>(
-          AIRTABLE_TABLE_NAME_INSTITUCIONES,
-          [FIELD_NOMBRE_INSTITUCIONES, FIELD_DIRECCION_INSTITUCIONES]
-      )
+  const [convocatoriasRecords, lanzamientosRecords, institutionsRecords] = await Promise.all([
+      db.convocatorias.getAll({ filterByFormula: formula }),
+      db.lanzamientos.getAll({ sort: [{ field: FIELD_FECHA_INICIO_LANZAMIENTOS, direction: 'desc' }] }),
+      db.instituciones.getAll()
   ]);
   
-  if (convocatoriasRes.error || lanzamientosRes.error || institutionsRes.error) {
-    const errorMsg = (convocatoriasRes.error || lanzamientosRes.error || institutionsRes.error)?.error;
-    const finalMessage = typeof errorMsg === 'string' ? errorMsg : errorMsg?.message || 'Error al cargar los datos de convocatorias.';
-    throw new Error(finalMessage);
-  }
-
-  const myEnrollmentsValidation = convocatoriaArraySchema.safeParse(convocatoriasRes.records);
+  const myEnrollmentsValidation = convocatoriaArraySchema.safeParse(convocatoriasRecords);
   if (!myEnrollmentsValidation.success) {
       const formattedErrors = myEnrollmentsValidation.error.issues.map(issue => 
         `  - Registro #${String(issue.path[0])}, Campo '${issue.path.slice(1).map(String).join('.')}': ${issue.message}`
@@ -168,10 +117,9 @@ export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: 
       console.error('[Zod Validation Error in MyEnrollments]:', myEnrollmentsValidation.error.issues);
       throw new Error(`Error de validación de datos en 'Mis Inscripciones':\n${formattedErrors}`);
   }
-
   const myEnrollments = myEnrollmentsValidation.data.map(r => ({ ...r.fields, id: r.id }));
 
-  const lanzamientosValidation = lanzamientoPPSArraySchema.safeParse(lanzamientosRes.records);
+  const lanzamientosValidation = lanzamientoPPSArraySchema.safeParse(lanzamientosRecords);
   if (!lanzamientosValidation.success) {
     const formattedErrors = lanzamientosValidation.error.issues.map(issue => 
       `  - Registro #${String(issue.path[0])}, Campo '${issue.path.slice(1).map(String).join('.')}': ${issue.message}`
@@ -179,27 +127,21 @@ export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: 
     console.error('[Zod Validation Error in Lanzamientos]:', lanzamientosValidation.error.issues);
     throw new Error(`Error de validación de datos en 'Lanzamientos de PPS':\n${formattedErrors}`);
   }
-  
   const allLanzamientosRecords = lanzamientosValidation.data.map(r => ({ ...r.fields, id: r.id }));
   
-  // FIX: The filtering of 'Oculto' PPS should apply to everyone viewing a student's dashboard,
-  // including admins, to accurately reflect what the student sees.
-  // Admin-specific management views (like ConvocatoriaStatusManager) fetch their own unfiltered data.
   const lanzamientos = allLanzamientosRecords.filter(lanzamiento => {
     const estado = normalizeStringForComparison(lanzamiento[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]);
     return estado !== 'oculto';
   });
 
   const institutionAddressMap = new Map<string, string>();
-  if (institutionsRes.records) {
-      institutionsRes.records.forEach(record => {
-          const name = record.fields[FIELD_NOMBRE_INSTITUCIONES];
-          const address = record.fields[FIELD_DIRECCION_INSTITUCIONES];
-          if (name && address) {
-              institutionAddressMap.set(normalizeStringForComparison(name), address);
-          }
-      });
-  }
+  institutionsRecords.forEach(record => {
+      const name = record.fields[FIELD_NOMBRE_INSTITUCIONES];
+      const address = record.fields[FIELD_DIRECCION_INSTITUCIONES];
+      if (name && address) {
+          institutionAddressMap.set(normalizeStringForComparison(name), address);
+      }
+  });
 
   return { lanzamientos, myEnrollments, allLanzamientos: allLanzamientosRecords, institutionAddressMap };
 };
@@ -342,50 +284,25 @@ export const processInformeTasks = (myEnrollments: Convocatoria[], allLanzamient
 };
 
 export const fetchSeleccionados = async (lanzamientoId: string): Promise<GroupedSeleccionados | null> => {
-    // 1. Fetch ALL 'seleccionado' convocatorias at once
-    const { records: allSeleccionados, error: convError } = await fetchAllAirtableData<ConvocatoriaFields>(
-        AIRTABLE_TABLE_NAME_CONVOCATORIAS,
-        [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, FIELD_HORARIO_FORMULA_CONVOCATORIAS],
-        `LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = 'seleccionado'`
-    );
-
-    if (convError) {
-        throw new Error('Error al buscar los alumnos seleccionados.');
-    }
+    const allSeleccionados = await db.convocatorias.getAll({
+        filterByFormula: `LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = 'seleccionado'`
+    });
     
-    // 2. Filter them in memory for the target lanzamiento
     const relevantConvocatorias = allSeleccionados.filter(c => 
         (c.fields[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || []).includes(lanzamientoId)
     );
 
-    if (relevantConvocatorias.length === 0) {
-        return null;
-    }
+    if (relevantConvocatorias.length === 0) return null;
 
-    // 3. Collect all unique student IDs from the relevant convocatorias
     const studentIds = [...new Set(relevantConvocatorias.flatMap(c => c.fields[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] || []))];
+    if (studentIds.length === 0) return null;
 
-    if (studentIds.length === 0) {
-        return null;
-    }
-
-    // 4. Fetch details for only those students in a single batch
     const studentFormula = `OR(${studentIds.map(id => `RECORD_ID()='${id}'`).join(',')})`;
-    const { records: studentRecords, error: studentError } = await fetchAllAirtableData<EstudianteFields>(
-        AIRTABLE_TABLE_NAME_ESTUDIANTES,
-        [FIELD_NOMBRE_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES],
-        studentFormula
-    );
-
-    if (studentError) {
-        throw new Error('Error al obtener los datos de los estudiantes.');
-    }
+    const studentRecords = await db.estudiantes.getAll({ filterByFormula: studentFormula });
     
     const studentMap = new Map(studentRecords.map(r => [r.id, r.fields]));
 
-    // 5. Group students by horario
     const grouped: GroupedSeleccionados = {};
-
     relevantConvocatorias.forEach(conv => {
         const studentId = (conv.fields[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] || [])[0];
         const student = studentId ? studentMap.get(studentId) : null;
@@ -402,7 +319,6 @@ export const fetchSeleccionados = async (lanzamientoId: string): Promise<Grouped
         }
     });
     
-    // Sort students within each group
     for (const horario in grouped) {
         grouped[horario].sort((a, b) => a.nombre.localeCompare(b.nombre));
     }

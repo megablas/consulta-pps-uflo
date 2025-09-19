@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import CriteriosPanel from '../components/CriteriosPanel';
 import PracticasTable from '../components/PracticasTable';
 import SolicitudesList from '../components/SolicitudesList';
-import EmptyState from '../components/EmptyState';
 import Tabs from '../components/Tabs';
 import Card from '../components/Card';
 import WelcomeBanner from '../components/WelcomeBanner';
@@ -15,16 +14,13 @@ import type { TabId, Orientacion } from '../types';
 import { calculateCriterios } from '../utils/criteriaCalculations';
 import DashboardLoadingSkeleton from '../components/DashboardLoadingSkeleton';
 import ErrorState from '../components/ErrorState';
-import { useStudentData } from '../hooks/useStudentData';
-import { useStudentPracticas } from '../hooks/useStudentPracticas';
-import { useStudentSolicitudes } from '../hooks/useStudentSolicitudes';
-import { useConvocatorias } from '../hooks/useConvocatorias';
 import { processInformeTasks } from '../services/dataService';
 import ProfileView from '../components/ProfileView';
 import PrintableReport from '../components/PrintableReport';
 import MobileBottomNav from '../components/MobileBottomNav';
 import { HORAS_OBJETIVO_TOTAL, HORAS_OBJETIVO_ORIENTACION, ROTACION_OBJETIVO_ORIENTACIONES } from '../constants';
 import CalendarView from '../components/CalendarView';
+import { StudentPanelProvider, useStudentPanel } from '../contexts/StudentPanelContext';
 
 interface StudentDashboardProps {
   user: AuthUser;
@@ -109,8 +105,7 @@ const TotalHoursSummaryCard: React.FC<{ totalHours: number, goalHours: number }>
     );
 };
 
-const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, onTabChange, showExportButton = false }) => {
-  const { isSuperUserMode } = useAuth();
+const StudentDashboardContent: React.FC<StudentDashboardProps> = ({ user, activeTab, onTabChange, showExportButton = false }) => {
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
   const [greeting, setGreeting] = useState('');
 
@@ -124,39 +119,33 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
       setGreeting('Buenas noches');
     }
   }, []);
+  
+  // --- CONSUME CENTRALIZED CONTEXT ---
+  const {
+      studentDetails,
+      practicas,
+      solicitudes,
+      lanzamientos,
+      myEnrollments,
+      allLanzamientos,
+      institutionAddressMap,
+      isLoading,
+      error,
+      updateOrientation,
+      // FIX: Destructure `updateInternalNotes` to pass it as a prop to ProfileView.
+      updateInternalNotes,
+      updateNota,
+      enrollStudent,
+      confirmInforme,
+      refetchAll,
+  } = useStudentPanel();
 
-  // --- CUSTOM HOOKS FOR DATA FETCHING AND MUTATIONS ---
-  const { studentDetails, studentAirtableId, isStudentLoading, studentError, updateOrientation, refetchStudent } = useStudentData(user.legajo);
-  const { practicas, isPracticasLoading, practicasError, updateNota, refetchPracticas } = useStudentPracticas(user.legajo);
-  const { solicitudes, isSolicitudesLoading, solicitudesError, refetchSolicitudes } = useStudentSolicitudes(user.legajo, studentAirtableId);
-  const { 
-    lanzamientos, myEnrollments, allLanzamientos, isConvocatoriasLoading, convocatoriasError,
-    enrollStudent, confirmInforme, refetchConvocatorias, institutionAddressMap
-  } = useConvocatorias(user.legajo, studentAirtableId, isSuperUserMode);
 
   // --- DERIVED STATE & MEMOIZATION ---
   const [internalActiveTab, setInternalActiveTab] = useState<TabId>('convocatorias');
   const currentActiveTab = activeTab ?? internalActiveTab;
   const setCurrentActiveTab = onTabChange ?? setInternalActiveTab;
   const isCalendarActive = currentActiveTab === 'calendario';
-  
-  const isLoading = isStudentLoading || isPracticasLoading || isSolicitudesLoading || isConvocatoriasLoading;
-  const error = studentError || practicasError || solicitudesError || convocatoriasError;
-
-  const refetchAll = useCallback(() => {
-    refetchStudent();
-    refetchPracticas();
-    refetchSolicitudes();
-    refetchConvocatorias();
-  }, [refetchStudent, refetchPracticas, refetchSolicitudes, refetchConvocatorias]);
-
-  useEffect(() => {
-    // When the user navigates to the "Informes" tab, refetch the data
-    // to ensure any newly added report links are displayed.
-    if (currentActiveTab === 'informes') {
-      refetchConvocatorias();
-    }
-  }, [currentActiveTab, refetchConvocatorias]);
   
   const selectedOrientacion = (studentDetails?.['Orientación Elegida'] || "") as Orientacion | "";
   const studentNameForPanel = studentDetails?.['Nombre'] || user.nombre;
@@ -179,9 +168,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   }, [updateNota]);
 
   // --- TAB DEFINITIONS ---
-  // Memoize tab content to prevent re-renders on tab change
-  const convocatoriasContent = useMemo(() => <ConvocatoriasList lanzamientos={lanzamientos} myEnrollments={myEnrollments} practicas={practicas} student={studentDetails} onInscribir={enrollStudent.mutate} institutionAddressMap={institutionAddressMap} />, [lanzamientos, myEnrollments, practicas, studentDetails, enrollStudent.mutate, institutionAddressMap]);
-  const informesContent = useMemo(() => <InformesList tasks={informeTasks} onConfirmar={confirmInforme.mutate} />, [informeTasks, confirmInforme.mutate]);
+  const convocatoriasContent = useMemo(() => <ConvocatoriasList lanzamientos={lanzamientos} myEnrollments={myEnrollments} practicas={practicas} student={studentDetails} onInscribir={enrollStudent.mutate} institutionAddressMap={institutionAddressMap} />, [lanzamientos, myEnrollments, practicas, studentDetails, enrollStudent, institutionAddressMap]);
+  const informesContent = useMemo(() => <InformesList tasks={informeTasks} onConfirmar={confirmInforme.mutate} />, [informeTasks, confirmInforme]);
   const solicitudesContent = useMemo(() => <SolicitudesList solicitudes={solicitudes} />, [solicitudes]);
   const practicasContent = useMemo(() => (
     <div className="space-y-6">
@@ -191,7 +179,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
       <PracticasTable practicas={practicas} handleNotaChange={handleNotaChange} />
     </div>
   ), [practicas, handleNotaChange, criterios.horasTotales]);
-  const profileContent = useMemo(() => <ProfileView studentDetails={studentDetails} isLoading={isStudentLoading} />, [studentDetails, isStudentLoading]);
+  // FIX: Pass required props to ProfileView.
+  const profileContent = useMemo(() => <ProfileView studentDetails={studentDetails} isLoading={isLoading} updateInternalNotes={updateInternalNotes} />, [studentDetails, isLoading, updateInternalNotes]);
   const calendarioContent = useMemo(() => <CalendarView myEnrollments={myEnrollments} allLanzamientos={allLanzamientos} />, [myEnrollments, allLanzamientos]);
 
 
@@ -205,7 +194,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
     ];
 
     if (showExportButton) {
-      // Admin/Jefe view of a student. User wants 'Convocatorias', 'Informes', 'Solicitudes', 'Prácticas'.
       return tabs.filter(tab => tab.id === 'convocatorias' || tab.id === 'informes' || tab.id === 'solicitudes' || tab.id === 'practicas');
     }
     
@@ -313,6 +301,20 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
       </div>
     </>
   );
+};
+
+
+/**
+ * Main wrapper component for the StudentDashboard.
+ * It instantiates the StudentPanelProvider to make the context available
+ * to the StudentDashboardContent and all its children.
+ */
+const StudentDashboard: React.FC<StudentDashboardProps> = (props) => {
+    return (
+        <StudentPanelProvider legajo={props.user.legajo}>
+            <StudentDashboardContent {...props} />
+        </StudentPanelProvider>
+    );
 };
 
 export default StudentDashboard;

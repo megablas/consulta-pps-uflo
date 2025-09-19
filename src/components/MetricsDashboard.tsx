@@ -8,6 +8,7 @@ import type {
   LanzamientoPPSFields,
   InstitucionFields,
   AirtableRecord,
+  LanzamientoPPS,
 } from '../types';
 import {
   AIRTABLE_TABLE_NAME_PRACTICAS,
@@ -144,10 +145,12 @@ const fetchMetricsData = async () => {
   };
 };
 
+const MONTH_NAMES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
 // Encapsula toda la lógica de métricas; incluye coerción segura de Lookups
 function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targetYear: number) {
   const { estudiantes, practicas, convocatorias, lanzamientos, institutions } = data;
-
+  
   const studentMapById = new Map<string, any>(estudiantes.map((e) => [e.id, e]));
 
   const startOfTargetYear = new Date(Date.UTC(targetYear, 0, 1));
@@ -239,6 +242,15 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
         return dateB - dateA;
     })
     .slice(0, 5);
+  
+  const lanzamientosPorMesRaw = MONTH_NAMES.map((monthName, index) => {
+    const count = lanzamientosYear.filter(l => parseToUTCDate(l[FIELD_FECHA_INICIO_LANZAMIENTOS])?.getUTCMonth() === index).length;
+    return { label: monthName.substring(0, 3), value: count };
+  });
+
+  const totalLanzamientosAnual = lanzamientosPorMesRaw.reduce((sum, month) => sum + month.value, 0);
+  const lanzamientosPorMes = lanzamientosPorMesRaw.filter(monthData => monthData.value > 0);
+  
 
   // --- CÁLCULO DE CUPOS OFRECIDOS ---
   // Se calcula el total de cupos de PPS lanzadas en el año, excluyendo las de "Relevamiento Profesional".
@@ -433,18 +445,16 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
   });
   Object.keys(hourBins).forEach((key) => (hourBins[key as keyof typeof hourBins].count = hourBins[key as keyof typeof hourBins].students.length));
 
-  const topInstitutions = Array.from(
-    lanzamientosYear
-      .filter(
-        (l) => !normalizeStringForComparison(getText(l[FIELD_NOMBRE_PPS_LANZAMIENTOS])).includes('relevamiento')
-      )
-      .reduce((map, l) => {
-        const name = getText(l[FIELD_NOMBRE_PPS_LANZAMIENTOS]) || 'Sin Nombre';
-        map.set(name, (map.get(name) || 0) + (l[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0));
-        return map;
-      }, new Map<string, number>()),
-    ([label, value]) => ({ label, value })
-  )
+  const institutionCuposMap = new Map<string, number>();
+  lanzamientosYear
+    .filter(l => !normalizeStringForComparison(getText(l[FIELD_NOMBRE_PPS_LANZAMIENTOS])).includes('relevamiento'))
+    .forEach(l => {
+        const groupName = getGroupName(l[FIELD_NOMBRE_PPS_LANZAMIENTOS]);
+        const currentCupos = institutionCuposMap.get(groupName) || 0;
+        institutionCuposMap.set(groupName, currentCupos + (l[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0));
+    });
+
+  const topInstitutions = Array.from(institutionCuposMap, ([label, value]) => ({ label, value }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 5);
 
@@ -471,25 +481,84 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
       ? Math.round(timeToPlacementDurations.reduce((a, b) => a + b, 0) / timeToPlacementDurations.length)
       : 0;
 
-  const nuevosConveniosInstitutions = institutions.filter(
-    (inst) => inst[FIELD_CONVENIO_NUEVO_INSTITUCIONES] && inst[FIELD_NOMBRE_INSTITUCIONES]
-  );
-  const nuevosConveniosList = nuevosConveniosInstitutions.map((inst) => {
-    const instName = getText(inst[FIELD_NOMBRE_INSTITUCIONES]) || '—';
-    const normInstGroupName = normalizeStringForComparison(getGroupName(instName));
-    const totalCupos = lanzamientosYear
-      .filter((l) => {
-        const launchGroup = normalizeStringForComparison(getGroupName(getText(l[FIELD_NOMBRE_PPS_LANZAMIENTOS])));
-        return launchGroup.startsWith(normInstGroupName);
-      })
-      .reduce((sum, l) => sum + (l[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0), 0);
+  // --- CÁLCULO DE CONVENIOS NUEVOS ---
+  // Un "convenio nuevo" para el año objetivo debe:
+  // 1. Estar marcado como "Convenio Nuevo" en la tabla de Instituciones.
+  // 2. Tener su PRIMER lanzamiento histórico dentro del año objetivo.
 
-    return {
-      nombre: instName,
-      legajo: '—',
-      cupos: totalCupos,
-    };
+  // Obtener todas las instituciones marcadas como nuevas.
+  const allMarkedAsNewInstitutions = institutions
+    .filter(inst => inst[FIELD_CONVENIO_NUEVO_INSTITUCIONES] && inst[FIELD_NOMBRE_INSTITUCIONES])
+    .map(inst => ({
+      ...inst,
+      groupName: getGroupName(inst[FIELD_NOMBRE_INSTITUCIONES]),
+      normGroupName: normalizeStringForComparison(getGroupName(inst[FIELD_NOMBRE_INSTITUCIONES]))
+    }));
+
+  const newConveniosForYearGroupNames = new Set<string>();
+  const nuevosConveniosList: { nombre: string; legajo: string; cupos: number; }[] = [];
+
+  // Crear un mapa para búsqueda rápida de todos los lanzamientos por nombre de grupo normalizado.
+  const launchesByGroup = new Map<string, (LanzamientoPPSFields & { id: string })[]>();
+  lanzamientos.forEach(l => {
+    const ppsName = getText(l[FIELD_NOMBRE_PPS_LANZAMIENTOS]);
+    if (ppsName) {
+      const normGroupName = normalizeStringForComparison(getGroupName(ppsName));
+      if (!launchesByGroup.has(normGroupName)) {
+        launchesByGroup.set(normGroupName, []);
+      }
+      launchesByGroup.get(normGroupName)!.push(l);
+    }
   });
+
+  // Procesar solo nombres de grupo únicos de instituciones marcadas como nuevas
+  const uniqueMarkedAsNewGroups = new Map<string, { groupName: string }>();
+  allMarkedAsNewInstitutions.forEach(inst => {
+    if (!uniqueMarkedAsNewGroups.has(inst.normGroupName)) {
+      uniqueMarkedAsNewGroups.set(inst.normGroupName, { groupName: inst.groupName });
+    }
+  });
+
+  uniqueMarkedAsNewGroups.forEach(({ groupName }, normGroupName) => {
+    const institutionLaunches = launchesByGroup.get(normGroupName) || [];
+    
+    if (institutionLaunches.length === 0) {
+      return; // Sin lanzamientos, no puede ser un convenio nuevo para ningún año.
+    }
+
+    // Encontrar la fecha de lanzamiento más temprana para este grupo de instituciones.
+    let earliestLaunchDate: Date | null = null;
+    institutionLaunches.forEach(l => {
+      const launchDate = parseToUTCDate(l[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+      if (launchDate) {
+        if (!earliestLaunchDate || launchDate < earliestLaunchDate) {
+          earliestLaunchDate = launchDate;
+        }
+      }
+    });
+
+    // Verificar si el primer lanzamiento cae dentro del año objetivo.
+    if (earliestLaunchDate && earliestLaunchDate.getUTCFullYear() === targetYear) {
+      newConveniosForYearGroupNames.add(groupName);
+
+      // Calcular los cupos totales para este nuevo grupo de instituciones dentro del año objetivo.
+      const totalCuposInYear = institutionLaunches
+        .filter(l => {
+          const launchDate = parseToUTCDate(l[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+          return launchDate && launchDate.getUTCFullYear() === targetYear;
+        })
+        .reduce((sum, l) => sum + (l[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0), 0);
+      
+      nuevosConveniosList.push({
+        nombre: groupName,
+        legajo: '—', // Placeholder
+        cupos: totalCuposInYear,
+      });
+    }
+  });
+
+  // Ordenar la lista final alfabéticamente por nombre.
+  nuevosConveniosList.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
   const studentsWithPracticeEnCurso = new Set<string>();
     practicas.forEach(p => {
@@ -546,7 +615,7 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
     alumnosEnPPS: { value: studentsWithActivePPS_Set.size, list: alumnosEnPPSList },
     alumnosActivos: { value: allActiveStudents.length, list: alumnosActivosList },
     alumnosSinPPS: { value: alumnosSinPPSList.length, list: alumnosSinPPSList },
-    alumnosSinNingunaPPS: { value: alumnosSinNingunaPPSList.length, list: alumnosSinNingunaPPSList },
+    alumnosSinNingunaPPS: { value: alumnosSinNingunaPPSList.length, list: alumnosFinalizadosList },
     alumnosFinalizados: { value: finalizacionesThisYear.length, list: alumnosFinalizadosList },
     ppsLanzadas: { value: ppsLanzadasCount, list: ppsLanzadasList },
     cuposOfrecidos: { value: cuposOfrecidosSinRelevamiento },
@@ -559,8 +628,10 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
       students: (data as any).students.sort((a: any, b: any) => b.totalHoras - a.totalHoras),
     })),
     topInstitutions,
+    lanzamientosPorMes,
+    totalLanzamientosAnual,
     avgTimeToPlacement,
-    nuevosConvenios: { value: nuevosConveniosList.length, list: nuevosConveniosList },
+    nuevosConvenios: { value: newConveniosForYearGroupNames.size, list: nuevosConveniosList },
     alumnosInicioCiclo: { value: studentsAtStartOfYear.length, list: alumnosInicioCicloList },
     nuevosAlumnos: { value: newStudentsThisYear.length, list: nuevosAlumnosList },
     picoAlumnos: { value: maxStudentCount },
@@ -933,54 +1004,42 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSelect }) 
                 </div>
               </Card>
 
-              <Card icon="assessment" title="Análisis de PPS e Instituciones" description="Oferta, demanda y convenios.">
-                <div className="space-y-6 mt-4">
-                  <MetricCard
-                    title="Convenios con Instituciones Nuevas"
-                    value={metrics.nuevosConvenios.value}
-                    icon="handshake"
-                    description={`Instituciones nuevas con PPS lanzadas en ${targetYear}.`}
-                    isLoading={false}
-                    className="bg-slate-50/50 dark:bg-slate-800/50"
-                    onClick={() =>
-                      openModal({
-                        title: `Convenios Con Instituciones Nuevas (${targetYear})`,
-                        students: metrics.nuevosConvenios.list,
-                        headers: [
-                          { key: 'nombre', label: 'Institución' },
-                          { key: 'cupos', label: 'Cupos Ofrecidos' },
-                        ],
-                      })
-                    }
-                  />
-                  <div className="mt-6 pt-6 border-t border-slate-200/60 dark:border-slate-700">
-                    <h3 className="font-bold text-slate-800 dark:text-slate-100 text-center mb-4">Últimas 5 PPS Lanzadas</h3>
-                    <div className="space-y-3">
-                        {(metrics.ultimas5Lanzadas as any[]).map((launch) => {
-                            const especialidadVisuals = getEspecialidadClasses(launch[FIELD_ORIENTACION_LANZAMIENTOS]);
-                            return (
-                                <div key={launch.id} className="flex items-center justify-between p-3 bg-white dark:bg-slate-800/50 rounded-lg border border-slate-200/60 dark:border-slate-700 shadow-sm">
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-semibold text-slate-800 dark:text-slate-100 text-sm truncate">{launch[FIELD_NOMBRE_PPS_LANZAMIENTOS]}</p>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400">{formatDate(launch[FIELD_FECHA_INICIO_LANZAMIENTOS])}</p>
-                                    </div>
-                                    <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                                        <span className={`${especialidadVisuals.tag} shadow-sm`}>{launch[FIELD_ORIENTACION_LANZAMIENTOS]}</span>
-                                        <span className="text-sm font-bold text-slate-700 dark:text-slate-200 bg-slate-200/80 dark:bg-slate-700 px-2 py-1 rounded-md">{launch[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS]} cupos</span>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
+              <Card icon="calendar_month" title={`Lanzamientos por Mes (${targetYear})`}>
+                <div className="mt-4">
+                  <div className="text-center mb-6 border-b border-slate-200/70 dark:border-slate-700/70 pb-6">
+                      <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Lanzamientos Totales del Año</p>
+                      <p className="text-5xl font-black text-slate-800 dark:text-slate-100 tracking-tighter mt-1">{metrics.totalLanzamientosAnual}</p>
                   </div>
+                  <BarChart
+                    data={metrics.lanzamientosPorMes}
+                    title=""
+                    onBarClick={(label) => {
+                      const monthIndex = MONTH_NAMES.findIndex(m => m.substring(0, 3) === label);
+                      if (monthIndex === -1) return;
+                      
+                      const monthStudents: StudentInfo[] = metrics.listaPostulaciones.filter(p => {
+                        const date = parseToUTCDate(p.fechaInscripcion as string);
+                        return date && date.getUTCMonth() === monthIndex;
+                      });
+                       openModal({
+                          title: `Postulaciones en ${MONTH_NAMES[monthIndex]}`,
+                          students: monthStudents,
+                          headers: [
+                            {key: 'nombre', label: 'Nombre'},
+                            {key: 'legajo', label: 'Legajo'},
+                            {key: 'institucion', label: 'Institución'},
+                          ]
+                        })
+                    }}
+                  />
                 </div>
               </Card>
 
-              <Card icon="signal_cellular_alt" title="Distribución por Horas" description="Progreso de horas acumuladas de los estudiantes activos." className="hidden lg:block">
+              <Card icon="signal_cellular_alt" title="Distribución por Horas" description="Progreso de horas acumuladas de los estudiantes activos." className="lg:col-span-2">
                   <div className="mt-4">
                       <Histogram
                         data={metrics.distribucionHoras}
-                        title="Distribución de Alumnos por Horas"
+                        title=""
                         onBarClick={(label, students) =>
                           openModal({
                             title: `Alumnos en el rango: ${label}`,
@@ -993,57 +1052,6 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSelect }) 
                           })
                         }
                       />
-                  </div>
-              </Card>
-              <Card icon="groups" title="Población Estudiantil" description="Movimiento de la cohorte durante el ciclo.">
-                  <div className="mt-4 p-4 bg-white dark:bg-slate-800/50 rounded-xl">
-                    <div className="space-y-2">
-                      <button
-                        onClick={() =>
-                          openModal({ title: `Alumnos al Inicio (${targetYear})`, students: metrics.alumnosInicioCiclo.list })
-                        }
-                        className="w-full p-2 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-700/50 text-left transition-colors flex justify-between items-baseline group focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-300"
-                      >
-                        <span className="text-sm text-slate-600 dark:text-slate-300 font-medium group-hover:text-slate-800 dark:group-hover:text-slate-100">
-                          Alumnos al inicio del ciclo
-                        </span>
-                        <span className="text-2xl font-black text-slate-800 dark:text-slate-50 tracking-tighter">
-                          {metrics.alumnosInicioCiclo.value}
-                        </span>
-                      </button>
-
-                      <div className="border-t border-slate-200/70 dark:border-slate-700 mx-2" />
-
-                      <button
-                        onClick={() =>
-                          openModal({
-                            title: `Nuevos Ingresos (${targetYear})`,
-                            students: metrics.nuevosAlumnos.list,
-                            headers: [
-                              { key: 'nombre', label: 'Nombre' },
-                              { key: 'legajo', label: 'Legajo' },
-                              { key: 'fechaIngreso', label: 'Fecha Ingreso' },
-                            ],
-                          })
-                        }
-                        className="w-full p-2 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-700/50 text-left transition-colors flex justify-between items-baseline group focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-300"
-                      >
-                        <span className="text-sm text-slate-600 dark:text-slate-300 font-medium group-hover:text-slate-800 dark:group-hover:text-slate-100">
-                          Nuevos ingresos en el ciclo
-                        </span>
-                        <span className="text-2xl font-black text-slate-800 dark:text-slate-50 tracking-tighter">{metrics.nuevosAlumnos.value}</span>
-                      </button>
-
-                      <div className="border-t border-slate-200/70 dark:border-slate-700 mx-2" />
-
-                      <div
-                        className="w-full p-2 text-left flex justify-between items-baseline"
-                        title="Máximo de estudiantes activos simultáneamente durante el ciclo."
-                      >
-                        <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">Pico de alumnos en el ciclo</span>
-                        <span className="text-2xl font-black text-slate-800 dark:text-slate-50 tracking-tighter">{metrics.picoAlumnos.value}</span>
-                      </div>
-                    </div>
                   </div>
               </Card>
             </div>
@@ -1113,7 +1121,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSelect }) 
                   <div className="hidden lg:block">
                     <Histogram
                       data={metrics.distribucionHoras}
-                      title="Distribución de Alumnos por Horas"
+                      title=""
                       onBarClick={(label, students) =>
                         openModal({
                           title: `Alumnos en el rango: ${label}`,
@@ -1175,7 +1183,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSelect }) 
                     onBarClick={(label) =>
                       openModal({
                         title: `Alumnos en ${label}`,
-                        students: metrics.alumnosEnPPS.list.filter((s) => s.institucion === label),
+                        students: metrics.alumnosEnPPS.list.filter((s) => getGroupName(s.institucion) === label),
                         headers: [
                           { key: 'nombre', label: 'Nombre' },
                           { key: 'legajo', label: 'Legajo' },

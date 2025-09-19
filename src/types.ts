@@ -280,6 +280,16 @@ export type TabId = 'convocatorias' | 'calendario' | 'informes' | 'solicitudes' 
 // Gender identifier for personalization
 export type UserGender = 'masculino' | 'femenino' | 'neutro';
 
+// For the new Calendar view
+export interface CalendarEvent {
+  id: string;
+  name: string;
+  schedule: string;
+  orientation: string;
+  location: string;
+  colorClasses: { dot: string; tag: string };
+}
+
 // -- Executive Report Types --
 // For Timeline View replication in reports
 export interface TimelineInstitution {
