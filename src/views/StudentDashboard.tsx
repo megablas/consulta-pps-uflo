@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import CriteriosPanel from '../components/CriteriosPanel';
 import PracticasTable from '../components/PracticasTable';
 import SolicitudesList from '../components/SolicitudesList';
@@ -147,6 +147,31 @@ const StudentDashboardContent: React.FC<StudentDashboardProps> = ({ user, active
   const setCurrentActiveTab = onTabChange ?? setInternalActiveTab;
   const isCalendarActive = currentActiveTab === 'calendario';
   
+  // --- START: Scroll restoration logic ---
+  const scrollPositionRef = useRef(0);
+  const previousTabRef = useRef<TabId>();
+
+  useEffect(() => {
+    previousTabRef.current = currentActiveTab;
+  }, [currentActiveTab]);
+
+  const handleTabChange = useCallback((tabId: TabId) => {
+    // If we are about to navigate TO the calendar, save the current scroll position.
+    if (tabId === 'calendario' && currentActiveTab !== 'calendario') {
+      scrollPositionRef.current = window.scrollY;
+    }
+    setCurrentActiveTab(tabId);
+  }, [currentActiveTab, setCurrentActiveTab]);
+
+  useLayoutEffect(() => {
+    // If the previous tab was 'calendario' and the new one isn't, restore scroll.
+    if (previousTabRef.current === 'calendario' && currentActiveTab !== 'calendario') {
+      // Use 'instant' to avoid a jarring scroll animation.
+      window.scrollTo({ top: scrollPositionRef.current, behavior: 'instant' });
+    }
+  }, [currentActiveTab]);
+  // --- END: Scroll restoration logic ---
+  
   const selectedOrientacion = (studentDetails?.['Orientación Elegida'] || "") as Orientacion | "";
   const studentNameForPanel = studentDetails?.['Nombre'] || user.nombre;
 
@@ -219,7 +244,9 @@ const StudentDashboardContent: React.FC<StudentDashboardProps> = ({ user, active
   }, [studentDataTabs, currentActiveTab, setCurrentActiveTab]);
 
   if (isLoading) return <DashboardLoadingSkeleton />;
-  if (error) return <ErrorState error={error.message} onRetry={refetchAll} />;
+  // The onRetry prop for ErrorState is called from an onClick handler, which passes a MouseEvent.
+  // The refetchAll function does not expect any arguments, so it's wrapped in an arrow function to prevent passing the event.
+  if (error) return <ErrorState error={error.message} onRetry={() => refetchAll()} />;
   
   return (
     <>
@@ -245,7 +272,7 @@ const StudentDashboardContent: React.FC<StudentDashboardProps> = ({ user, active
               <Tabs
                   tabs={studentDataTabs}
                   activeTabId={currentActiveTab}
-                  onTabChange={(id) => setCurrentActiveTab(id as TabId)}
+                  onTabChange={(id) => handleTabChange(id as TabId)}
               />
             </Card>
           </div>
@@ -282,7 +309,7 @@ const StudentDashboardContent: React.FC<StudentDashboardProps> = ({ user, active
           <MobileBottomNav 
               tabs={mobileNavTabs}
               activeTabId={currentActiveTab}
-              onTabChange={(id) => setCurrentActiveTab(id as TabId)}
+              onTabChange={(id) => handleTabChange(id as TabId)}
           />
         )}
         {showExportButton && (
