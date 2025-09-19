@@ -244,8 +244,7 @@ const StudentDashboardContent: React.FC<StudentDashboardProps> = ({ user, active
   }, [studentDataTabs, currentActiveTab, setCurrentActiveTab]);
 
   if (isLoading) return <DashboardLoadingSkeleton />;
-  // The onRetry prop for ErrorState is called from an onClick handler, which passes a MouseEvent.
-  // The refetchAll function does not expect any arguments, so it's wrapped in an arrow function to prevent passing the event.
+  // FIX: The onRetry prop for ErrorState is called from an onClick handler, which passes a MouseEvent. The refetchAll function does not expect any arguments, so it's wrapped in an arrow function to prevent passing the event.
   if (error) return <ErrorState error={error.message} onRetry={() => refetchAll()} />;
   
   return (

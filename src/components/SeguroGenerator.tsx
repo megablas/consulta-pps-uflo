@@ -101,6 +101,7 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
 
     useEffect(() => {
         const fetchTemplate = async () => {
+            // FIX: Using fetchAirtableData to respect maxRecords parameter
             const { records, error } = await fetchAirtableData<LanzamientoPPSFields>(
                 AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
                 [FIELD_PLANTILLA_SEGURO_LANZAMIENTOS],

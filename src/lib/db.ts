@@ -36,8 +36,9 @@ function createTableInterface<TSchema extends { _tableName: string }, TAirtableF
 
     const service = {
         // READ operations pass through to airtableService but encapsulate the table name
-        getAll: async (options?: { filterByFormula?: string; sort?: any[] }) => {
-            const { records, error } = await airtable.fetchAllAirtableData<TAirtableFields>(_tableName, [], options?.filterByFormula, options?.sort);
+        // FIX: Added the `fields` property to the options type to allow specifying which columns to fetch, improving performance.
+        getAll: async (options?: { filterByFormula?: string; sort?: any[]; fields?: string[] }) => {
+            const { records, error } = await airtable.fetchAllAirtableData<TAirtableFields>(_tableName, options?.fields || [], options?.filterByFormula, options?.sort);
             if (error) {
                 const errorMsg = typeof error.error === 'string' ? error.error : error.error.message;
                 throw new Error(errorMsg);

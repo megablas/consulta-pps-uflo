@@ -3,92 +3,61 @@ import * as airtableService from '../airtableService';
 import { fetchSeleccionados } from '../dataService';
 import {
   AIRTABLE_TABLE_NAME_ESTUDIANTES,
-  AIRTABLE_TABLE_NAME_PRACTICAS,
-  AIRTABLE_TABLE_NAME_PPS,
   AIRTABLE_TABLE_NAME_CONVOCATORIAS,
-  AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
-  FIELD_HORAS_PRACTICAS,
-  FIELD_ESPECIALIDAD_PRACTICAS,
   FIELD_NOMBRE_ESTUDIANTES,
   FIELD_LEGAJO_ESTUDIANTES,
-  FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES,
-  FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
   FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS,
-  FIELD_INFORME_SUBIDO_CONVOCATORIAS,
-  FIELD_INFORME_LANZAMIENTOS,
-  FIELD_FECHA_FIN_LANZAMIENTOS,
   FIELD_NOMBRE_PPS_LANZAMIENTOS,
   FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS,
-  FIELD_HORARIO_FORMULA_CONVOCATORIAS
+  FIELD_HORARIO_FORMULA_CONVOCATORIAS,
+  FIELD_NOMBRE_PPS_CONVOCATORIAS,
 } from '../../constants';
-import type { EstudianteFields, PracticaFields, SolicitudPPSFields, ConvocatoriaFields, LanzamientoPPSFields } from '../../types';
+import type { LanzamientoPPS } from '../../types';
 
 // Mock del servicio de Airtable
 jest.mock('../airtableService');
 const mockedAirtableService = airtableService as jest.Mocked<typeof airtableService>;
 
-const mockStudent: EstudianteFields = {
-    [FIELD_LEGAJO_ESTUDIANTES]: '12345',
-    [FIELD_NOMBRE_ESTUDIANTES]: 'Juan Perez',
-    [FIELD_ORIENTACION_ELEGIDA_ESTUDIANTES]: 'Clinica'
-};
-
-const mockPracticas: PracticaFields[] = [
-    { [FIELD_HORAS_PRACTICAS]: 100, [FIELD_ESPECIALIDAD_PRACTICAS]: 'Clinica' },
-    { [FIELD_HORAS_PRACTICAS]: 80, [FIELD_ESPECIALIDAD_PRACTICAS]: 'Educacional' },
-    { [FIELD_HORAS_PRACTICAS]: 75, [FIELD_ESPECIALIDAD_PRACTICAS]: 'Laboral' },
-];
-
-const mockLanzamientos: LanzamientoPPSFields[] = [
-    { id: 'lanz1', [FIELD_INFORME_LANZAMIENTOS]: 'http://informe.com', [FIELD_FECHA_FIN_LANZAMIENTOS]: '2023-10-10', [FIELD_NOMBRE_PPS_LANZAMIENTOS]: 'PPS Test' }
-];
-
-const mockConvocatorias: ConvocatoriaFields[] = [
-    { [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS]: ['lanz1'], [FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS]: 'Seleccionado', [FIELD_INFORME_SUBIDO_CONVOCATORIAS]: true }
-];
-
 describe('Data Service - fetchSeleccionados', () => {
-  it('should robustly fetch and filter selected students by a specific lanzamientoId', async () => {
-    const targetLanzamientoId = 'lanz_A';
+  // FIX: Rewrote test to match the new server-side filtering logic of `fetchSeleccionados`.
+  // It now passes a full LanzamientoPPS object and mocks the API calls based on a name-based formula.
+  it('should fetch and filter selected students by the PPS name', async () => {
+    const targetLanzamiento: LanzamientoPPS = {
+      id: 'lanz_A',
+      [FIELD_NOMBRE_PPS_LANZAMIENTOS]: "Hospital Alpha"
+    };
 
-    // Mock a response that includes 'seleccionado' students from MULTIPLE lanzamientos
-    const mockAllSeleccionadosConvocatorias = [
-      { id: 'conv1', fields: { [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS]: [targetLanzamientoId], [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: ['stu_A1'], [FIELD_HORARIO_FORMULA_CONVOCATORIAS]: 'Mañana' } },
-      { id: 'conv2', fields: { [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS]: ['lanz_B_other'], [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: ['stu_B1'], [FIELD_HORARIO_FORMULA_CONVOCATORIAS]: 'Tarde' } },
-      { id: 'conv3', fields: { [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS]: [targetLanzamientoId], [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: ['stu_A2'], [FIELD_HORARIO_FORMULA_CONVOCATORIAS]: 'Tarde' } },
-      { id: 'conv4', fields: { [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS]: ['lanz_B_other'], [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: ['stu_B2'], [FIELD_HORARIO_FORMULA_CONVOCATORIAS]: 'Mañana' } },
+    const mockConvocatoriasResponse = [
+      { id: 'conv1', fields: { [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: ['stu_A1'], [FIELD_HORARIO_FORMULA_CONVOCATORIAS]: 'Mañana' } },
+      { id: 'conv3', fields: { [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: ['stu_A2'], [FIELD_HORARIO_FORMULA_CONVOCATORIAS]: 'Tarde' } },
     ];
 
     const mockStudentsResponse = [
       { id: 'stu_A1', fields: { [FIELD_NOMBRE_ESTUDIANTES]: 'Ana Manana', [FIELD_LEGAJO_ESTUDIANTES]: '1111' } },
       { id: 'stu_A2', fields: { [FIELD_NOMBRE_ESTUDIANTES]: 'Bruno Tarde', [FIELD_LEGAJO_ESTUDIANTES]: '2222' } },
-      { id: 'stu_B1', fields: { [FIELD_NOMBRE_ESTUDIANTES]: 'Carlos Otro', [FIELD_LEGAJO_ESTUDIANTES]: '3333' } },
-      { id: 'stu_B2', fields: { [FIELD_NOMBRE_ESTUDIANTES]: 'Diana Otro', [FIELD_LEGAJO_ESTUDIANTES]: '4444' } },
     ];
     
     mockedAirtableService.fetchAllAirtableData.mockImplementation(async (tableName, fields, formula) => {
-      // First call: get ALL 'seleccionado' convocatorias
       if (tableName === AIRTABLE_TABLE_NAME_CONVOCATORIAS) {
-        const expectedFormula = `LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = 'seleccionado'`;
-        expect(formula).toEqual(expectedFormula);
-        return { records: mockAllSeleccionadosConvocatorias, error: null } as any;
+        // Check that the formula correctly filters by PPS name and status
+        expect(formula).toContain(`{${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = 'seleccionado'`);
+        expect(formula).toContain(`{${FIELD_NOMBRE_PPS_CONVOCATORIAS}} = 'Hospital Alpha'`);
+        return { records: mockConvocatoriasResponse, error: null } as any;
       }
       
-      // Second call: get details for the FILTERED students
       if (tableName === AIRTABLE_TABLE_NAME_ESTUDIANTES) {
-        // The formula should now only contain student IDs for lanz_A
+        // Check that the student fetch is for the correct student IDs
         const expectedStudentFormula = "OR(RECORD_ID()='stu_A1',RECORD_ID()='stu_A2')";
         expect(formula?.replace(/\s+/g, '')).toEqual(expectedStudentFormula.replace(/\s+/g, ''));
-        // Return only the relevant students for the test to be accurate
-        return { records: mockStudentsResponse.filter(s => s.id === 'stu_A1' || s.id === 'stu_A2'), error: null } as any;
+        return { records: mockStudentsResponse, error: null } as any;
       }
       
       return { records: [], error: null } as any;
     });
 
-    const result = await fetchSeleccionados(targetLanzamientoId);
+    const result = await fetchSeleccionados(targetLanzamiento);
     
-    // The final result should only contain students from `lanz_A`, correctly grouped.
+    // The final result should only contain students from the mocked "Hospital Alpha" convocatoria
     expect(result).toEqual({
       'Mañana': [
         { nombre: 'Ana Manana', legajo: '1111' },
@@ -98,16 +67,6 @@ describe('Data Service - fetchSeleccionados', () => {
       ],
     });
     
-    // Verify the correct calls were made.
-    expect(mockedAirtableService.fetchAllAirtableData).toHaveBeenCalledWith(
-      AIRTABLE_TABLE_NAME_CONVOCATORIAS,
-      expect.any(Array),
-      expect.stringContaining("LOWER({Estado}) = 'seleccionado'")
-    );
-    expect(mockedAirtableService.fetchAllAirtableData).toHaveBeenCalledWith(
-      AIRTABLE_TABLE_NAME_ESTUDIANTES,
-      expect.any(Array),
-      expect.stringContaining("OR(RECORD_ID()='stu_A1',RECORD_ID()='stu_A2')")
-    );
+    expect(mockedAirtableService.fetchAllAirtableData).toHaveBeenCalledTimes(2);
   });
 });

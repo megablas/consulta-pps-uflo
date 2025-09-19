@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode, useMemo } from 'react';
+import React, { createContext, useContext, ReactNode, useMemo, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { useStudentData } from '../hooks/useStudentData';
 import { useStudentPracticas } from '../hooks/useStudentPracticas';
@@ -58,7 +58,8 @@ export const StudentPanelProvider: React.FC<{ legajo: string; children: ReactNod
     const error = studentError || practicasError || solicitudesError || convocatoriasError;
 
     // Create a memoized function to refetch all data at once.
-    const refetchAll = useMemo(() => () => {
+    // FIX: Changed from `useMemo` to `useCallback` for memoizing a function, which is more idiomatic.
+    const refetchAll = useCallback(() => {
         refetchStudent();
         refetchPracticas();
         refetchSolicitudes();
