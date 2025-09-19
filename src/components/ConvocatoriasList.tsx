@@ -34,9 +34,9 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myE
     const { openSeleccionadosModal, showModal } = useModal();
     
     const seleccionadosMutation = useMutation({
-        mutationFn: (lanzamiento: LanzamientoPPS) => fetchSeleccionados(lanzamiento.id),
-        onSuccess: (data, variables) => {
-            const title = variables[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'Convocatoria';
+        mutationFn: (lanzamiento: LanzamientoPPS) => fetchSeleccionados(lanzamiento),
+        onSuccess: (data, lanzamiento) => {
+            const title = lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'Convocatoria';
             openSeleccionadosModal(data, title);
         },
         onError: (error) => {

@@ -119,7 +119,9 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
 
   // --- RENDER LOGIC ---
   if (isLoading) return <DashboardLoadingSkeleton />;
-  if (error) return <ErrorState error={error.message} onRetry={refetchAll} />;
+  // FIX: The onRetry prop for ErrorState is called from an onClick handler, which passes a MouseEvent.
+  // The refetchAll function does not expect any arguments, so it is wrapped in an arrow function to prevent passing the event.
+  if (error) return <ErrorState error={error.message} onRetry={() => refetchAll()} />;
 
   const DashboardContent = () => (
     <div className="space-y-8 animate-fade-in-up">

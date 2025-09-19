@@ -283,32 +283,55 @@ export const processInformeTasks = (myEnrollments: Convocatoria[], allLanzamient
   });
 };
 
-export const fetchSeleccionados = async (lanzamientoId: string): Promise<GroupedSeleccionados | null> => {
-    const allSeleccionados = await db.convocatorias.getAll({
-        filterByFormula: `LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = 'seleccionado'`
-    });
+export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<GroupedSeleccionados | null> => {
+    const ppsName = lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS];
+    const startDate = lanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS]; // e.g., '2024-08-05'
+
+    if (!ppsName || !startDate) {
+        console.warn('fetchSeleccionados called without a PPS name or start date in the lanzamiento object.');
+        return null;
+    }
     
-    const relevantConvocatorias = allSeleccionados.filter(c => 
-        (c.fields[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || []).includes(lanzamientoId)
-    );
+    // Escape single quotes for Airtable formula
+    const escapedPpsName = ppsName.replace(/'/g, "\\'");
 
-    if (relevantConvocatorias.length === 0) return null;
+    // The start date from 'lanzamiento' is already in YYYY-MM-DD format.
+    // We use DATETIME_FORMAT on the Airtable field to ensure we compare only the date part,
+    // ignoring any time components, which makes the match robust and accurate.
+    const formula = `AND(
+        LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = 'seleccionado',
+        {${FIELD_NOMBRE_PPS_CONVOCATORIAS}} = '${escapedPpsName}',
+        DATETIME_FORMAT({${FIELD_FECHA_INICIO_CONVOCATORIAS}}, 'YYYY-MM-DD') = '${startDate}'
+    )`;
 
-    const studentIds = [...new Set(relevantConvocatorias.flatMap(c => c.fields[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] || []))];
+    const convocatoriasRecords = await db.convocatorias.getAll({
+        filterByFormula: formula,
+        fields: [
+            FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS,
+            FIELD_HORARIO_FORMULA_CONVOCATORIAS
+        ]
+    });
+
+    if (convocatoriasRecords.length === 0) return null;
+
+    const studentIds = [...new Set(convocatoriasRecords.flatMap(c => c.fields[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] || []))];
     if (studentIds.length === 0) return null;
 
     const studentFormula = `OR(${studentIds.map(id => `RECORD_ID()='${id}'`).join(',')})`;
-    const studentRecords = await db.estudiantes.getAll({ filterByFormula: studentFormula });
+    const studentRecords = await db.estudiantes.getAll({ 
+        filterByFormula: studentFormula,
+        fields: [FIELD_NOMBRE_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES]
+    });
     
     const studentMap = new Map(studentRecords.map(r => [r.id, r.fields]));
 
     const grouped: GroupedSeleccionados = {};
-    relevantConvocatorias.forEach(conv => {
-        const studentId = (conv.fields[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] || [])[0];
+    convocatoriasRecords.forEach(convRecord => {
+        const studentId = (convRecord.fields[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] || [])[0];
         const student = studentId ? studentMap.get(studentId) : null;
         
         if (student) {
-            const horario = conv.fields[FIELD_HORARIO_FORMULA_CONVOCATORIAS] || 'No especificado';
+            const horario = convRecord.fields[FIELD_HORARIO_FORMULA_CONVOCATORIAS] || 'No especificado';
             if (!grouped[horario]) {
                 grouped[horario] = [];
             }
