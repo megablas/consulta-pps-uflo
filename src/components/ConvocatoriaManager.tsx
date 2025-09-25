@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { fetchAllAirtableData, updateAirtableRecord, createAirtableRecord } from '../services/airtableService';
-import type { LanzamientoPPS, Practica, InstitucionFields } from '../types';
+import type { LanzamientoPPS, Practica, InstitucionFields, AirtableRecord, LanzamientoPPSFields, PracticaFields } from '../types';
 import {
   AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
   FIELD_NOMBRE_PPS_LANZAMIENTOS,
@@ -312,7 +312,8 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
         setError(null);
         
         const [lanzamientosRes, institucionesRes] = await Promise.all([
-            fetchAllAirtableData<LanzamientoPPS>(
+            // FIX: Changed generic type from LanzamientoPPS to LanzamientoPPSFields to ensure correct type inference.
+            fetchAllAirtableData<LanzamientoPPSFields>(
                 AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
                 [
                     FIELD_NOMBRE_PPS_LANZAMIENTOS,
@@ -434,7 +435,8 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
             const lastYearStart = new Date(currentYear - 1, 0, 1).toISOString().split('T')[0];
             const filterFormula = `IS_AFTER({${FIELD_FECHA_INICIO_PRACTICAS}}, DATETIME_PARSE('${lastYearStart}', 'YYYY-MM-DD'))`;
     
-            const { records: recentPracticas, error: practicasError } = await fetchAllAirtableData<Practica>(
+            // FIX: Changed generic type from Practica to PracticaFields to ensure correct type inference.
+            const { records: recentPracticas, error: practicasError } = await fetchAllAirtableData<PracticaFields>(
                 AIRTABLE_TABLE_NAME_PRACTICAS,
                 [
                     FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS,
@@ -448,7 +450,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
     
             if (practicasError) throw new Error('Error al obtener las prácticas antiguas desde Airtable.');
     
-            const groupedPracticas = new Map<string, Practica[]>();
+            const groupedPracticas = new Map<string, (PracticaFields & { id: string })[]>();
             for (const practica of recentPracticas.map(p => ({ ...p.fields, id: p.id }))) {
                 const nameRaw = practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
                 const name = Array.isArray(nameRaw) ? nameRaw[0] : nameRaw;
@@ -456,7 +458,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
     
                 if (!name || !date) continue;
                 
-                const key = `${normalizeStringForComparison(name)}-${date}`;
+                const key = `${normalizeStringForComparison(name as string)}-${date}`;
                 if (!groupedPracticas.has(key)) {
                     groupedPracticas.set(key, []);
                 }

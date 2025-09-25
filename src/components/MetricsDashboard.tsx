@@ -9,6 +9,7 @@ import type {
   InstitucionFields,
   AirtableRecord,
   LanzamientoPPS,
+  Orientacion,
 } from '../types';
 import {
   AIRTABLE_TABLE_NAME_PRACTICAS,
@@ -43,6 +44,7 @@ import Loader from './Loader';
 import BarChart from './BarChart';
 import Histogram from './Histogram';
 import MetricCard from './MetricCard';
+import { calculateCriterios } from '../utils/criteriaCalculations';
 
 type StudentInfo = {
   legajo: string;
@@ -93,6 +95,7 @@ const fetchMetricsData = async () => {
         'Finalizaron',
         'Creada',
         'Fecha de Finalización',
+        'Orientación Elegida',
       ]),
       fetchAllAirtableData<PracticaFields>(AIRTABLE_TABLE_NAME_PRACTICAS, [
         FIELD_NOMBRE_BUSQUEDA_PRACTICAS,
@@ -260,10 +263,12 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
       (l) =>
         !normalizeStringForComparison(getText(l[FIELD_NOMBRE_PPS_LANZAMIENTOS])).includes('relevamiento')
     )
-    .reduce((sum, l) => sum + (l[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0), 0);
+    // FIX: Explicitly convert cupos to a number to prevent type errors during addition.
+    .reduce((sum, l) => sum + Number(l[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0), 0);
   
   // Se calcula el total de cupos, incluyendo las de "Relevamiento Profesional", para la descripción de la tarjeta.
-  const cuposTotalesConRelevamiento = lanzamientosYear.reduce((sum, l) => sum + (l[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0), 0);
+  // FIX: Explicitly convert cupos to a number to prevent type errors during addition.
+  const cuposTotalesConRelevamiento = lanzamientosYear.reduce((sum, l) => sum + Number(l[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0), 0);
 
   const convocatoriasYear = convocatorias.filter(
     (c) => parseToUTCDate(c[FIELD_FECHA_INICIO_CONVOCATORIAS])?.getUTCFullYear() === targetYear
@@ -327,6 +332,54 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
       });
     }
   });
+  
+  const legajoToStudentId = new Map<string, string>();
+  estudiantes.forEach(e => {
+    if(e[FIELD_LEGAJO_ESTUDIANTES]) {
+        legajoToStudentId.set(String(e[FIELD_LEGAJO_ESTUDIANTES]), e.id);
+    }
+  });
+
+  // --- UNIFIED & CORRECTED PRACTICE ASSOCIATION LOGIC ---
+  const studentPracticesById = new Map<string, (PracticaFields & { id: string; })[]>();
+  const studentTotalHoursById = new Map<string, number>();
+  const studentPracticeTypes = new Map<string, { hasRelevamiento: boolean; hasOther: boolean; }>();
+  
+  practicas.forEach(p => {
+    let studentIds: string[] = [];
+    const linkedIds = p[FIELD_ESTUDIANTE_LINK_PRACTICAS];
+    if (Array.isArray(linkedIds) && linkedIds.length > 0) {
+        studentIds = linkedIds;
+    } else {
+        const legajoArray = p[FIELD_NOMBRE_BUSQUEDA_PRACTICAS];
+        const legajo = Array.isArray(legajoArray) ? String(legajoArray[0]) : null;
+        if(legajo && legajoToStudentId.has(legajo)) {
+            studentIds.push(legajoToStudentId.get(legajo)!);
+        }
+    }
+    
+    const institucionRaw = p[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
+    const institucion = getText(institucionRaw);
+    const isRelevamiento = normalizeStringForComparison(institucion).includes('relevamiento');
+    const hours = p[FIELD_HORAS_PRACTICAS] || 0;
+
+    studentIds.forEach(id => {
+        // Populate studentPracticesById
+        if (!studentPracticesById.has(id)) studentPracticesById.set(id, []);
+        studentPracticesById.get(id)!.push(p);
+
+        // Populate studentTotalHoursById
+        studentTotalHoursById.set(id, (studentTotalHoursById.get(id) || 0) + hours);
+
+        // Populate studentPracticeTypes
+        if (!studentPracticeTypes.has(id)) {
+            studentPracticeTypes.set(id, { hasRelevamiento: false, hasOther: false });
+        }
+        const types = studentPracticeTypes.get(id)!;
+        if (isRelevamiento) types.hasRelevamiento = true;
+        else types.hasOther = true;
+    });
+  });
 
   const studentsWithActivePPS_Set = new Set<string>();
   const activePPSPracticas: { studentId: string; practica: PracticaFields & { id: string } }[] = [];
@@ -372,22 +425,6 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
     })
     .sort((a, b) => a.nombre.localeCompare(b.nombre));
 
-  const studentPracticeTypes = new Map<string, { hasRelevamiento: boolean; hasOther: boolean }>();
-  practicas.forEach((p) => {
-    const studentIds = p[FIELD_ESTUDIANTE_LINK_PRACTICAS] || [];
-    const institucionRaw = p[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
-    const institucion = getText(institucionRaw);
-    const isRelevamiento = normalizeStringForComparison(institucion).includes('relevamiento');
-    studentIds.forEach((id: string) => {
-      if (!studentPracticeTypes.has(id)) {
-        studentPracticeTypes.set(id, { hasRelevamiento: false, hasOther: false });
-      }
-      const types = studentPracticeTypes.get(id)!;
-      if (isRelevamiento) types.hasRelevamiento = true;
-      else types.hasOther = true;
-    });
-  });
-
   const alumnosSinPPSList = allActiveStudents
     .filter((student) => {
       const types = studentPracticeTypes.get(student.id);
@@ -415,15 +452,6 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
     }))
     .sort((a, b) => a.nombre.localeCompare(b.nombre));
 
-  const studentTotalHoursById = practicas.reduce((acc, p) => {
-    const studentIds = p[FIELD_ESTUDIANTE_LINK_PRACTICAS] || [];
-    const hours = p[FIELD_HORAS_PRACTICAS] || 0;
-    studentIds.forEach((id: string) => {
-        acc.set(id, (acc.get(id) || 0) + hours);
-    });
-    return acc;
-  }, new Map<string, number>());
-
   const hourBins: { [key: string]: { count: number; students: StudentInfo[] } } = {
     '0-50 hs': { count: 0, students: [] },
     '51-100 hs': { count: 0, students: [] },
@@ -449,7 +477,7 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
   lanzamientosYear
     .filter(l => !normalizeStringForComparison(getText(l[FIELD_NOMBRE_PPS_LANZAMIENTOS])).includes('relevamiento'))
     .forEach(l => {
-        const groupName = getGroupName(l[FIELD_NOMBRE_PPS_LANZAMIENTOS]);
+        const groupName = getGroupName(getText(l[FIELD_NOMBRE_PPS_LANZAMIENTOS]));
         const currentCupos = institutionCuposMap.get(groupName) || 0;
         institutionCuposMap.set(groupName, currentCupos + (l[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0));
     });
@@ -491,8 +519,8 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
     .filter(inst => inst[FIELD_CONVENIO_NUEVO_INSTITUCIONES] && inst[FIELD_NOMBRE_INSTITUCIONES])
     .map(inst => ({
       ...inst,
-      groupName: getGroupName(inst[FIELD_NOMBRE_INSTITUCIONES]),
-      normGroupName: normalizeStringForComparison(getGroupName(inst[FIELD_NOMBRE_INSTITUCIONES]))
+      groupName: getGroupName(getText(inst[FIELD_NOMBRE_INSTITUCIONES])),
+      normGroupName: normalizeStringForComparison(getGroupName(getText(inst[FIELD_NOMBRE_INSTITUCIONES])))
     }));
 
   const newConveniosForYearGroupNames = new Set<string>();
@@ -611,11 +639,30 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
       legajo: Array.from(data.orientations).join(', '),
   })).sort((a, b) => a.nombre.localeCompare(b.nombre));
 
+  const alumnosParaAcreditarList: StudentInfo[] = [];
+  allActiveStudents.forEach(student => {
+    const studentPractices = studentPracticesById.get(student.id) || [];
+    const selectedOrientacion = (student['Orientación Elegida'] || "") as Orientacion | "";
+
+    if (studentPractices.length > 0 && selectedOrientacion) {
+        const criterios = calculateCriterios(studentPractices, selectedOrientacion);
+        if (criterios.cumpleHorasTotales && criterios.cumpleHorasOrientacion && criterios.cumpleRotacion) {
+            alumnosParaAcreditarList.push({
+                legajo: student[FIELD_LEGAJO_ESTUDIANTES] || 'N/A',
+                nombre: student[FIELD_NOMBRE_ESTUDIANTES] || `ID ${student.id}`,
+                totalHoras: Math.round(criterios.horasTotales),
+                orientaciones: criterios.orientacionesUnicas.join(', '),
+            });
+        }
+    }
+  });
+  alumnosParaAcreditarList.sort((a, b) => a.nombre.localeCompare(b.nombre));
+
   return {
     alumnosEnPPS: { value: studentsWithActivePPS_Set.size, list: alumnosEnPPSList },
     alumnosActivos: { value: allActiveStudents.length, list: alumnosActivosList },
     alumnosSinPPS: { value: alumnosSinPPSList.length, list: alumnosSinPPSList },
-    alumnosSinNingunaPPS: { value: alumnosSinNingunaPPSList.length, list: alumnosFinalizadosList },
+    alumnosSinNingunaPPS: { value: alumnosSinNingunaPPSList.length, list: alumnosSinNingunaPPSList },
     alumnosFinalizados: { value: finalizacionesThisYear.length, list: alumnosFinalizadosList },
     ppsLanzadas: { value: ppsLanzadasCount, list: ppsLanzadasList },
     cuposOfrecidos: { value: cuposOfrecidosSinRelevamiento },
@@ -638,6 +685,7 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
     ultimas5Lanzadas,
     alumnosProximosAFinalizar: { value: alumnosProximosAFinalizarList.length, list: alumnosProximosAFinalizarList },
     activeInstitutions: { value: activeInstitutionsMap.size, list: activeInstitutionsList },
+    alumnosParaAcreditar: { value: alumnosParaAcreditarList.length, list: alumnosParaAcreditarList },
   };
 }
 
@@ -1058,85 +1106,77 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSelect }) 
           )}
 
           {activeTab === 'students' && (
-            <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <Card icon="group_work" title="Situación de Estudiantes" description="Accesos rápidos a cohortes específicas.">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                  <MetricCard
-                    title="Con PPS Activa"
-                    value={metrics.alumnosEnPPS.value}
-                    icon="play_circle"
-                    description="Actualmente cursando una práctica."
-                    isLoading={false}
-                    onClick={() =>
-                      openModal({
-                        title: 'Alumnos con PPS Activa',
-                        students: metrics.alumnosEnPPS.list,
-                        headers: [
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <MetricCard
+                  title="Estudiantes Activos (Total)"
+                  value={metrics.alumnosActivos.value}
+                  icon="school"
+                  description="Total de estudiantes que aún no finalizan."
+                  isLoading={false}
+                  onClick={() => openModal({ title: 'Estudiantes Activos', students: metrics.alumnosActivos.list })}
+              />
+              <MetricCard
+                  title="Nuevos Ingresos (Ciclo)"
+                  value={metrics.nuevosAlumnos.value}
+                  icon="person_add"
+                  description={`Estudiantes ingresados en ${targetYear}.`}
+                  isLoading={false}
+                  onClick={() => openModal({
+                      title: `Nuevos Ingresos (${targetYear})`,
+                      students: metrics.nuevosAlumnos.list,
+                      headers: [
                           { key: 'nombre', label: 'Nombre' },
                           { key: 'legajo', label: 'Legajo' },
-                          { key: 'institucion', label: 'Institución' },
-                          { key: 'fechaFin', label: 'Finaliza' },
-                        ],
-                      })
-                    }
-                  />
-                  <MetricCard
-                    title="Sin PPS (campo)"
-                    value={metrics.alumnosSinPPS.value}
-                    icon="hourglass_empty"
-                    description="Sin PPS de campo registrada."
-                    isLoading={false}
-                    onClick={() => openModal({ title: 'Alumnos sin PPS (excl. Relevamiento)', students: metrics.alumnosSinPPS.list })}
-                  />
-                  <MetricCard
-                    title="Sin ninguna PPS"
-                    value={metrics.alumnosSinNingunaPPS.value}
-                    icon="block"
-                    description="Sin prácticas de ningún tipo."
-                    isLoading={false}
-                    onClick={() =>
-                      openModal({ title: 'Alumnos sin NINGUNA PPS (Total)', students: metrics.alumnosSinNingunaPPS.list })
-                    }
-                  />
-                  <MetricCard
-                    title="Finalizados"
-                    value={metrics.alumnosFinalizados.value}
-                    icon="verified"
-                    description="Solicitud de acreditación final."
-                    isLoading={false}
-                    onClick={() => openModal({ title: `Alumnos Finalizados (${targetYear})`, students: metrics.alumnosFinalizados.list })}
-                  />
-                </div>
-              </Card>
-
-              <Card icon="timer" title="Tiempos y Progreso" description="Tiempo medio hasta asignación y distribución de horas.">
-                <div className="mt-4 space-y-6">
-                  <MetricCard
-                    title="Tiempo medio a PPS"
-                    value={`${metrics.avgTimeToPlacement} días`}
-                    icon="schedule"
-                    description="Desde primera postulación a primera PPS."
-                    isLoading={false}
-                  />
-                  <div className="hidden lg:block">
-                    <Histogram
-                      data={metrics.distribucionHoras}
-                      title=""
-                      onBarClick={(label, students) =>
-                        openModal({
-                          title: `Alumnos en el rango: ${label}`,
-                          students,
-                          headers: [
-                            { key: 'nombre', label: 'Nombre' },
-                            { key: 'legajo', label: 'Legajo' },
-                            { key: 'totalHoras', label: 'Horas Totales' },
-                          ],
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-              </Card>
+                          { key: 'fechaIngreso', label: 'Fecha Ingreso' },
+                      ]
+                  })}
+              />
+              <MetricCard
+                  title="Finalizados (Ciclo)"
+                  value={metrics.alumnosFinalizados.value}
+                  icon="verified"
+                  description="Solicitud de acreditación final."
+                  isLoading={false}
+                  onClick={() => openModal({ title: `Alumnos Finalizados (${targetYear})`, students: metrics.alumnosFinalizados.list })}
+              />
+              <MetricCard
+                  title="Listos para Acreditar"
+                  value={metrics.alumnosParaAcreditar.value}
+                  icon="school"
+                  description="Cumplen todos los criterios de horas y rotación."
+                  isLoading={isLoading}
+                  onClick={() => openModal({
+                      title: 'Alumnos Listos para Acreditar Horas',
+                      students: metrics.alumnosParaAcreditar.list,
+                      headers: [
+                          { key: 'nombre', label: 'Nombre' },
+                          { key: 'legajo', label: 'Legajo' },
+                          { key: 'totalHoras', label: 'Horas Totales' },
+                          { key: 'orientaciones', label: 'Orientaciones' },
+                      ],
+                      description: (
+                          <>
+                              Estos estudiantes han completado las <strong>250 horas totales</strong>, las <strong>70 horas</strong> en su orientación elegida, y la <strong>rotación por 3 orientaciones</strong>.
+                          </>
+                      )
+                  })}
+              />
+              <MetricCard
+                  title="Pico de Estudiantes (Ciclo)"
+                  value={metrics.picoAlumnos.value}
+                  icon="trending_up"
+                  description="Máxima cantidad de estudiantes activos en el ciclo."
+                  isLoading={false}
+                  onClick={() => openModal({ title: 'Pico de Estudiantes', students: [], description: `El número máximo de estudiantes activos simultáneamente durante ${targetYear} fue ${metrics.picoAlumnos.value}.` })}
+              />
+              <MetricCard
+                  title="Estudiantes al Inicio del Ciclo"
+                  value={metrics.alumnosInicioCiclo.value}
+                  icon="event"
+                  description={`Estudiantes activos al 1 de Enero, ${targetYear}.`}
+                  isLoading={false}
+                  onClick={() => openModal({ title: `Estudiantes al Inicio del Ciclo ${targetYear}`, students: metrics.alumnosInicioCiclo.list })}
+              />
             </div>
           )}
 

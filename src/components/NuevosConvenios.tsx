@@ -144,7 +144,7 @@ const NuevosConvenios: React.FC = () => {
                 }
                 
                 const group = groupsTargetYear.get(normGroupName)!;
-                const cupos = launch[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0;
+                const cupos = Number(launch[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0);
                 group.totalCupos += cupos;
                 group.subPps.push({ name: originalName, cupos });
             }
@@ -307,7 +307,8 @@ const NuevosConvenios: React.FC = () => {
                         onChange={e => setTargetYear(Number(e.target.value))}
                         className="w-full appearance-none pl-4 pr-10 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors"
                      >
-                         {availableYears.map(year => <option key={year} value={year}>{year}</option>)}
+                        {/* FIX: Explicitly type 'year' to resolve type inference issues. */}
+                         {availableYears.map((year: number) => <option key={year} value={year}>{year}</option>)}
                      </select>
                      <span className="absolute right-3 top-1/2 -translate-y-1/2 material-icons text-slate-400 dark:text-slate-500 pointer-events-none">expand_more</span>
                 </div>
@@ -361,9 +362,9 @@ const NuevosConvenios: React.FC = () => {
                         className="bg-blue-600 text-white font-bold py-3 px-6 rounded-xl text-base transition-all duration-200 shadow-lg hover:bg-blue-700 hover:-translate-y-0.5 flex items-center justify-center gap-2"
                     >
                         {mutation.isPending ? (
-                            <><div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin"/><span>Guardando...</span></>
+                             <><div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin"/><span>Guardando...</span></>
                         ) : (
-                            <><span className="material-icons !text-base">save</span><span>Guardar Cambios ({changesToSave.length})</span></>
+                             <><span className="material-icons !text-base">save</span><span>Guardar Cambios ({changesToSave.length})</span></>
                         )}
                     </button>
                 </div>

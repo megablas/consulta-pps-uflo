@@ -257,8 +257,10 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                 
                 const institucion = ppsData?.[FIELD_NOMBRE_PPS_LANZAMIENTOS] || individualConv[FIELD_NOMBRE_PPS_CONVOCATORIAS] || 'N/A';
                 
-                const normalizedInstitucionName = normalizeStringForComparison(institucion as string);
+                // FIX: Added type assertion to string to satisfy normalizeStringForComparison
+                const normalizedInstitucionName = normalizeStringForComparison(String(institucion));
                 const institutionDetails = institutionMap.get(normalizedInstitucionName);
+                // FIX: Added type assertion to string to satisfy normalizeStringForComparison
                 const direccion = institutionDetails?.[FIELD_DIRECCION_INSTITUCIONES] || 'Dirección no encontrada en Instituciones';
 
                 const fechaInicio = ppsData?.[FIELD_FECHA_INICIO_LANZAMIENTOS] || individualConv[FIELD_FECHA_INICIO_CONVOCATORIAS];
@@ -294,7 +296,7 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                     legajo: student[FIELD_LEGAJO_ESTUDIANTES] || 'N/A',
                     correo: student[FIELD_CORREO_ESTUDIANTES] || 'N/A',
                     telefono: formatPhoneNumber(student[FIELD_TELEFONO_ESTUDIANTES] as string | undefined),
-                    institucion: institucion,
+                    institucion: institucion as string,
                     direccion: direccion,
                     periodo: periodoValue,
                     horario: horario,
@@ -447,6 +449,7 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
 
     const renderReviewStep = () => {
       const groupedStudents = studentsForReview.reduce((acc, student) => {
+          // FIX: Explicitly type `acc` to ensure type safety within the reducer.
           const key = `${student.institucion}::${student.tutor}`;
           if (!acc[key]) {
               acc[key] = {

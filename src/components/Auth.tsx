@@ -154,24 +154,30 @@ const Auth: React.FC = () => {
   }, [mode]);
 
   useEffect(() => {
-    if (mode !== 'register') {
+    // This effect should only clean up state related to the registration process.
+    // It should NOT clear state needed for the password reset process.
+    if (mode !== 'register' && mode !== 'reset') {
         setLegajoCheckState('idle');
         setLegajoMessage(null);
         setFoundStudent(null);
         setFoundAuthUser(null);
         return;
     }
-    const handler = setTimeout(() => {
-      if (legajo.trim()) {
-        checkLegajo(legajo.trim());
-      } else {
-        setLegajoCheckState('idle');
-        setFoundStudent(null);
-        setFoundAuthUser(null);
-        setLegajoMessage(null);
-      }
-    }, 700);
-    return () => clearTimeout(handler);
+
+    // This part is exclusively for the 'register' mode's live validation.
+    if (mode === 'register') {
+      const handler = setTimeout(() => {
+        if (legajo.trim()) {
+          checkLegajo(legajo.trim());
+        } else {
+          setLegajoCheckState('idle');
+          setFoundStudent(null);
+          setFoundAuthUser(null);
+          setLegajoMessage(null);
+        }
+      }, 700);
+      return () => clearTimeout(handler);
+    }
   }, [legajo, mode, checkLegajo]);
 
   const handleNewDataChange = (e: React.ChangeEvent<HTMLInputElement>) => {
