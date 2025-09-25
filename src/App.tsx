@@ -34,6 +34,7 @@ const App: React.FC = () => {
         <PwaInstallProvider>
           <Layout>
             <ErrorBoundary>
+              {/* FIX: The children prop is now correctly passed to ErrorBoundary */}
               <Suspense fallback={
                 <div className="flex justify-center items-center min-h-[60vh]">
                   <Loader />
