@@ -254,6 +254,42 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
   const totalLanzamientosAnual = lanzamientosPorMesRaw.reduce((sum, month) => sum + month.value, 0);
   const lanzamientosPorMes = lanzamientosPorMesRaw.filter(monthData => monthData.value > 0);
   
+  const currentMonth = new Date().getUTCMonth();
+  const lanzamientosMesActualRaw = lanzamientosYear.filter(
+    (l) => parseToUTCDate(l[FIELD_FECHA_INICIO_LANZAMIENTOS])?.getUTCMonth() === currentMonth
+  );
+
+  const groupedLanzamientosMap = new Map<string, {
+      groupName: string;
+      totalCupos: number;
+      variants: { name: string; cupos: number; id: string }[];
+  }>();
+
+  lanzamientosMesActualRaw.forEach(pps => {
+      const ppsName = pps[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'Sin Nombre';
+      const groupName = getGroupName(ppsName);
+      
+      if (!groupedLanzamientosMap.has(groupName)) {
+          groupedLanzamientosMap.set(groupName, {
+              groupName: groupName,
+              totalCupos: 0,
+              variants: [],
+          });
+      }
+
+      const group = groupedLanzamientosMap.get(groupName)!;
+      const cupos = Number(pps[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0);
+      group.totalCupos += cupos;
+      group.variants.push({
+          name: ppsName,
+          cupos: cupos,
+          id: pps.id,
+      });
+  });
+
+  const lanzamientosMesActual = Array.from(groupedLanzamientosMap.values())
+      .sort((a, b) => a.groupName.localeCompare(b.groupName));
+
 
   // --- CÁLCULO DE CUPOS OFRECIDOS ---
   // Se calcula el total de cupos de PPS lanzadas en el año, excluyendo las de "Relevamiento Profesional".
@@ -641,11 +677,11 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
 
   const alumnosParaAcreditarList: StudentInfo[] = [];
   allActiveStudents.forEach(student => {
-    const studentPractices = studentPracticesById.get(student.id) || [];
+    const studentPracticas = studentPracticesById.get(student.id) || [];
     const selectedOrientacion = (student['Orientación Elegida'] || "") as Orientacion | "";
 
-    if (studentPractices.length > 0 && selectedOrientacion) {
-        const criterios = calculateCriterios(studentPractices, selectedOrientacion);
+    if (studentPracticas.length > 0 && selectedOrientacion) {
+        const criterios = calculateCriterios(studentPracticas, selectedOrientacion);
         if (criterios.cumpleHorasTotales && criterios.cumpleHorasOrientacion && criterios.cumpleRotacion) {
             alumnosParaAcreditarList.push({
                 legajo: student[FIELD_LEGAJO_ESTUDIANTES] || 'N/A',
@@ -676,6 +712,7 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
     })),
     topInstitutions,
     lanzamientosPorMes,
+    lanzamientosMesActual,
     totalLanzamientosAnual,
     avgTimeToPlacement,
     nuevosConvenios: { value: newConveniosForYearGroupNames.size, list: nuevosConveniosList },
@@ -870,6 +907,8 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSelect }) 
     refetchOnWindowFocus: false,
   });
 
+  const totalCuposMesActual = metrics ? metrics.lanzamientosMesActual.reduce((acc, group) => acc + group.totalCupos, 0) : 0;
+
   if (error) {
     return (
       <div className="max-w-3xl mx-auto mt-10">
@@ -1052,55 +1091,49 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSelect }) 
                 </div>
               </Card>
 
-              <Card icon="calendar_month" title={`Lanzamientos por Mes (${targetYear})`}>
-                <div className="mt-4">
-                  <div className="text-center mb-6 border-b border-slate-200/70 dark:border-slate-700/70 pb-6">
-                      <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Lanzamientos Totales del Año</p>
-                      <p className="text-5xl font-black text-slate-800 dark:text-slate-100 tracking-tighter mt-1">{metrics.totalLanzamientosAnual}</p>
-                  </div>
-                  <BarChart
-                    data={metrics.lanzamientosPorMes}
-                    title=""
-                    onBarClick={(label) => {
-                      const monthIndex = MONTH_NAMES.findIndex(m => m.substring(0, 3) === label);
-                      if (monthIndex === -1) return;
-                      
-                      const monthStudents: StudentInfo[] = metrics.listaPostulaciones.filter(p => {
-                        const date = parseToUTCDate(p.fechaInscripcion as string);
-                        return date && date.getUTCMonth() === monthIndex;
-                      });
-                       openModal({
-                          title: `Postulaciones en ${MONTH_NAMES[monthIndex]}`,
-                          students: monthStudents,
-                          headers: [
-                            {key: 'nombre', label: 'Nombre'},
-                            {key: 'legajo', label: 'Legajo'},
-                            {key: 'institucion', label: 'Institución'},
-                          ]
-                        })
-                    }}
-                  />
-                </div>
-              </Card>
-
-              <Card icon="signal_cellular_alt" title="Distribución por Horas" description="Progreso de horas acumuladas de los estudiantes activos." className="lg:col-span-2">
-                  <div className="mt-4">
-                      <Histogram
-                        data={metrics.distribucionHoras}
-                        title=""
-                        onBarClick={(label, students) =>
-                          openModal({
-                            title: `Alumnos en el rango: ${label}`,
-                            students,
-                            headers: [
-                              { key: 'nombre', label: 'Nombre' },
-                              { key: 'legajo', label: 'Legajo' },
-                              { key: 'totalHoras', label: 'Horas Totales' },
-                            ],
-                          })
-                        }
-                      />
-                  </div>
+              <Card icon="campaign" title="Lanzamientos del Mes Actual" description={`Total de instituciones con PPS lanzadas en ${MONTH_NAMES[new Date().getMonth()]}.`}>
+                    <div className="mt-4 grid grid-cols-2 gap-4 divide-x divide-slate-200/70 dark:divide-slate-700/70 border-b border-slate-200/70 dark:border-slate-700/70 pb-4">
+                        <div className="text-center px-2">
+                            <p className="text-5xl font-black text-slate-800 dark:text-slate-100">{metrics.lanzamientosMesActual.length}</p>
+                            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">Instituciones</p>
+                        </div>
+                        <div className="text-center px-2">
+                            <p className="text-5xl font-black text-slate-800 dark:text-slate-100">{totalCuposMesActual}</p>
+                            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">Cupos Ofrecidos</p>
+                        </div>
+                    </div>
+                  {metrics.lanzamientosMesActual.length > 0 ? (
+                      <ul className="mt-4 space-y-3">
+                          {metrics.lanzamientosMesActual.map((group) => (
+                              <li key={group.groupName} className="text-sm p-3 rounded-lg bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700">
+                                  <div className="flex justify-between items-center">
+                                      <span className="font-bold text-slate-800 dark:text-slate-100">{group.groupName}</span>
+                                      <span className="text-xs font-bold text-blue-700 dark:text-blue-200 bg-blue-100 dark:bg-blue-900/50 px-2.5 py-1 rounded-full">
+                                          {group.totalCupos} cupos
+                                      </span>
+                                  </div>
+                                  {group.variants.length > 1 && (
+                                      <details className="mt-2 text-xs group/details">
+                                          <summary className="cursor-pointer text-slate-500 dark:text-slate-400 font-medium list-none flex items-center gap-1">
+                                              Ver desglose ({group.variants.length})
+                                              <span className="material-icons !text-sm transition-transform duration-200 group-open/details:rotate-180">expand_more</span>
+                                          </summary>
+                                          <ul className="pl-4 mt-2 pt-2 border-t border-slate-200 dark:border-slate-700 space-y-1.5">
+                                              {group.variants.map(variant => (
+                                                  <li key={variant.id} className="flex justify-between items-center">
+                                                      <span className="text-slate-600 dark:text-slate-300">{variant.name.replace(`${group.groupName} - `, '')}</span>
+                                                      <span className="font-mono text-slate-500 dark:text-slate-400">{variant.cupos} cupos</span>
+                                                  </li>
+                                              ))}
+                                          </ul>
+                                      </details>
+                                  )}
+                              </li>
+                          ))}
+                      </ul>
+                  ) : (
+                      <p className="mt-4 text-sm text-center text-slate-500 dark:text-slate-400">No hubo lanzamientos este mes.</p>
+                  )}
               </Card>
             </div>
           )}
@@ -1177,12 +1210,33 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSelect }) 
                   isLoading={false}
                   onClick={() => openModal({ title: `Estudiantes al Inicio del Ciclo ${targetYear}`, students: metrics.alumnosInicioCiclo.list })}
               />
+              <div className="md:col-span-2 lg:col-span-3">
+                <Card icon="signal_cellular_alt" title="Distribución por Horas" description="Progreso de horas acumuladas de los estudiantes activos.">
+                    <div className="mt-4">
+                        <Histogram
+                          data={metrics.distribucionHoras}
+                          title=""
+                          onBarClick={(label, students) =>
+                            openModal({
+                              title: `Alumnos en el rango: ${label}`,
+                              students,
+                              headers: [
+                                { key: 'nombre', label: 'Nombre' },
+                                { key: 'legajo', label: 'Legajo' },
+                                { key: 'totalHoras', label: 'Horas Totales' },
+                              ],
+                            })
+                          }
+                        />
+                    </div>
+                </Card>
+              </div>
             </div>
           )}
 
           {activeTab === 'institutions' && (
-            <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <Card icon="apartment" title="Oferta de Campo" description="Cupos ofrecidos y PPS lanzadas.">
+             <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+               <Card icon="apartment" title="Oferta de Campo" description="Cupos ofrecidos y PPS lanzadas.">
                 <div className="mt-4 space-y-6">
                   <MetricCard
                     title="Cupos ofrecidos"

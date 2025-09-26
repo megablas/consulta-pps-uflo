@@ -6,7 +6,7 @@ import Loader from './Loader';
 import EmptyState from './EmptyState';
 import Toast from './Toast';
 import { CONFERENCE_PPS_NAME, FIELD_LEGAJO_ESTUDIANTES, FIELD_NOMBRE_ESTUDIANTES } from '../constants';
-import { getEspecialidadClasses } from '../utils/formatters';
+import { getEspecialidadClasses, formatDate, parseToUTCDate } from '../utils/formatters';
 
 interface GroupedAttendance {
     totalHours: number;
@@ -120,139 +120,154 @@ const AcreditacionJornada: React.FC = () => {
             const practicaCreationPromises = [];
             let allAttendanceIdsToUpdate: string[] = [];
 
-            for (const [orientation, group] of student.groupedByOrientation.entries()) {
-                if (group.totalHours <= 0) continue;
-                
-                allAttendanceIdsToUpdate = [...allAttendanceIdsToUpdate, ...group.attendanceIds];
+            for (const [orientation, groupData] of student.groupedByOrientation.entries()) {
+                const sortedDates = [...groupData.dates].sort();
+                const startDate = sortedDates[0];
+                const endDate = sortedDates[sortedDates.length - 1];
 
-                const sortedDates = group.dates.sort();
-                const fechaInicio = sortedDates[0];
-                const fechaFin = sortedDates[sortedDates.length - 1];
-
-                const newPractica = {
+                const newPracticaData = {
                     estudianteLink: [student.studentId],
                     lanzamientoVinculado: [conferenceLaunchId],
                     institucionLink: [conferenceInstitutionId],
                     especialidad: orientation,
-                    horasRealizadas: group.totalHours,
-                    fechaInicio,
-                    fechaFin,
+                    horasRealizadas: groupData.totalHours,
                     estado: 'Finalizada',
-                    nota: null
+                    fechaInicio: startDate,
+                    fechaFin: endDate,
+                    nota: 'Aprobado',
                 };
-                practicaCreationPromises.push(db.practicas.create(newPractica));
+                practicaCreationPromises.push(db.practicas.create(newPracticaData));
+                allAttendanceIdsToUpdate = allAttendanceIdsToUpdate.concat(groupData.attendanceIds);
             }
-            
-            // Wait for all new Practicas to be created for this student
+
             await Promise.all(practicaCreationPromises);
-            
-            // Then, mark all their attendance records as processed
-            const recordsToUpdate = allAttendanceIdsToUpdate.map(id => ({
-                id,
-                fields: { procesado: true }
-            }));
-            
-            if(recordsToUpdate.length > 0) {
-                await db.asistenciasJornada.updateMany(recordsToUpdate);
+
+            // Mark attendance records as processed
+            const attendanceRecordsToUpdate = allAttendanceIdsToUpdate.map(id => ({ id, fields: { procesado: true } }));
+            if (attendanceRecordsToUpdate.length > 0) {
+                await db.asistenciasJornada.updateMany(attendanceRecordsToUpdate);
             }
         },
         onSuccess: (_, { student }) => {
-            setToastInfo({ message: `Horas de ${student.studentInfo.nombre} acreditadas.`, type: 'success' });
+            setToastInfo({ message: `Acreditación exitosa para ${student.studentInfo.nombre}.`, type: 'success' });
+            queryClient.invalidateQueries({ queryKey: ['pendingJornadaAccreditations'] });
         },
         onError: (error: Error, { student }) => {
-            setToastInfo({ message: `Error al acreditar a ${student.studentInfo.nombre}: ${error.message}`, type: 'error' });
-            throw error; // Re-throw to stop "Acreditar Todos"
+            setToastInfo({ message: `Error acreditando a ${student.studentInfo.nombre}: ${error.message}`, type: 'error' });
         },
-        onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ['pendingJornadaAccreditations'] });
+        // FIX: The onSettled callback in useMutation takes four arguments. The original code was missing the 'error' parameter,
+        // which caused a type inference failure and led to the component being incorrectly typed as returning 'void'.
+        onSettled: (_, error, { student }) => {
+            setProcessingState(prev => ({ ...prev, studentId: null }));
         }
     });
 
-    const handleAcreditar = async (student: StudentToAccredit) => {
-        if (!data?.conferenceLaunchId || !data?.conferenceInstitutionId) return;
+    const handleAccreditStudent = (student: StudentToAccredit) => {
+        if (!data?.conferenceLaunchId || !data?.conferenceInstitutionId) {
+            setToastInfo({ message: 'Error: Faltan datos de configuración de la jornada.', type: 'error' });
+            return;
+        }
         setProcessingState({ studentId: student.studentId, isAll: false });
-        await accreditationMutation.mutateAsync({ student, conferenceLaunchId: data.conferenceLaunchId, conferenceInstitutionId: data.conferenceInstitutionId });
-        setProcessingState({ studentId: null, isAll: false });
+        accreditationMutation.mutate({
+            student,
+            conferenceLaunchId: data.conferenceLaunchId,
+            conferenceInstitutionId: data.conferenceInstitutionId,
+        });
     };
 
-    const handleAcreditarTodos = async () => {
-        if (!data?.studentsToAccredit || data.studentsToAccredit.length === 0 || !data?.conferenceLaunchId || !data?.conferenceInstitutionId) return;
-        
+    const handleAccreditAll = () => {
+        if (!data?.studentsToAccredit || data.studentsToAccredit.length === 0 || !data.conferenceLaunchId || !data.conferenceInstitutionId) {
+            setToastInfo({ message: 'No hay estudiantes para acreditar.', type: 'error' });
+            return;
+        }
+
         setProcessingState({ studentId: null, isAll: true });
-        let successCount = 0;
         
-        for (const student of data.studentsToAccredit) {
-            try {
-                await accreditationMutation.mutateAsync({ student, conferenceLaunchId: data.conferenceLaunchId, conferenceInstitutionId: data.conferenceInstitutionId });
-                successCount++;
-            } catch (e) {
-                // Error toast is handled in the mutation's onError
-                break; // Stop on the first error
+        // Using a promise chain to process one by one
+        const accreditSequentially = async () => {
+            for (const student of data.studentsToAccredit) {
+                try {
+                    await accreditationMutation.mutateAsync({
+                        student,
+                        conferenceLaunchId: data.conferenceLaunchId!,
+                        conferenceInstitutionId: data.conferenceInstitutionId!,
+                    });
+                } catch (e) {
+                    console.error(`Failed to accredit ${student.studentInfo.nombre}, stopping process.`, e);
+                    // The onError in the mutation will handle the toast for the specific student
+                    break; // Stop on first error
+                }
             }
-        }
+            setProcessingState({ studentId: null, isAll: false });
+        };
 
-        if (successCount > 0) {
-             setToastInfo({ message: `Proceso finalizado. Se acreditaron ${successCount} estudiantes.`, type: 'success' });
-        }
-
-        setProcessingState({ studentId: null, isAll: false });
+        accreditSequentially();
     };
 
-    if (isLoading) return <Loader />;
+    if (isLoading) return <div className="p-8 flex justify-center"><Loader /></div>;
     if (error) return <EmptyState icon="error" title="Error al Cargar Datos" message={error.message} />;
 
-    const students = data?.studentsToAccredit || [];
-
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-fade-in-up">
             {toastInfo && <Toast message={toastInfo.message} type={toastInfo.type} onClose={() => setToastInfo(null)} />}
-            <Card icon="military_tech" title="Acreditar Horas de Jornada" description={`Se encontraron ${students.length} estudiantes con asistencias pendientes de acreditar.`}>
+            
+            <Card 
+                icon="military_tech" 
+                title="Acreditación de Asistencia a Jornada" 
+                description={`Se encontraron ${data?.studentsToAccredit.length || 0} estudiantes con asistencias pendientes de procesar.`}
+                actions={
+                    <button
+                        onClick={handleAccreditAll}
+                        disabled={!data || data.studentsToAccredit.length === 0 || processingState.isAll || processingState.studentId !== null}
+                        className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-md disabled:bg-slate-400 flex items-center gap-2"
+                    >
+                        {processingState.isAll ? (
+                            <>
+                                <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin"/>
+                                <span>Procesando...</span>
+                            </>
+                        ) : (
+                            <>
+                                <span className="material-icons !text-base">auto_awesome</span>
+                                <span>Acreditar Todo</span>
+                            </>
+                        )}
+                    </button>
+                }
+            >
+               {data && data.studentsToAccredit.length > 0 ? (
                 <div className="mt-6 pt-6 border-t border-slate-200/60 dark:border-slate-700">
-                    {students.length > 0 && (
-                        <div className="flex justify-end mb-4">
-                            <button
-                                onClick={handleAcreditarTodos}
-                                disabled={processingState.isAll || accreditationMutation.isPending}
-                                className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow hover:bg-blue-700 disabled:bg-slate-400"
-                            >
-                                {processingState.isAll ? 'Procesando...' : 'Acreditar a Todos'}
-                            </button>
-                        </div>
-                    )}
-                    {students.length > 0 ? (
-                        <div className="space-y-3">
-                            {students.map(student => {
-                                const isProcessingThis = processingState.studentId === student.studentId;
-                                return (
-                                <div key={student.studentId} className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200/80 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                                    <div>
-                                        <p className="font-bold text-slate-900 dark:text-slate-100">{student.studentInfo.nombre}</p>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400 font-mono">{student.studentInfo.legajo}</p>
-                                        <div className="flex flex-wrap gap-2 mt-2">
-                                            {Array.from(student.groupedByOrientation.entries()).map(([orientation, group]) => {
-                                                const classes = getEspecialidadClasses(orientation);
-                                                return (
-                                                    <span key={orientation} className={`${classes.tag} shadow-sm`}>
-                                                        {orientation}: {group.totalHours} hs
-                                                    </span>
-                                                )
-                                            })}
-                                        </div>
+                    <div className="space-y-4">
+                        {data.studentsToAccredit.map(student => (
+                            <div key={student.studentId} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                                <div>
+                                    <p className="font-semibold text-slate-800 dark:text-slate-100">{student.studentInfo.nombre}</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">Legajo: {student.studentInfo.legajo}</p>
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                        {Array.from(student.groupedByOrientation.entries()).map(([orientation, groupData]) => {
+                                            const visuals = getEspecialidadClasses(orientation);
+                                            return (
+                                                <span key={orientation} className={`${visuals.tag} text-xs`}>
+                                                    {orientation}: {groupData.totalHours} hs
+                                                </span>
+                                            )
+                                        })}
                                     </div>
-                                    <button
-                                        onClick={() => handleAcreditar(student)}
-                                        disabled={isProcessingThis || processingState.isAll}
-                                        className="w-full sm:w-auto bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow hover:bg-emerald-700 disabled:bg-slate-400 flex-shrink-0"
-                                    >
-                                        {isProcessingThis ? 'Acreditando...' : 'Acreditar'}
-                                    </button>
                                 </div>
-                            )})}
-                        </div>
-                    ) : (
-                        <EmptyState icon="check_all" title="Todo al Día" message="No hay asistencias pendientes de acreditar." />
-                    )}
+                                <button 
+                                    onClick={() => handleAccreditStudent(student)}
+                                    disabled={processingState.isAll || processingState.studentId === student.studentId}
+                                    className="bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow hover:bg-emerald-700 disabled:bg-slate-400"
+                                >
+                                    {processingState.studentId === student.studentId ? 'Procesando...' : 'Acreditar'}
+                                </button>
+                            </div>
+                        ))}
+                    </div>
                 </div>
+               ) : (
+                 <EmptyState icon="task_alt" title="Todo Acreditado" message="No hay asistencias pendientes de procesar."/>
+               )}
             </Card>
         </div>
     );
