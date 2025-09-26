@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import AdminSearch from './AdminSearch';
 import { fetchAllAirtableData, createAirtableRecord, deleteAirtableRecord, updateAirtableRecord } from '../services/airtableService';
-import type { EstudianteFields, Penalizacion, PenalizacionFields, ConvocatoriaFields, PracticaFields, LanzamientoPPSFields } from '../types';
+import type { EstudianteFields, Penalizacion, PenalizacionFields, ConvocatoriaFields, PracticaFields, LanzamientoPPSFields, AirtableRecord } from '../types';
 import {
   AIRTABLE_TABLE_NAME_ESTUDIANTES,
   FIELD_LEGAJO_ESTUDIANTES,
@@ -99,7 +99,6 @@ const AddPenaltyModal: React.FC<{
             if (selectedPpsId && triggerTypes.includes(penaltyType)) {
                 const ppsId = selectedPpsId;
 
-                // --- Find target records using precise formulas ---
                 const studentConvFormula = `AND(FIND('${student.id}', ARRAYJOIN({${FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS}})), FIND('${ppsId}', ARRAYJOIN({${FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS}})))`;
                 const studentPracticaFormula = `AND(FIND('${student.id}', ARRAYJOIN({${FIELD_ESTUDIANTE_LINK_PRACTICAS}})), FIND('${ppsId}', ARRAYJOIN({${FIELD_LANZAMIENTO_VINCULADO_PRACTICAS}})))`;
 
@@ -384,17 +383,17 @@ const PenalizationManager: React.FC = () => {
         }
     };
     
-    const handleStudentSelect = useCallback((student: { legajo: string; nombre: string }) => {
-        // We need to get the student's Airtable record ID, not just use the one from the list,
-        // as a student might not be in the `penalizedStudents` list yet.
-        fetchAllAirtableData<EstudianteFields>(AIRTABLE_TABLE_NAME_ESTUDIANTES, [], `{${FIELD_LEGAJO_ESTUDIANTES}} = '${student.legajo}'`).then(({records}) => {
-            if (records[0]) {
-                setSelectedStudent({ id: records[0].id, legajo: student.legajo, nombre: student.nombre });
-                setIsModalOpen(true);
-            } else {
-                setToastInfo({ message: 'No se pudo encontrar el registro del estudiante para aplicar la penalización.', type: 'error' });
-            }
+    const handleStudentSelect = useCallback((student: AirtableRecord<EstudianteFields>) => {
+        if (!student.fields.Legajo || !student.fields.Nombre) {
+            setToastInfo({ message: 'El registro del estudiante está incompleto.', type: 'error' });
+            return;
+        }
+        setSelectedStudent({
+            id: student.id,
+            legajo: student.fields.Legajo,
+            nombre: student.fields.Nombre
         });
+        setIsModalOpen(true);
     }, []);
 
     return (

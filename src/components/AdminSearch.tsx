@@ -5,30 +5,33 @@ import {
     FIELD_LEGAJO_ESTUDIANTES, 
     FIELD_NOMBRE_ESTUDIANTES,
 } from '../constants';
-import type { EstudianteFields } from '../types';
+import type { EstudianteFields, AirtableRecord } from '../types';
 
 interface AdminSearchProps {
-  onStudentSelect: (student: { legajo: string, nombre: string }) => void;
+  onStudentSelect: (student: AirtableRecord<EstudianteFields>) => void;
+  onSearchChange?: (term: string) => Promise<void>;
 }
 
-const AdminSearch: React.FC<AdminSearchProps> = ({ onStudentSelect }) => {
+const AdminSearch: React.FC<AdminSearchProps> = ({ onStudentSelect, onSearchChange }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [results, setResults] = useState<EstudianteFields[]>([]);
+  const [results, setResults] = useState<AirtableRecord<EstudianteFields>[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
   const fetchMatches = useCallback(async (term: string) => {
+    if (onSearchChange) {
+        await onSearchChange(term);
+        return;
+    }
+
     if (term.length < 2) {
       setResults([]);
       return;
     }
     setIsLoading(true);
-    // Escape double quotes and convert to lowercase for a guaranteed case-insensitive search
     const cleanedTerm = term.replace(/"/g, '\\"').toLowerCase();
     
-    // Wrap the {Nombre} field in LOWER() to match against the lowercased search term.
-    // This makes the search robustly case-insensitive.
     const formula = `OR(
         SEARCH("${cleanedTerm}", LOWER({${FIELD_NOMBRE_ESTUDIANTES}})),
         SEARCH("${cleanedTerm}", {${FIELD_LEGAJO_ESTUDIANTES}} & '')
@@ -38,19 +41,19 @@ const AdminSearch: React.FC<AdminSearchProps> = ({ onStudentSelect }) => {
         AIRTABLE_TABLE_NAME_ESTUDIANTES,
         [FIELD_NOMBRE_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES],
         formula,
-        7 // max 7 results
+        7
     );
     
     if (!error) {
-      setResults(records.map(r => r.fields));
+      setResults(records);
     }
     setIsLoading(false);
-  }, []);
+  }, [onSearchChange]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
       fetchMatches(searchTerm);
-    }, 300); // Debounce time
+    }, 300);
 
     return () => {
       clearTimeout(handler);
@@ -69,15 +72,11 @@ const AdminSearch: React.FC<AdminSearchProps> = ({ onStudentSelect }) => {
     };
   }, []);
 
-  const handleSelect = (student: EstudianteFields) => {
-    const legajo = student[FIELD_LEGAJO_ESTUDIANTES];
-    const nombre = student[FIELD_NOMBRE_ESTUDIANTES];
-    if (legajo && nombre) {
-      onStudentSelect({ legajo, nombre });
-      setSearchTerm('');
-      setResults([]);
-      setIsDropdownOpen(false);
-    }
+  const handleSelect = (student: AirtableRecord<EstudianteFields>) => {
+    onStudentSelect(student);
+    setSearchTerm('');
+    setResults([]);
+    setIsDropdownOpen(false);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,7 +86,7 @@ const AdminSearch: React.FC<AdminSearchProps> = ({ onStudentSelect }) => {
     }
   };
 
-  const showDropdown = isDropdownOpen && searchTerm.length > 0;
+  const showDropdown = isDropdownOpen && searchTerm.length > 0 && !onSearchChange;
 
   return (
     <div ref={searchContainerRef} className="relative w-full max-w-lg mx-auto">
@@ -115,14 +114,14 @@ const AdminSearch: React.FC<AdminSearchProps> = ({ onStudentSelect }) => {
                     </div>
                 ) : results.length > 0 ? (
                     <ul>
-                        {results.map((student, index) => (
-                            <li key={student[FIELD_LEGAJO_ESTUDIANTES] || index}>
+                        {results.map((student) => (
+                            <li key={student.id}>
                                 <button
                                     onClick={() => handleSelect(student)}
                                     className="w-full text-left px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/50 transition-colors flex justify-between items-center"
                                 >
-                                    <span className="font-medium text-slate-800 dark:text-slate-100">{student[FIELD_NOMBRE_ESTUDIANTES]}</span>
-                                    <span className="text-sm text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">{student[FIELD_LEGAJO_ESTUDIANTES]}</span>
+                                    <span className="font-medium text-slate-800 dark:text-slate-100">{student.fields[FIELD_NOMBRE_ESTUDIANTES]}</span>
+                                    <span className="text-sm text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">{student.fields[FIELD_LEGAJO_ESTUDIANTES]}</span>
                                 </button>
                             </li>
                         ))}

@@ -31,7 +31,7 @@ La plataforma ofrece funcionalidades tanto para estudiantes como para administra
 - **Frontend:** [React](https://react.dev/) con [Vite](https://vitejs.dev/)
 - **Lenguaje:** [TypeScript](https://www.typescriptlang.org/)
 - **Estilos:** [Tailwind CSS](https://tailwindcss.com/)
-- **Base de Datos / Backend:** [Airtable](https://www.airtable.com/)
+- **Bases de Datos:** [Airtable](https://www.airtable.com/)
 
 ---
 
@@ -57,19 +57,20 @@ Sigue estos pasos para configurar y ejecutar el proyecto en tu máquina local.
     npm install
     ```
 
-### Configuración del Entorno (Airtable)
+### Configuración del Entorno
 
-La aplicación necesita credenciales para conectarse a la base de datos de Airtable.
+La aplicación necesita credenciales para conectarse a Airtable.
 
 1.  **Crea el archivo de constantes:**
     Si no existe, crea un archivo `src/constants.ts`.
 
-2.  **Añade tus credenciales de Airtable:**
-    Abre `src/constants.ts` y reemplaza los valores de `AIRTABLE_PAT` y `AIRTABLE_BASE_ID` con tus propias credenciales.
+2.  **Añade tus credenciales:**
+    Abre `src/constants.ts` y reemplaza los valores de las constantes con tus propias credenciales.
 
     ```typescript
     // src/constants.ts
 
+    // --- Airtable Configuration ---
     // Token de Acceso Personal (PAT) de Airtable
     export const AIRTABLE_PAT = 'pat...'; // Reemplazar con tu token
 
@@ -77,7 +78,7 @@ La aplicación necesita credenciales para conectarse a la base de datos de Airta
     export const AIRTABLE_BASE_ID = 'app...'; // Reemplazar con el ID de tu base
     ```
 
-    -   Puedes encontrar el **Base ID** en la [documentación de la API de Airtable](https://airtable.com/developers/web/api/introduction) al seleccionar tu base.
+    -   Puedes encontrar el **Base ID** de Airtable en la [documentación de la API de Airtable](https://airtable.com/developers/web/api/introduction) al seleccionar tu base.
     -   Puedes generar un **Personal Access Token (PAT)** en la sección de [Cuenta de Desarrollador de Airtable](https://airtable.com/create/tokens). Asegúrate de que el token tenga los permisos (`scopes`) necesarios para leer y escribir en tu base (`data.records:read` y `data.records:write`).
 
 ### Iniciar la Aplicación

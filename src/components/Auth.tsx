@@ -39,7 +39,7 @@ const AuthInput: React.FC<AuthInputProps> = ({ id, type, value, onChange, placeh
 );
 
 // Helper function to process the role from Airtable
-const getProcessedRole = (roleValue: any): 'Jefe' | 'SuperUser' | 'Directivo' | undefined => {
+const getProcessedRole = (roleValue: any): 'Jefe' | 'SuperUser' | 'Directivo' | 'Estudiante Asistente' | undefined => {
     if (!roleValue) {
         return undefined;
     }
@@ -59,7 +59,7 @@ const getProcessedRole = (roleValue: any): 'Jefe' | 'SuperUser' | 'Directivo' | 
     const trimmedRole = roleValue.trim();
 
     // Check against valid roles
-    if (trimmedRole === 'Jefe' || trimmedRole === 'SuperUser' || trimmedRole === 'Directivo') {
+    if (trimmedRole === 'Jefe' || trimmedRole === 'SuperUser' || trimmedRole === 'Directivo' || trimmedRole === 'Estudiante Asistente') {
         return trimmedRole;
     }
 
@@ -206,6 +206,9 @@ const Auth: React.FC = () => {
 
     if (legajoTrimmed === 'admin' && passwordTrimmed === 'superadmin' && mode === 'login') {
       login({ legajo: 'admin', nombre: 'Super Usuario', role: 'SuperUser' }, rememberMe);
+      return;
+    } else if (legajoTrimmed === 'asistente' && passwordTrimmed === 'asistente' && mode === 'login') {
+      login({ legajo: 'asistente', nombre: 'Estudiante Asistente', role: 'Estudiante Asistente' }, rememberMe);
       return;
     }
 

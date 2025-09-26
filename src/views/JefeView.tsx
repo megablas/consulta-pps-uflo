@@ -8,6 +8,7 @@ import Tabs from '../components/Tabs';
 import MetricsDashboard from '../components/MetricsDashboard';
 import TimelineView from '../components/TimelineView';
 import SubTabs from '../components/SubTabs';
+import type { AirtableRecord, EstudianteFields } from '../types';
 
 interface StudentTabInfo {
     id: string; // legajo
@@ -50,19 +51,27 @@ const JefeView: React.FC = () => {
     const [activeTabId, setActiveTabId] = useState(initialTabId);
     const [activeMetricsTabId, setActiveMetricsTabId] = useState('dashboard');
 
-    const openStudentPanel = useCallback((student: { legajo: string, nombre: string }) => {
-        if (studentTabs.some(s => s.legajo === student.legajo)) {
-            setActiveTabId(student.legajo);
+    const openStudentPanel = useCallback((student: AirtableRecord<EstudianteFields>) => {
+        const legajo = student.fields.Legajo;
+        const nombre = student.fields.Nombre;
+
+        if (!legajo || !nombre) {
+            alert('El registro del estudiante no tiene legajo o nombre.');
+            return;
+        }
+        
+        if (studentTabs.some(s => s.legajo === legajo)) {
+            setActiveTabId(legajo);
             return;
         }
         
         const newStudentTab: StudentTabInfo = {
-            id: student.legajo,
-            legajo: student.legajo,
-            nombre: student.nombre,
+            id: legajo,
+            legajo: legajo,
+            nombre: nombre,
         };
         setStudentTabs(prev => [...prev, newStudentTab]);
-        setActiveTabId(student.legajo);
+        setActiveTabId(legajo);
     }, [studentTabs]);
     
     const handleCloseTab = useCallback((tabId: string) => {

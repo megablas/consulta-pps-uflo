@@ -1,12 +1,15 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import AdminSearch from '../components/AdminSearch';
+import ConvocatoriaManager from '../components/ConvocatoriaManager';
+import CorreccionPanel from '../components/CorreccionPanel';
 import { useAuth, type AuthUser } from '../contexts/AuthContext';
 import StudentDashboard from './StudentDashboard';
 import Tabs from '../components/Tabs';
 import MetricsDashboard from '../components/MetricsDashboard';
 import TimelineView from '../components/TimelineView';
 import SubTabs from '../components/SubTabs';
-import InstitutionMetrics from '../components/InstitutionMetrics';
+// FIX: Import AirtableRecord and EstudianteFields for correct type usage
+import type { AirtableRecord, EstudianteFields } from '../types';
 
 interface StudentTabInfo {
     id: string; // legajo
@@ -14,7 +17,7 @@ interface StudentTabInfo {
     nombre: string;
 }
 
-const DirectivoWelcomeBanner: React.FC<{ name: string }> = ({ name }) => {
+const JefeWelcomeBanner: React.FC<{ name: string }> = ({ name }) => {
   const [greeting, setGreeting] = useState('');
 
   React.useEffect(() => {
@@ -30,11 +33,11 @@ const DirectivoWelcomeBanner: React.FC<{ name: string }> = ({ name }) => {
 
   return (
     <div className="mb-8">
-      <h1 className="text-4xl font-black text-slate-900 dark:text-slate-50 tracking-tighter">
-        {greeting}, <span className="text-blue-600 dark:text-blue-400">{name.split(' ')[0]}</span>.
+      <h1 className="text-4xl font-black text-slate-800 tracking-tighter">
+        {greeting}, <span className="text-blue-600">{name.split(' ')[0]}</span>.
       </h1>
-      <p className="mt-2 text-md text-slate-600 dark:text-slate-400">
-        Bienvenido al panel directivo. Aquí encontrarás las métricas clave y herramientas de consulta.
+      <p className="mt-2 text-md text-slate-600">
+        Bienvenido a tu panel de gestión de Prácticas Profesionales Supervisadas.
       </p>
     </div>
   );
@@ -44,23 +47,33 @@ const DirectivoView: React.FC = () => {
     const { authenticatedUser } = useAuth();
     const [studentTabs, setStudentTabs] = useState<StudentTabInfo[]>([]);
     
+    const jefeOrientations = authenticatedUser?.orientaciones || [];
     const initialTabId = 'metrics';
     const [activeTabId, setActiveTabId] = useState(initialTabId);
-    const [activeMetricsTabId, setActiveMetricsTabId] = useState('resumen');
+    const [activeMetricsTabId, setActiveMetricsTabId] = useState('dashboard');
 
-    const openStudentPanel = useCallback((student: { legajo: string, nombre: string }) => {
-        if (studentTabs.some(s => s.legajo === student.legajo)) {
-            setActiveTabId(student.legajo);
+    // FIX: Updated the function signature to correctly handle the AirtableRecord type passed by AdminSearch.
+    const openStudentPanel = useCallback((student: AirtableRecord<EstudianteFields>) => {
+        const legajo = student.fields.Legajo;
+        const nombre = student.fields.Nombre;
+
+        if (!legajo || !nombre) {
+            alert('El registro del estudiante no tiene legajo o nombre.');
+            return;
+        }
+        
+        if (studentTabs.some(s => s.legajo === legajo)) {
+            setActiveTabId(legajo);
             return;
         }
         
         const newStudentTab: StudentTabInfo = {
-            id: student.legajo,
-            legajo: student.legajo,
-            nombre: student.nombre,
+            id: legajo,
+            legajo: legajo,
+            nombre: nombre,
         };
         setStudentTabs(prev => [...prev, newStudentTab]);
-        setActiveTabId(student.legajo);
+        setActiveTabId(legajo);
     }, [studentTabs]);
     
     const handleCloseTab = useCallback((tabId: string) => {
@@ -72,7 +85,7 @@ const DirectivoView: React.FC = () => {
 
     const allTabs = useMemo(() => {
         const metricsSubTabs = [
-            { id: 'resumen', label: 'Resumen', icon: 'bar_chart' },
+            { id: 'dashboard', label: 'Dashboard', icon: 'bar_chart' },
             { id: 'timeline', label: 'Línea de Tiempo', icon: 'timeline' },
         ];
 
@@ -85,12 +98,25 @@ const DirectivoView: React.FC = () => {
                     <>
                         <SubTabs tabs={metricsSubTabs} activeTabId={activeMetricsTabId} onTabChange={setActiveMetricsTabId} />
                         <div className="mt-6">
-                            {activeMetricsTabId === 'resumen' && <MetricsDashboard onStudentSelect={openStudentPanel} />}
+                            {/* FIX: Adapted the call to wrap the simpler student object from MetricsDashboard into an AirtableRecord-like structure. */}
+                            {activeMetricsTabId === 'dashboard' && <MetricsDashboard onStudentSelect={(student) => openStudentPanel({ id: '', createdTime: '', fields: { Legajo: student.legajo, Nombre: student.nombre }})} />}
                             {activeMetricsTabId === 'timeline' && <TimelineView />}
                         </div>
                     </>
                 ),
             },
+            {
+                id: 'correccion',
+                label: 'Corrección',
+                icon: 'rule',
+                content: <CorreccionPanel />,
+            },
+            ...(jefeOrientations.length > 0 ? [{
+                id: 'manager-jefe',
+                label: 'Gestión PPS',
+                icon: 'tune',
+                content: <ConvocatoriaManager forcedOrientations={jefeOrientations} />,
+            }] : []),
             {
                 id: 'search',
                 label: 'Buscar Alumno',
@@ -109,11 +135,11 @@ const DirectivoView: React.FC = () => {
 
         return [...mainTabs, ...dynamicStudentTabs];
 
-    }, [studentTabs, openStudentPanel, activeMetricsTabId]);
+    }, [studentTabs, jefeOrientations, openStudentPanel, activeMetricsTabId]);
 
     return (
-        <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-2xl shadow-lg border border-slate-200/60 dark:border-slate-700/80 animate-fade-in-up">
-            <DirectivoWelcomeBanner name={authenticatedUser?.nombre || 'Directivo'} />
+        <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg border border-slate-200/60 animate-fade-in-up">
+            <JefeWelcomeBanner name={authenticatedUser?.nombre || 'Jefe de Cátedra'} />
             <div>
                 <Tabs
                     tabs={allTabs}
@@ -126,4 +152,5 @@ const DirectivoView: React.FC = () => {
     );
 };
 
+// FIX: Corrected export to 'DirectivoView' to match the component defined in this file.
 export default DirectivoView;

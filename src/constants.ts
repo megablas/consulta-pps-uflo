@@ -1,6 +1,11 @@
+import { ConferenceModule, Orientacion } from "./types";
+
 // ADVERTENCIA DE SEGURIDAD: Este token está expuesto. En producción, debería estar en un backend.
 export const AIRTABLE_PAT = 'patEjnXqyKnMwEUw5.19a19b12ad3c23b36888b9e228c2c9db1cbc923e9a29d7357e4103bb286d4bd1'; // TODO: Move to backend or environment variable
 export const AIRTABLE_BASE_ID = 'appBY8PYhPZ1X2ka1';
+
+export const SUPABASE_URL = 'https://tu-proyecto-url.supabase.co';
+export const SUPABASE_ANON_KEY = 'tu_supabase_anon_key';
 
 // Table Names
 export const AIRTABLE_TABLE_NAME_PPS = 'Solicitud de PPS';
@@ -12,6 +17,7 @@ export const AIRTABLE_TABLE_NAME_CONVOCATORIAS = 'Convocatorias';
 export const AIRTABLE_TABLE_NAME_INSTITUCIONES = 'Instituciones';
 export const AIRTABLE_TABLE_NAME_FINALIZACION = 'Finalización de PPS';
 export const AIRTABLE_TABLE_NAME_PENALIZACIONES = 'Historial de Penalizaciones';
+export const AIRTABLE_TABLE_NAME_ASISTENCIAS_JORNADA = 'Asistencias Jornada';
 
 
 // --- Fields for 'Estudiantes' table ---
@@ -40,6 +46,7 @@ export const FIELD_ESTADO_PRACTICA = 'Estado';
 export const FIELD_ESPECIALIDAD_PRACTICAS = 'Especialidad';
 export const FIELD_NOTA_PRACTICAS = 'Nota';
 export const FIELD_LANZAMIENTO_VINCULADO_PRACTICAS = 'Lanzamiento Vinculado';
+export const FIELD_INSTITUCION_LINK_PRACTICAS = 'Institución';
 
 
 // --- Fields for 'Solicitud de PPS' table ---
@@ -118,6 +125,15 @@ export const FIELD_PENALIZACION_FECHA = 'Fecha del Incidente';
 export const FIELD_PENALIZACION_PUNTAJE = 'Puntaje Penalización';
 export const FIELD_PENALIZACION_CONVOCATORIA_LINK = 'Convocatoria Afectada';
 
+// --- Fields for 'Asistencias Jornada' table ---
+export const FIELD_ASISTENCIA_ESTUDIANTE = 'Estudiante';
+export const FIELD_ASISTENCIA_MODULO_ID = 'Modulo ID';
+export const FIELD_ASISTENCIA_MODULO_NOMBRE = 'Modulo Asistido';
+export const FIELD_ASISTENCIA_FECHA = 'Fecha';
+export const FIELD_ASISTENCIA_ORIENTACION = 'Orientacion';
+export const FIELD_ASISTENCIA_HORAS = 'Horas';
+export const FIELD_ASISTENCIA_PROCESADO = 'Procesado';
+
 
 // --- Academic criteria constants ---
 export const HORAS_OBJETIVO_TOTAL = 250;
@@ -134,3 +150,13 @@ export const ALERT_INFORMES_TEXT = 'Las fechas de entrega de los informes pueden
 // --- Misc ---
 export const EMAIL_SEGUROS = 'mesadeayuda.patagonia@uflouniversidad.edu.ar';
 export const TEMPLATE_PPS_NAME = 'Colegio Virgen de Luján';
+export const CONFERENCE_PPS_NAME = 'III Jornada Universitaria de Salud Mental';
+
+export const CONFERENCE_MODULES: ConferenceModule[] = [
+    { id: 'm1', name: 'Martes 7 (Mañana)', date: '2025-10-07', orientation: Orientacion.CLINICA, hours: 5 },
+    { id: 'm2', name: 'Martes 7 (Tarde)', date: '2025-10-07', orientation: Orientacion.CLINICA, hours: 5 },
+    { id: 'm3', name: 'Miércoles 8 (Mañana)', date: '2025-10-08', orientation: Orientacion.CLINICA, hours: 5 },
+    { id: 'm4', name: 'Miércoles 8 (Tarde)', date: '2025-10-08', orientation: Orientacion.LABORAL, hours: 5 },
+    { id: 'm5', name: 'Jueves 9 (Mañana)', date: '2025-10-09', orientation: Orientacion.CLINICA, hours: 5 },
+    { id: 'm6', name: 'Jueves 9 (Tarde)', date: '2025-10-09', orientation: Orientacion.EDUCACIONAL, hours: 5 },
+];

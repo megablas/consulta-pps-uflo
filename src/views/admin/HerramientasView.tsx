@@ -7,9 +7,13 @@ import RepitentesPanel from '../../components/RepitentesPanel';
 import ExecutiveReportGenerator from '../../components/ExecutiveReportGenerator';
 import PenalizationManager from '../../components/PenalizationManager';
 import { useModal } from '../../contexts/ModalContext';
+// FIX: Imported types to correctly define the props interface.
+import type { AirtableRecord, EstudianteFields } from '../../types';
 
+
+// FIX: Corrected the prop type for onStudentSelect to match what AdminSearch provides.
 interface HerramientasViewProps {
-  onStudentSelect: (student: { legajo: string, nombre: string }) => void;
+  onStudentSelect: (student: AirtableRecord<EstudianteFields>) => void;
 }
 
 const HerramientasView: React.FC<HerramientasViewProps> = ({ onStudentSelect }) => {
