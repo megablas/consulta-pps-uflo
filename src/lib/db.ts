@@ -2,7 +2,8 @@ import * as airtable from '../services/airtableService';
 import { schema } from './airtableSchema';
 import type { 
     EstudianteFields, PracticaFields, AuthUserFields, ConvocatoriaFields, 
-    LanzamientoPPSFields, InstitucionFields, PenalizacionFields, SolicitudPPSFields, FinalizacionPPSFields
+    LanzamientoPPSFields, InstitucionFields, PenalizacionFields, SolicitudPPSFields, FinalizacionPPSFields,
+    AsistenciaJornadaFields
 } from '../types';
 
 // A generic mapped type to extract developer-friendly field keys from a schema object
@@ -36,7 +37,6 @@ function createTableInterface<TSchema extends { _tableName: string }, TAirtableF
 
     const service = {
         // READ operations pass through to airtableService but encapsulate the table name
-        // FIX: Added the `fields` property to the options type to allow specifying which columns to fetch, improving performance.
         getAll: async (options?: { filterByFormula?: string; sort?: any[]; fields?: string[] }) => {
             const { records, error } = await airtable.fetchAllAirtableData<TAirtableFields>(_tableName, options?.fields || [], options?.filterByFormula, options?.sort);
             if (error) {
@@ -57,29 +57,26 @@ function createTableInterface<TSchema extends { _tableName: string }, TAirtableF
 
         // WRITE operations use the field mapping for a better DX
         create: async (fields: DevFields<TSchema>) => {
-            // FIX: Added type assertion to satisfy the generic constraint of TAirtableFields.
-            const { record, error } = await airtable.createAirtableRecord<TAirtableFields>(_tableName, translateFieldsToAirtable(fields, tableSchema) as TAirtableFields);
+            const { record: airtableRecord, error } = await airtable.createAirtableRecord<TAirtableFields>(_tableName, translateFieldsToAirtable(fields, tableSchema) as TAirtableFields);
             if (error) {
                 const errorMsg = typeof error.error === 'string' ? error.error : error.error.message;
                 throw new Error(errorMsg);
             }
-            return record;
+            return airtableRecord;
         },
 
         update: async (recordId: string, fields: Partial<DevFields<TSchema>>) => {
-            // FIX: Added type assertion to satisfy the generic constraint of TAirtableFields.
-            const { record, error } = await airtable.updateAirtableRecord<TAirtableFields>(_tableName, recordId, translateFieldsToAirtable(fields, tableSchema) as Partial<TAirtableFields>);
+            const { record: airtableRecord, error } = await airtable.updateAirtableRecord<TAirtableFields>(_tableName, recordId, translateFieldsToAirtable(fields, tableSchema) as Partial<TAirtableFields>);
             if (error) {
                 const errorMsg = typeof error.error === 'string' ? error.error : error.error.message;
                 throw new Error(errorMsg);
             }
-            return record;
+            return airtableRecord;
         },
 
         updateMany: async (records: { id: string; fields: Partial<DevFields<TSchema>> }[]) => {
             const { records: updatedRecords, error } = await airtable.updateAirtableRecords<TAirtableFields>(
                 _tableName,
-                // FIX: Added type assertion to satisfy the generic constraint of TAirtableFields.
                 records.map(r => ({ id: r.id, fields: translateFieldsToAirtable(r.fields, tableSchema) as Partial<TAirtableFields> }))
             );
             if (error) {
@@ -111,6 +108,7 @@ export const db = {
     lanzamientos: createTableInterface<typeof schema.lanzamientos, LanzamientoPPSFields>(schema.lanzamientos),
     instituciones: createTableInterface<typeof schema.instituciones, InstitucionFields>(schema.instituciones),
     penalizaciones: createTableInterface<typeof schema.penalizaciones, PenalizacionFields>(schema.penalizaciones),
+    asistenciasJornada: createTableInterface<typeof schema.asistenciasJornada, AsistenciaJornadaFields>(schema.asistenciasJornada),
     solicitudes: createTableInterface<typeof schema.solicitudes, SolicitudPPSFields>(schema.solicitudes),
     finalizacion: createTableInterface<typeof schema.finalizacion, FinalizacionPPSFields>(schema.finalizacion),
 };

@@ -14,10 +14,11 @@ const AdminView = lazy(() => import('./views/AdminView'));
 const JefeView = lazy(() => import('./views/JefeView'));
 const StudentView = lazy(() => import('./views/StudentView'));
 const DirectivoView = lazy(() => import('./views/DirectivoView'));
+const AsistenteView = lazy(() => import('./views/AsistenteView'));
 
 
 const App: React.FC = () => {
-  const { authenticatedUser, isAuthLoading, isSuperUserMode, isJefeMode, isDirectivoMode } = useAuth();
+  const { authenticatedUser, isAuthLoading, isSuperUserMode, isJefeMode, isDirectivoMode, isAsistenteMode } = useAuth();
 
   if (isAuthLoading) {
     return (
@@ -34,7 +35,6 @@ const App: React.FC = () => {
         <PwaInstallProvider>
           <Layout>
             <ErrorBoundary>
-              {/* FIX: The children prop is now correctly passed to ErrorBoundary */}
               <Suspense fallback={
                 <div className="flex justify-center items-center min-h-[60vh]">
                   <Loader />
@@ -48,6 +48,8 @@ const App: React.FC = () => {
                   <JefeView />
                 ) : isDirectivoMode ? (
                   <DirectivoView />
+                ) : isAsistenteMode ? (
+                  <AsistenteView />
                 ) : (
                   <StudentView />
                 )}

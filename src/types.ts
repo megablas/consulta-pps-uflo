@@ -54,7 +54,7 @@ export interface AuthUserFields {
   'Nombre'?: string;
   'PasswordHash'?: string;
   'Salt'?: string;
-  'Role'?: 'Jefe' | 'SuperUser' | 'Directivo';
+  'Role'?: 'Jefe' | 'SuperUser' | 'Directivo' | 'Estudiante Asistente';
   'Orientaciones'?: string; // Comma-separated list
 }
 
@@ -101,7 +101,6 @@ export interface ConvocatoriaFields {
   'Estado de Convocatoria'?: string; // e.g. 'Abierta', 'Cerrada'
   'Estado'?: string; // e.g., 'No seleccionado', 'Seleccionado', 'Inscripto'
   'Orientación'?: string;
-  // FIX: Made '¿Terminó de cursar?' optional to align with schema and usage, resolving multiple type errors.
   '¿Terminó de cursar?'?: string;
   'Cursando Materias Electivas'?: string;
   'Finales que adeuda'?: string;
@@ -124,6 +123,18 @@ export interface PenalizacionFields {
     'Convocatoria Afectada'?: string[];
 }
 
+export interface AsistenciaJornadaFields {
+    [key: string]: any;
+    'Estudiante'?: string[];
+    'Modulo ID'?: string;
+    'Modulo Asistido'?: string;
+    'Fecha'?: string;
+    'Orientacion'?: string;
+    'Horas'?: number;
+    'Procesado'?: boolean;
+}
+
+
 export interface Penalizacion extends PenalizacionFields {
     id: string;
 }
@@ -142,6 +153,10 @@ export interface LanzamientoPPS extends LanzamientoPPSFields {
 
 export interface Convocatoria extends ConvocatoriaFields {
   id: string;
+}
+
+export interface AsistenciaJornada extends AsistenciaJornadaFields {
+    id: string;
 }
 
 export interface FinalizacionPPSFields {
@@ -197,7 +212,6 @@ export interface GroupedSeleccionados {
   [horario: string]: SelectedStudent[];
 }
 
-// FIX: Added missing 'StudentForReview' type for the SeguroGenerator component.
 export interface StudentForReview {
     studentId: string;
     nombre: string;
@@ -358,3 +372,12 @@ export interface ComparativeExecutiveReportData {
 export type AnyReportData = ExecutiveReportData | ComparativeExecutiveReportData;
 
 export type ReportType = '2024' | '2025' | 'comparative';
+
+// For the new Asistente feature
+export interface ConferenceModule {
+    id: string;
+    name: string;
+    date: string; // YYYY-MM-DD
+    orientation: Orientacion;
+    hours: number;
+}

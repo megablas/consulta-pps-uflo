@@ -15,6 +15,8 @@ import RepitentesPanel from '../components/RepitentesPanel';
 import ExecutiveReportGenerator from '../components/ExecutiveReportGenerator';
 import PenalizationManager from '../components/PenalizationManager';
 import { useModal } from '../contexts/ModalContext';
+import type { AirtableRecord, EstudianteFields } from '../types';
+import AcreditacionJornada from '../components/AcreditacionJornada';
 
 interface StudentTabInfo {
     id: string; // legajo
@@ -26,24 +28,31 @@ const AdminView: React.FC = () => {
     const [studentTabs, setStudentTabs] = useState<StudentTabInfo[]>([]);
     const [activeTabId, setActiveTabId] = useState('metrics');
     
-    // State for sub-tabs within each main section
     const [activeMetricsTabId, setActiveMetricsTabId] = useState('dashboard');
     const [activeGestionTabId, setActiveGestionTabId] = useState('manager');
     const [activeHerramientasTabId, setActiveHerramientasTabId] = useState('repitentes');
     const { showModal } = useModal();
 
 
-    const openStudentPanel = useCallback((student: { legajo: string, nombre: string }) => {
-        if (!studentTabs.some(s => s.legajo === student.legajo)) {
+    const openStudentPanel = useCallback((student: AirtableRecord<EstudianteFields>) => {
+        const legajo = student.fields.Legajo;
+        const nombre = student.fields.Nombre;
+
+        if (!legajo || !nombre) {
+            showModal('Error', 'El registro del estudiante no tiene legajo o nombre.');
+            return;
+        }
+
+        if (!studentTabs.some(s => s.legajo === legajo)) {
             const newStudentTab: StudentTabInfo = {
-                id: student.legajo,
-                legajo: student.legajo,
-                nombre: student.nombre,
+                id: legajo,
+                legajo: legajo,
+                nombre: nombre,
             };
             setStudentTabs(prev => [...prev, newStudentTab]);
         }
-        setActiveTabId(student.legajo);
-    }, [studentTabs]);
+        setActiveTabId(legajo);
+    }, [studentTabs, showModal]);
 
     const handleCloseTab = useCallback((tabId: string) => {
         setStudentTabs(prev => prev.filter(s => s.id !== tabId));
@@ -66,6 +75,7 @@ const AdminView: React.FC = () => {
         const herramientasSubTabs = [
             { id: 'repitentes', label: 'Repitentes', icon: 'history_edu' },
             { id: 'penalizaciones', label: 'Penalizaciones', icon: 'gavel' },
+            { id: 'acreditar_jornada', label: 'Acreditar Jornada', icon: 'military_tech' },
             { id: 'search', label: 'Buscar Alumno', icon: 'person_search' },
             { id: 'insurance', label: 'Seguros', icon: 'shield' },
             { id: 'convenios', label: 'Convenios Nuevos', icon: 'handshake' },
@@ -81,7 +91,7 @@ const AdminView: React.FC = () => {
                     <>
                         <SubTabs tabs={metricsSubTabs} activeTabId={activeMetricsTabId} onTabChange={setActiveMetricsTabId} />
                         <div className="mt-6">
-                            {activeMetricsTabId === 'dashboard' && <MetricsDashboard onStudentSelect={openStudentPanel} />}
+                            {activeMetricsTabId === 'dashboard' && <MetricsDashboard onStudentSelect={(s) => openStudentPanel({ id: '', createdTime: '', fields: { Legajo: s.legajo, Nombre: s.nombre } })} />}
                             {activeMetricsTabId === 'timeline' && <TimelineView />}
                         </div>
                     </>
@@ -117,6 +127,7 @@ const AdminView: React.FC = () => {
                          <div className="mt-6">
                             {activeHerramientasTabId === 'repitentes' && <RepitentesPanel />}
                             {activeHerramientasTabId === 'penalizaciones' && <PenalizationManager />}
+                            {activeHerramientasTabId === 'acreditar_jornada' && <AcreditacionJornada />}
                             {activeHerramientasTabId === 'search' && <div className="p-4"><AdminSearch onStudentSelect={openStudentPanel} /></div>}
                             {activeHerramientasTabId === 'insurance' && <SeguroGenerator showModal={showModal} />}
                             {activeHerramientasTabId === 'convenios' && <NuevosConvenios />}
