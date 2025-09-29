@@ -10,11 +10,13 @@ interface State {
 }
 
 class ErrorBoundary extends Component<Props, State> {
-  // FIX: Added a constructor to explicitly initialize state, which can resolve subtle type inference issues.
-  constructor(props: Props) {
-    super(props);
-    this.state = { hasError: false };
-  }
+  // FIX: Use modern class field syntax for state initialization.
+  public state: State = { hasError: false };
+
+  // FIX: Use modern class field syntax for methods to ensure `this` is bound correctly.
+  public handleRefresh = () => {
+    window.location.reload();
+  };
 
   public static getDerivedStateFromError(error: Error): State {
     // Actualiza el estado para que el siguiente renderizado muestre la UI de fallback.
@@ -25,10 +27,6 @@ class ErrorBoundary extends Component<Props, State> {
     // También puedes registrar el error en un servicio de reporte de errores
     console.error("Error no capturado:", error, errorInfo);
   }
-
-  private handleRefresh = () => {
-    window.location.reload();
-  };
 
   public render() {
     if (this.state.hasError) {

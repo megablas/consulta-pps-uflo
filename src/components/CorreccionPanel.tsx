@@ -245,13 +245,13 @@ const CorreccionPanel: React.FC = () => {
             currentPracticaId = newPracticaRecord.id;
 
             setAllPpsGroups(prev => {
-                const newGroups = new Map(prev);
+                const newGroups = new Map<string, InformeCorreccionPPS>(prev);
                 const ppsGroup = newGroups.get(student.lanzamientoId);
                 if (ppsGroup) {
-                    const studentToUpdate = ppsGroup.students.find(s => s.studentId === student.studentId);
-                    if (studentToUpdate) {
-                        studentToUpdate.practicaId = newPracticaRecord.id;
-                    }
+                    const newStudents = ppsGroup.students.map(s => 
+                        s.studentId === student.studentId ? { ...s, practicaId: newPracticaRecord.id } : s
+                    );
+                    newGroups.set(student.lanzamientoId, { ...ppsGroup, students: newStudents });
                 }
                 return newGroups;
             });
@@ -275,7 +275,7 @@ const CorreccionPanel: React.FC = () => {
         setToastInfo({ message: 'Nota guardada exitosamente.', type: 'success' });
         // FIX: Avoid direct state mutation by creating new objects for the updated student and group.
         setAllPpsGroups(prev => {
-            const newGroups = new Map(prev);
+            const newGroups = new Map<string, InformeCorreccionPPS>(prev);
             const ppsGroup = newGroups.get(student.lanzamientoId);
             if (ppsGroup) {
                 const newStudents = ppsGroup.students.map(s => {
@@ -345,7 +345,7 @@ const CorreccionPanel: React.FC = () => {
           await db.practicas.updateMany(recordsToUpdate);
           setToastInfo({ message: `${selectedPracticaIds.length} notas actualizadas a "${newNota}".`, type: 'success' });
           setAllPpsGroups(prev => {
-              const newGroups = new Map(prev);
+              const newGroups = new Map<string, InformeCorreccionPPS>(prev);
               const ppsGroup = newGroups.get(lanzamientoId);
               if (ppsGroup) {
                   // FIX: Avoid direct mutation by creating a new students array.

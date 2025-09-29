@@ -124,9 +124,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   const hasData = useMemo(() => practicas.length > 0 || solicitudes.length > 0 || lanzamientos.length > 0 || informeTasks.length > 0, [practicas, solicitudes, lanzamientos, informeTasks]);
   const showEmptyState = useMemo(() => !isLoading && !hasData && isSuperUserMode, [isLoading, hasData, isSuperUserMode]);
 
-  // --- RENDER LOGIC ---
   if (isLoading) return <DashboardLoadingSkeleton />;
-  if (error) return <ErrorState error={error.message} onRetry={refetchAll} />;
+  if (error) return <ErrorState error={error.message} onRetry={() => refetchAll()} />;
 
   if (showEmptyState) {
     return (
@@ -160,12 +159,12 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
               practicas={practicas} 
           />
       </div>
-      <div className="no-print space-y-8 animate-fade-in-up">
-        {/* Top section is now separate from the tabbed content */}
+
+      {/* --- VISTA DE ESCRITORIO (SIN CAMBIOS) --- */}
+      <div className="hidden md:block no-print space-y-8 animate-fade-in-up">
         <WelcomeBanner studentName={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />
         <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
         
-        {/* Tabbed content */}
         {hasData && (
           <Card>
             <Tabs
@@ -175,22 +174,67 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
             />
           </Card>
         )}
-        
-        {/* Floating action buttons */}
-        {showExportButton && (
-          <>
-            <WhatsAppExportButton practicas={practicas} criterios={criterios} selectedOrientacion={selectedOrientacion} studentNameForPanel={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />
-             <button
-              onClick={() => window.print()}
-              className="fixed bottom-6 right-24 z-50 w-14 h-14 bg-slate-700 text-white rounded-full shadow-lg flex items-center justify-center
-                         transition-all duration-300 ease-in-out transform hover:scale-110 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-slate-400"
-              aria-label="Imprimir reporte"
-            >
-              <span className="material-icons !text-2xl">print</span>
-            </button>
-          </>
-        )}
       </div>
+
+      {/* --- NUEVA VISTA MÓVIL (REESTRUCTURADA) --- */}
+      <div className="md:hidden no-print space-y-8 animate-fade-in-up">
+          {currentActiveTab === 'convocatorias' && (
+              <>
+                  <WelcomeBanner studentName={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />
+                  <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
+                  <Card icon="campaign" title="Convocatorias Abiertas" description="Postúlate a las PPS disponibles que se ajusten a tu interés y disponibilidad.">
+                    {convocatoriasContent}
+                  </Card>
+              </>
+          )}
+
+          {currentActiveTab === 'calendario' && (
+              <Card icon="calendar_month" title="Mi Calendario de Prácticas" description="Vista mensual de tus PPS en curso. Toca un día con eventos para ver los detalles.">
+                  {calendarContent}
+              </Card>
+          )}
+
+          {currentActiveTab === 'informes' && (
+              <Card icon="assignment_turned_in" title="Entrega de Informes Finales" description="Sube tu informe final al campus y luego confirma la entrega aquí.">
+                  {informesContent}
+              </Card>
+          )}
+
+          {currentActiveTab === 'solicitudes' && (
+              <Card icon="list_alt" title="Mis Solicitudes de PPS" description="Seguimiento del estado de las Prácticas Profesionales Supervisadas que has solicitado.">
+                  {solicitudesContent}
+              </Card>
+          )}
+          
+          {currentActiveTab === 'practicas' && (
+              <>
+                  <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
+                  <Card icon="work_history" title="Historial de Prácticas" description="Detalle de todas las prácticas que has realizado y sus calificaciones.">
+                    {practicasContent}
+                  </Card>
+              </>
+          )}
+
+          {currentActiveTab === 'profile' && (
+                <Card icon="person" title="Mi Perfil">
+                  {profileContent}
+              </Card>
+          )}
+      </div>
+      
+      {showExportButton && (
+        <>
+          <WhatsAppExportButton practicas={practicas} criterios={criterios} selectedOrientacion={selectedOrientacion} studentNameForPanel={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />
+            <button
+            onClick={() => window.print()}
+            className="fixed bottom-6 right-24 z-50 w-14 h-14 bg-slate-700 text-white rounded-full shadow-lg flex items-center justify-center
+                        transition-all duration-300 ease-in-out transform hover:scale-110 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-slate-400"
+            aria-label="Imprimir reporte"
+          >
+            <span className="material-icons !text-2xl">print</span>
+          </button>
+        </>
+      )}
     </>
   );
 };
