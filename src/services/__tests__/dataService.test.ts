@@ -11,6 +11,8 @@ import {
   FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS,
   FIELD_HORARIO_FORMULA_CONVOCATORIAS,
   FIELD_NOMBRE_PPS_CONVOCATORIAS,
+  FIELD_FECHA_INICIO_CONVOCATORIAS,
+  FIELD_FECHA_INICIO_LANZAMIENTOS,
 } from '../../constants';
 import type { LanzamientoPPS } from '../../types';
 
@@ -24,7 +26,8 @@ describe('Data Service - fetchSeleccionados', () => {
   it('should fetch and filter selected students by the PPS name', async () => {
     const targetLanzamiento: LanzamientoPPS = {
       id: 'lanz_A',
-      [FIELD_NOMBRE_PPS_LANZAMIENTOS]: "Hospital Alpha"
+      [FIELD_NOMBRE_PPS_LANZAMIENTOS]: "Hospital Alpha",
+      [FIELD_FECHA_INICIO_LANZAMIENTOS]: '2024-08-01',
     };
 
     const mockConvocatoriasResponse = [
@@ -40,8 +43,9 @@ describe('Data Service - fetchSeleccionados', () => {
     mockedAirtableService.fetchAllAirtableData.mockImplementation(async (tableName, fields, formula) => {
       if (tableName === AIRTABLE_TABLE_NAME_CONVOCATORIAS) {
         // Check that the formula correctly filters by PPS name and status
-        expect(formula).toContain(`{${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = 'seleccionado'`);
+        expect(formula).toContain(`LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = 'seleccionado'`);
         expect(formula).toContain(`{${FIELD_NOMBRE_PPS_CONVOCATORIAS}} = 'Hospital Alpha'`);
+        expect(formula).toContain(`DATETIME_FORMAT({${FIELD_FECHA_INICIO_CONVOCATORIAS}}, 'YYYY-MM-DD') = '2024-08-01'`);
         return { records: mockConvocatoriasResponse, error: null } as any;
       }
       

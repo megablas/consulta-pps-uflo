@@ -35,11 +35,11 @@ const App: React.FC = () => {
         <PwaInstallProvider>
           <Layout>
             <ErrorBoundary>
-              <Suspense fallback={
+              <Suspense fallback={(
                 <div className="flex justify-center items-center min-h-[60vh]">
                   <Loader />
                 </div>
-              }>
+              )}>
                 {!authenticatedUser ? (
                   <Auth />
                 ) : isSuperUserMode ? (

@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useModal } from '../contexts/ModalContext';
 import { fetchConvocatoriasData } from '../services/dataService';
 import { db } from '../lib/db';
-import type { LanzamientoPPS, ConvocatoriaFields, InformeTask } from '../types';
+import type { LanzamientoPPS, ConvocatoriaFields, InformeTask, Convocatoria } from '../types';
 import {
     FIELD_LEGAJO_ESTUDIANTES, FIELD_DNI_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES,
     FIELD_FECHA_NACIMIENTO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES,
@@ -11,8 +11,14 @@ import {
     FIELD_HORAS_ACREDITADAS_LANZAMIENTOS, FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS,
     FIELD_INFORME_SUBIDO_CONVOCATORIAS,
     FIELD_NOTA_PRACTICAS,
-    // FIX: Imported missing constant
     FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS,
+    FIELD_TERMINO_CURSAR_CONVOCATORIAS,
+    FIELD_CURSANDO_ELECTIVAS_CONVOCATORIAS,
+    FIELD_FINALES_ADEUDA_CONVOCATORIAS,
+    FIELD_OTRA_SITUACION_CONVOCATORIAS,
+    // FIX: Added missing constant imports.
+    FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
+    FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS,
 } from '../constants';
 
 export const useConvocatorias = (legajo: string, studentAirtableId: string | null, isSuperUserMode: boolean) => {
@@ -37,7 +43,6 @@ export const useConvocatorias = (legajo: string, studentAirtableId: string | nul
             const studentDetails = queryClient.getQueryData(['student', legajo]) as any;
             if (!studentAirtableId || !studentDetails?.studentDetails) throw new Error("No se pudo identificar al estudiante.");
             
-            // FIX: Removed incorrect type annotation and subsequent cast. TypeScript can now infer the correct type.
             const newRecord = {
                 lanzamientoVinculado: [selectedLanzamiento.id],
                 estudianteInscripto: [studentAirtableId],
@@ -55,100 +60,94 @@ export const useConvocatorias = (legajo: string, studentAirtableId: string | nul
                 correo: studentDetails.studentDetails[FIELD_CORREO_ESTUDIANTES],
                 fechaNacimiento: studentDetails.studentDetails[FIELD_FECHA_NACIMIENTO_ESTUDIANTES],
                 telefono: studentDetails.studentDetails[FIELD_TELEFONO_ESTUDIANTES],
-                terminoCursar: formData.terminoDeCursar ? 'Sí' : 'No',
-                cursandoElectivas: formData.cursandoElectivas ? 'Sí' : 'No',
-                finalesAdeuda: formData.finalesAdeudados || null,
+                terminoCursar: formData.terminoDeCursar === true ? 'Sí' : (formData.terminoDeCursar === false ? 'No' : undefined),
+                cursandoElectivas: formData.cursandoElectivas === true ? 'Sí' : (formData.cursandoElectivas === false ? 'No' : undefined),
+                finalesAdeuda: formData.finalesAdeudados,
                 otraSituacion: formData.otraSituacionAcademica,
+                informeSubido: false,
             };
+            
             return db.convocatorias.create(newRecord);
         },
-        onSuccess: () => {
-            closeEnrollmentForm();
-            showModal('¡Inscripción Exitosa!', 'Tu postulación ha sido enviada correctamente.');
-            queryClient.invalidateQueries({ queryKey: ['convocatorias', legajo] });
+        onMutate: () => {
+            setIsSubmittingEnrollment(true);
         },
-        onError: (error) => showModal('Error en la Inscripción', `No se pudo completar tu inscripción. Error: ${error.message}`),
-        onSettled: () => setIsSubmittingEnrollment(false),
+        onSuccess: () => {
+            showModal('¡Inscripción Exitosa!', 'Tu postulación ha sido registrada. Recibirás un correo electrónico cuando se publiquen los resultados de la selección.');
+            closeEnrollmentForm();
+            queryClient.invalidateQueries({ queryKey: ['convocatorias', legajo, studentAirtableId] });
+        },
+        onError: (error) => {
+            showModal('Error de Inscripción', `No se pudo completar tu postulación: ${error.message}`);
+        },
+        onSettled: () => {
+            setIsSubmittingEnrollment(false);
+        }
     });
 
-    const enrollStudent = {
-        ...enrollmentMutation,
-        mutate: (lanzamiento: LanzamientoPPS) => {
-            openEnrollmentForm(lanzamiento, async (formData: any) => {
-                setIsSubmittingEnrollment(true);
-                await enrollmentMutation.mutateAsync({ formData, selectedLanzamiento: lanzamiento });
-            });
-        },
-    };
-
-    const confirmInforme = useMutation<any, Error, InformeTask, { previousConvocatoriasData: any, previousPracticasData: any }>({
+    const confirmInforme = useMutation({
         mutationFn: async (task: InformeTask) => {
-            if (!task.practicaId) {
-                throw new Error("No se encontró un registro de práctica asociado para actualizar la nota.");
-            }
-            const submissionDate = new Date().toISOString().split('T')[0];
-            const updates = [];
-
-            updates.push(db.convocatorias.update(task.convocatoriaId, {
-                informeSubido: true,
-                fechaEntregaInforme: submissionDate
-            }));
-
-            updates.push(db.practicas.update(task.practicaId, {
-                nota: 'Entregado (sin corregir)'
-            }));
+            const { convocatoriaId, practicaId } = task;
+            const updateData = { informeSubido: true, fechaEntregaInforme: new Date().toISOString().split('T')[0] };
             
-            return Promise.all(updates);
+            if (practicaId) {
+                await db.practicas.update(practicaId, { nota: 'Entregado (sin corregir)' });
+            }
+            
+            return db.convocatorias.update(convocatoriaId, updateData);
         },
         onMutate: async (task: InformeTask) => {
-            await queryClient.cancelQueries({ queryKey: ['convocatorias', legajo] });
+            await queryClient.cancelQueries({ queryKey: ['convocatorias', legajo, studentAirtableId] });
             await queryClient.cancelQueries({ queryKey: ['practicas', legajo] });
 
-            const previousConvocatoriasData = queryClient.getQueryData(['convocatorias', legajo]);
+            const previousConvocatoriasData = queryClient.getQueryData(['convocatorias', legajo, studentAirtableId]);
             const previousPracticasData = queryClient.getQueryData(['practicas', legajo]);
-            
-            const submissionDate = new Date().toISOString().split('T')[0];
 
-            // Optimistically update convocatorias cache
-            queryClient.setQueryData(['convocatorias', legajo], (oldData: any) => {
+            queryClient.setQueryData(['convocatorias', legajo, studentAirtableId], (oldData: any) => {
                 if (!oldData) return oldData;
-                const newMyEnrollments = oldData.myEnrollments.map((enrollment: any) => 
-                    enrollment.id === task.convocatoriaId
-                        ? { ...enrollment, [FIELD_INFORME_SUBIDO_CONVOCATORIAS]: true, [FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS]: submissionDate }
-                        : enrollment
+                const newMyEnrollments = oldData.myEnrollments.map((e: Convocatoria) => 
+                    e.id === task.convocatoriaId ? { ...e, [FIELD_INFORME_SUBIDO_CONVOCATORIAS]: true } : e
                 );
                 return { ...oldData, myEnrollments: newMyEnrollments };
             });
 
-            // Optimistically update practicas cache
             if (task.practicaId) {
-                queryClient.setQueryData(['practicas', legajo], (oldData: any) => {
-                    if (!oldData) return oldData;
-                    return oldData.map((practica: any) =>
-                        practica.id === task.practicaId
-                            ? { ...practica, fields: { ...practica.fields, [FIELD_NOTA_PRACTICAS]: 'Entregado (sin corregir)' } }
-                            : practica
-                    );
-                });
+                queryClient.setQueryData(['practicas', legajo], (oldData: any) => 
+                    oldData?.map((p: any) => 
+                        p.id === task.practicaId ? { ...p, [FIELD_NOTA_PRACTICAS]: 'Entregado (sin corregir)' } : p
+                    )
+                );
             }
-
+            
             return { previousConvocatoriasData, previousPracticasData };
         },
-        onSuccess: () => {
-            showModal('Confirmación Exitosa', 'Se ha registrado la entrega de tu informe.');
-        },
-        onError: (err, variables, context) => {
+        onError: (err: Error, task, context) => {
             if (context?.previousConvocatoriasData) {
-                queryClient.setQueryData(['convocatorias', legajo], context.previousConvocatoriasData);
+                queryClient.setQueryData(['convocatorias', legajo, studentAirtableId], context.previousConvocatoriasData);
             }
             if (context?.previousPracticasData) {
                 queryClient.setQueryData(['practicas', legajo], context.previousPracticasData);
             }
-            showModal('Error', 'No se pudo confirmar la entrega. Se han revertido los cambios. Inténtalo de nuevo.');
+            showModal('Error', `No se pudo confirmar la entrega: ${err.message}`);
         },
         onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ['convocatorias', legajo] });
+            queryClient.invalidateQueries({ queryKey: ['convocatorias', legajo, studentAirtableId] });
             queryClient.invalidateQueries({ queryKey: ['practicas', legajo] });
+        }
+    });
+
+    const enrollStudent = useMutation({
+        mutationFn: (selectedLanzamiento: LanzamientoPPS) => {
+            return new Promise<void>((resolve, reject) => {
+                openEnrollmentForm(selectedLanzamiento, async (formData) => {
+                    try {
+                        await enrollmentMutation.mutateAsync({ formData, selectedLanzamiento });
+                        resolve();
+                    } catch (error) {
+                        reject(error);
+                    }
+                });
+            });
         },
     });
 
@@ -156,11 +155,11 @@ export const useConvocatorias = (legajo: string, studentAirtableId: string | nul
         lanzamientos,
         myEnrollments,
         allLanzamientos,
-        institutionAddressMap,
         isConvocatoriasLoading,
         convocatoriasError,
         enrollStudent,
         confirmInforme,
         refetchConvocatorias,
+        institutionAddressMap
     };
 };

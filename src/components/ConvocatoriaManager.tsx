@@ -353,7 +353,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
             });
             setInstitutionsMap(newInstitutionsMap);
 
-            const mappedRecords = lanzamientosRes.records.map(r => ({ ...r.fields, id: r.id }));
+            const mappedRecords = lanzamientosRes.records.map((r: AirtableRecord<LanzamientoPPSFields>) => ({ ...r.fields, id: r.id } as LanzamientoPPS));
             const filteredRecords = mappedRecords.filter(pps => 
                 !String(pps[FIELD_NOMBRE_PPS_LANZAMIENTOS] || '').toLowerCase().includes('uflo')
             );
@@ -451,14 +451,15 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
             if (practicasError) throw new Error('Error al obtener las prácticas antiguas desde Airtable.');
     
             const groupedPracticas = new Map<string, (PracticaFields & { id: string })[]>();
-            for (const practica of recentPracticas.map(p => ({ ...p.fields, id: p.id }))) {
+            // FIX: Explicitly typed the 'practica' variable within the for...of loop to resolve type inference issues where it was being treated as 'unknown'.
+            for (const practica of recentPracticas.map((p) => ({ ...(p.fields as object), id: p.id } as PracticaFields & { id: string }))) {
                 const nameRaw = practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
                 const name = Array.isArray(nameRaw) ? nameRaw[0] : nameRaw;
                 const date = practica[FIELD_FECHA_INICIO_PRACTICAS];
     
                 if (!name || !date) continue;
                 
-                const key = `${normalizeStringForComparison(name as string)}-${date}`;
+                const key = `${normalizeStringForComparison(String(name))}-${date}`;
                 if (!groupedPracticas.has(key)) {
                     groupedPracticas.set(key, []);
                 }

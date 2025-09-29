@@ -21,6 +21,7 @@ import { useStudentSolicitudes } from '../hooks/useStudentSolicitudes';
 import { useConvocatorias } from '../hooks/useConvocatorias';
 import { processInformeTasks } from '../services/dataService';
 import ProfileView from './ProfileView';
+import CalendarView from './CalendarView';
 import PrintableReport from './PrintableReport';
 
 interface StudentDashboardProps {
@@ -52,12 +53,12 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   const isLoading = isStudentLoading || isPracticasLoading || isSolicitudesLoading || isConvocatoriasLoading;
   const error = studentError || practicasError || solicitudesError || convocatoriasError;
 
-  const refetchAll = () => {
+  const refetchAll = useCallback(() => {
     refetchStudent();
     refetchPracticas();
     refetchSolicitudes();
     refetchConvocatorias();
-  };
+  }, [refetchStudent, refetchPracticas, refetchSolicitudes, refetchConvocatorias]);
   
   const selectedOrientacion = (studentDetails?.['Orientación Elegida'] || "") as Orientacion | "";
   const studentNameForPanel = studentDetails?.['Nombre'] || user.nombre;
@@ -66,47 +67,54 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   const informeTasks = useMemo(() => processInformeTasks(myEnrollments, allLanzamientos, practicas), [myEnrollments, allLanzamientos, practicas]);
 
   // --- MUTATION HANDLERS ---
-  const handleOrientacionChange = (orientacion: Orientacion | "") => {
+  const handleOrientacionChange = useCallback((orientacion: Orientacion | "") => {
     updateOrientation.mutate(orientacion, {
       onSuccess: () => {
         setShowSaveConfirmation(true);
         setTimeout(() => setShowSaveConfirmation(false), 2000);
       }
     });
-  };
+  }, [updateOrientation]);
 
-  const handleNotaChange = (practicaId: string, nota: string, convocatoriaId?: string) => {
+  const handleNotaChange = useCallback((practicaId: string, nota: string, convocatoriaId?: string) => {
     updateNota.mutate({ practicaId, nota, convocatoriaId });
-  };
+  }, [updateNota]);
   
+  // --- MEMOIZED TAB CONTENT ---
+  const convocatoriasContent = useMemo(() => <ConvocatoriasList lanzamientos={lanzamientos} myEnrollments={myEnrollments} practicas={practicas} student={studentDetails} onInscribir={enrollStudent.mutate} institutionAddressMap={institutionAddressMap} />, [lanzamientos, myEnrollments, practicas, studentDetails, enrollStudent, institutionAddressMap]);
+  const calendarContent = useMemo(() => <CalendarView myEnrollments={myEnrollments} allLanzamientos={allLanzamientos} />, [myEnrollments, allLanzamientos]);
+  const informesContent = useMemo(() => <InformesList tasks={informeTasks} onConfirmar={confirmInforme.mutate} />, [informeTasks, confirmInforme]);
+  const solicitudesContent = useMemo(() => <SolicitudesList solicitudes={solicitudes} />, [solicitudes]);
+  const practicasContent = useMemo(() => <PracticasTable practicas={practicas} handleNotaChange={handleNotaChange} />, [practicas, handleNotaChange]);
+  const profileContent = useMemo(() => <ProfileView studentDetails={studentDetails} isLoading={isStudentLoading} updateInternalNotes={updateInternalNotes} />, [studentDetails, isStudentLoading, updateInternalNotes]);
+
   const studentDataTabs = useMemo(() => {
-    let tabs = [
-      // FIX: Pass the required `institutionAddressMap` prop to ConvocatoriasList.
-      { id: 'convocatorias' as TabId, label: `Convocatorias`, icon: 'campaign', content: <ConvocatoriasList lanzamientos={lanzamientos} myEnrollments={myEnrollments} practicas={practicas} student={studentDetails} onInscribir={enrollStudent.mutate} institutionAddressMap={institutionAddressMap} />, badge: lanzamientos.length > 0 ? lanzamientos.length : undefined },
-      { id: 'informes' as TabId, label: `Informes`, icon: 'assignment_turned_in', content: <InformesList tasks={informeTasks} onConfirmar={confirmInforme.mutate} />, badge: informeTasks.length > 0 ? informeTasks.length : undefined },
-      { id: 'solicitudes' as TabId, label: `Mis Solicitudes`, icon: 'list_alt', content: <SolicitudesList solicitudes={solicitudes} />, badge: solicitudes.length > 0 ? solicitudes.length : undefined },
-      { id: 'practicas' as TabId, label: `Mis Prácticas`, icon: 'work_history', content: <PracticasTable practicas={practicas} handleNotaChange={handleNotaChange} />, badge: practicas.length > 0 ? practicas.length : undefined }
+    const tabs = [
+      { id: 'convocatorias' as TabId, label: 'Convocatorias', icon: 'campaign', content: convocatoriasContent, badge: lanzamientos.length > 0 ? lanzamientos.length : undefined },
+      { id: 'calendario' as TabId, label: 'Mi Calendario', icon: 'calendar_month', content: calendarContent, badge: undefined },
+      { id: 'informes' as TabId, label: `Informes`, icon: 'assignment_turned_in', content: informesContent, badge: informeTasks.length > 0 ? informeTasks.length : undefined },
+      { id: 'solicitudes' as TabId, label: `Mis Solicitudes`, icon: 'list_alt', content: solicitudesContent, badge: solicitudes.length > 0 ? solicitudes.length : undefined },
+      { id: 'practicas' as TabId, label: `Mis Prácticas`, icon: 'work_history', content: practicasContent, badge: practicas.length > 0 ? practicas.length : undefined }
     ];
 
     if (showExportButton) {
-      // Admin/Jefe view of a student. User wants 'Informes', 'Solicitudes', 'Prácticas'.
       return tabs.filter(tab => tab.id === 'informes' || tab.id === 'solicitudes' || tab.id === 'practicas');
     }
     
-    // Student's own view, add profile tab.
     tabs.push({
         id: 'profile' as TabId,
         label: 'Mi Perfil',
         icon: 'person',
-        // FIX: Pass props to ProfileView to fix type error. The component was refactored to accept props instead of using context directly.
-        content: <ProfileView studentDetails={studentDetails} isLoading={isStudentLoading} updateInternalNotes={updateInternalNotes} />,
+        content: profileContent,
         badge: undefined
     });
     return tabs;
 
-  }, [solicitudes, practicas, lanzamientos, myEnrollments, informeTasks, studentDetails, confirmInforme, handleNotaChange, enrollStudent, showExportButton, isStudentLoading, institutionAddressMap, updateInternalNotes]);
+  }, [
+      lanzamientos.length, informeTasks.length, solicitudes.length, practicas.length, showExportButton,
+      convocatoriasContent, calendarContent, informesContent, solicitudesContent, practicasContent, profileContent
+  ]);
   
-  // Effect to reset active tab if it's no longer in the list of available tabs (e.g., after filtering for admin view).
   useEffect(() => {
     const isCurrentTabValid = studentDataTabs.some(tab => tab.id === currentActiveTab);
     if (!isCurrentTabValid && studentDataTabs.length > 0) {
@@ -117,28 +125,11 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   const hasData = useMemo(() => practicas.length > 0 || solicitudes.length > 0 || lanzamientos.length > 0 || informeTasks.length > 0, [practicas, solicitudes, lanzamientos, informeTasks]);
   const showEmptyState = useMemo(() => !isLoading && !hasData && isSuperUserMode, [isLoading, hasData, isSuperUserMode]);
 
-  // --- RENDER LOGIC ---
   if (isLoading) return <DashboardLoadingSkeleton />;
   // FIX: The onRetry prop for ErrorState is called from an onClick handler, which passes a MouseEvent.
   // The refetchAll function does not expect any arguments, so it is wrapped in an arrow function to prevent passing the event.
   if (error) return <ErrorState error={error.message} onRetry={() => refetchAll()} />;
 
-  const DashboardContent = () => (
-    <div className="space-y-8 animate-fade-in-up">
-      <WelcomeBanner studentName={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />
-      <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
-      {hasData && (
-        <Card>
-          <Tabs
-            tabs={studentDataTabs}
-            activeTabId={currentActiveTab}
-            onTabChange={(id) => setCurrentActiveTab(id as TabId)}
-          />
-        </Card>
-      )}
-    </div>
-  );
-  
   if (showEmptyState) {
     return (
       <>
@@ -171,22 +162,80 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
               practicas={practicas} 
           />
       </div>
-      <div className="no-print">
-        <DashboardContent />
-        {showExportButton && (
-          <>
-            <WhatsAppExportButton practicas={practicas} criterios={criterios} selectedOrientacion={selectedOrientacion} studentNameForPanel={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />
-             <button
-              onClick={() => window.print()}
-              className="fixed bottom-6 right-24 z-50 w-14 h-14 bg-slate-700 text-white rounded-full shadow-lg flex items-center justify-center
-                         transition-all duration-300 ease-in-out transform hover:scale-110 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-slate-400"
-              aria-label="Imprimir reporte"
-            >
-              <span className="material-icons !text-2xl">print</span>
-            </button>
-          </>
+
+      {/* --- VISTA DE ESCRITORIO (SIN CAMBIOS) --- */}
+      <div className="hidden md:block no-print space-y-8 animate-fade-in-up">
+        <WelcomeBanner studentName={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />
+        <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
+        
+        {hasData && (
+          <Card>
+            <Tabs
+              tabs={studentDataTabs}
+              activeTabId={currentActiveTab}
+              onTabChange={(id) => setCurrentActiveTab(id as TabId)}
+            />
+          </Card>
         )}
       </div>
+
+      {/* --- NUEVA VISTA MÓVIL (REESTRUCTURADA) --- */}
+      <div className="md:hidden no-print space-y-8 animate-fade-in-up">
+          {currentActiveTab === 'convocatorias' && (
+              <>
+                  <WelcomeBanner studentName={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />
+                  <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
+                  <Card icon="campaign" title="Convocatorias Abiertas">
+                    {convocatoriasContent}
+                  </Card>
+              </>
+          )}
+
+          {currentActiveTab === 'calendario' && (
+              <>
+                  {calendarContent}
+              </>
+          )}
+
+          {currentActiveTab === 'informes' && (
+              <>
+                  {informesContent}
+              </>
+          )}
+
+          {currentActiveTab === 'solicitudes' && (
+              <>
+                  {solicitudesContent}
+              </>
+          )}
+          
+          {currentActiveTab === 'practicas' && (
+              <>
+                  <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
+                  {practicasContent}
+              </>
+          )}
+
+          {currentActiveTab === 'profile' && (
+                <Card icon="person" title="Mi Perfil">
+                  {profileContent}
+              </Card>
+          )}
+      </div>
+      
+      {showExportButton && (
+        <>
+          <WhatsAppExportButton practicas={practicas} criterios={criterios} selectedOrientacion={selectedOrientacion} studentNameForPanel={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />
+            <button
+            onClick={() => window.print()}
+            className="fixed bottom-6 right-24 z-50 w-14 h-14 bg-slate-700 text-white rounded-full shadow-lg flex items-center justify-center
+                        transition-all duration-300 ease-in-out transform hover:scale-110 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-slate-400"
+            aria-label="Imprimir reporte"
+          >
+            <span className="material-icons !text-2xl">print</span>
+          </button>
+        </>
+      )}
     </>
   );
 };
