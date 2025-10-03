@@ -17,6 +17,7 @@ import PenalizationManager from '../components/PenalizationManager';
 import { useModal } from '../contexts/ModalContext';
 import type { AirtableRecord, EstudianteFields } from '../types';
 import AcreditacionJornada from '../components/AcreditacionJornada';
+import ControlCuposJornada from '../components/ControlCuposJornada';
 
 interface StudentTabInfo {
     id: string; // legajo
@@ -76,6 +77,7 @@ const AdminView: React.FC = () => {
             { id: 'repitentes', label: 'Repitentes', icon: 'history_edu' },
             { id: 'penalizaciones', label: 'Penalizaciones', icon: 'gavel' },
             { id: 'acreditar_jornada', label: 'Acreditar Jornada', icon: 'military_tech' },
+            { id: 'control_cupos_jornada', label: 'Control de Cupos', icon: 'groups' },
             { id: 'search', label: 'Buscar Alumno', icon: 'person_search' },
             { id: 'insurance', label: 'Seguros', icon: 'shield' },
             { id: 'convenios', label: 'Convenios Nuevos', icon: 'handshake' },
@@ -128,6 +130,7 @@ const AdminView: React.FC = () => {
                             {activeHerramientasTabId === 'repitentes' && <RepitentesPanel />}
                             {activeHerramientasTabId === 'penalizaciones' && <PenalizationManager />}
                             {activeHerramientasTabId === 'acreditar_jornada' && <AcreditacionJornada />}
+                            {activeHerramientasTabId === 'control_cupos_jornada' && <ControlCuposJornada />}
                             {activeHerramientasTabId === 'search' && <div className="p-4"><AdminSearch onStudentSelect={openStudentPanel} /></div>}
                             {activeHerramientasTabId === 'insurance' && <SeguroGenerator showModal={showModal} />}
                             {activeHerramientasTabId === 'convenios' && <NuevosConvenios />}

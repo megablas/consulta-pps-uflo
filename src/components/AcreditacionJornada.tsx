@@ -25,6 +25,7 @@ import {
     FIELD_FECHA_INICIO_PRACTICAS,
     FIELD_FECHA_FIN_PRACTICAS,
     FIELD_INSTITUCION_LINK_PRACTICAS,
+    FIELD_ASISTENCIA_CONFIRMADA_JORNADA,
 } from '../constants';
 import { formatDate } from '../utils/formatters';
 import type { PracticaFields, EstudianteFields, AsistenciaJornadaFields, AsistenciaJornada } from '../types';
@@ -70,6 +71,12 @@ const fetchPendingDataForAccreditation = async (): Promise<{ students: StudentTo
 
     const asistenciasRes = await db.asistenciasJornada.getAll({
         filterByFormula: `NOT({Procesado})`,
+        fields: [
+            FIELD_ASISTENCIA_ESTUDIANTE,
+            FIELD_ASISTENCIA_MODULO_ID,
+            FIELD_ASISTENCIA_MODULO_NOMBRE,
+            FIELD_ASISTENCIA_FECHA,
+        ],
     });
     const asistencias = asistenciasRes.map(a => ({...a.fields, id: a.id}));
 
@@ -104,12 +111,14 @@ const fetchPendingDataForAccreditation = async (): Promise<{ students: StudentTo
         const studentInfo = studentsMap.get(studentId);
         if (!studentInfo) continue;
 
+        const confirmedAttendances = studentAsistencias.filter(a => a[FIELD_ASISTENCIA_CONFIRMADA_JORNADA] === true);
+
         const shiftAttendance: { [key: string]: { required: number, attendedUniqueIds: Set<string> } } = {};
         CONFERENCE_SHIFTS_BY_DAY.forEach(d => d.shifts.forEach(s => {
             shiftAttendance[s.shift_id] = { required: s.activities.length, attendedUniqueIds: new Set() };
         }));
 
-        studentAsistencias.forEach(asistencia => {
+        confirmedAttendances.forEach(asistencia => {
             const moduleId = asistencia[FIELD_ASISTENCIA_MODULO_ID] as string;
             if (!moduleId) return;
 
@@ -128,21 +137,21 @@ const fetchPendingDataForAccreditation = async (): Promise<{ students: StudentTo
             }
         }
 
-        const isEligible = completedShiftCount > 0;
         const totalHours = completedShiftCount * 5;
+        const isEligible = completedShiftCount > 0;
         const hasFullAttendance = completedShiftCount === totalConferenceShifts;
         
         finalStudentList.push({
             studentId,
             studentInfo,
-            totalAttendances: studentAsistencias.length,
+            totalAttendances: confirmedAttendances.length,
             totalHours,
             asistenciaIds: studentAsistencias.map(a => a.id),
             isEligible,
             hasFullAttendance,
             attendedActivities: studentAsistencias.map(a => ({
                 id: a.id,
-                name: a[FIELD_ASISTENCIA_MODULO_NOMBRE] as string || 'Actividad',
+                name: (a[FIELD_ASISTENCIA_MODULO_NOMBRE] as string || 'Actividad') + (a[FIELD_ASISTENCIA_CONFIRMADA_JORNADA] ? ' ✓' : ''),
                 date: a[FIELD_ASISTENCIA_FECHA] as string | undefined,
             })),
         });
@@ -229,7 +238,7 @@ const StudentAccreditationCard: React.FC<{
 
             {isExpanded && (
                 <div className="mt-4 pt-4 border-t border-slate-200/80 dark:border-slate-700/80 animate-fade-in-up" style={{ animationDuration: '300ms' }}>
-                    <h4 className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-2">Actividades Asistidas:</h4>
+                    <h4 className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-2">Actividades Registradas (✓ = Confirmada):</h4>
                      <ul className="list-disc list-inside pl-2 text-sm text-slate-600 dark:text-slate-400 space-y-1">
                         {student.attendedActivities.map(asistencia => (
                             <li key={asistencia.id}>{asistencia.name}</li>
