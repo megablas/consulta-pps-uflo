@@ -75,8 +75,8 @@ const TimelineView: React.FC = () => {
             const date = parseToUTCDate(launch[FIELD_FECHA_INICIO_LANZAMIENTOS]);
             return date && date.getUTCFullYear() === targetYear;
         });
-
-        // FIX: Explicitly cast cupos to a Number to prevent type errors in the reduce function.
+        
+        // FIX: Explicitly cast the 'cupos' value to a `Number` before adding it to the sum to prevent TypeScript from throwing an arithmetic operation error, which can occur with Airtable lookups that may not be strictly typed as numbers at compile time.
         const totalCupos = launchesForYear.reduce((sum, launch) => sum + Number(launch[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0), 0);
         
         const monthlyData: { [key: number]: {

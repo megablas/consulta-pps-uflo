@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useExecutiveReportData } from '../hooks/useExecutiveReportData';
+import useExecutiveReportData from '../hooks/useExecutiveReportData';
 import PrintableExecutiveReport from './PrintableExecutiveReport';
 import Loader from './Loader';
 import EmptyState from './EmptyState';

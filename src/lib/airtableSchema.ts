@@ -130,3 +130,57 @@ export const schema = {
         _tableName: AIRTABLE_TABLE_NAME_FINALIZACION,
     }
 } as const;
+
+// FIX: Added missing exports for Supabase synchronization.
+function toSnakeCase(str: string) {
+    if (!str) return '';
+    return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`).replace(/^_/, '');
+}
+
+export const airtableToSupabaseMapping: Record<string, { supabaseTable: string; fieldMapping: Record<string, string> }> = {};
+
+const schemaWithAny = schema as any;
+
+for (const schemaKey in schemaWithAny) {
+    if (Object.prototype.hasOwnProperty.call(schemaWithAny, schemaKey)) {
+        const tableSchema = schemaWithAny[schemaKey];
+        const airtableTableName = tableSchema._tableName;
+        if (!airtableTableName) continue;
+
+        const supabaseTable = airtableTableName.toLowerCase().replace(/[\s-]+/g, '_');
+        const fieldMapping: Record<string, string> = {};
+        
+        for (const devFieldKey in tableSchema) {
+            if (devFieldKey !== '_tableName' && Object.prototype.hasOwnProperty.call(tableSchema, devFieldKey)) {
+                const airtableFieldName = tableSchema[devFieldKey];
+                const supabaseFieldName = toSnakeCase(devFieldKey);
+                fieldMapping[airtableFieldName] = supabaseFieldName;
+            }
+        }
+
+        airtableToSupabaseMapping[airtableTableName] = { supabaseTable, fieldMapping };
+    }
+}
+
+export const mapAirtableToSupabase = (airtableTableName: string, airtableFields: any, airtableRecordId: string) => {
+    const mapping = airtableToSupabaseMapping[airtableTableName];
+    if (!mapping) {
+        throw new Error(`No Supabase mapping found for Airtable table: ${airtableTableName}`);
+    }
+
+    const supabaseData: Record<string, any> = {
+        airtable_record_id: airtableRecordId,
+    };
+
+    for (const airtableField in mapping.fieldMapping) {
+        if (Object.prototype.hasOwnProperty.call(airtableFields, airtableField)) {
+            const supabaseField = mapping.fieldMapping[airtableField];
+            supabaseData[supabaseField] = airtableFields[airtableField];
+        }
+    }
+
+    return {
+        supabaseTable: mapping.supabaseTable,
+        supabaseData,
+    };
+};
