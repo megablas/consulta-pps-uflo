@@ -72,4 +72,14 @@ export const NuevosConvenios: React.FC = () => {
         queryFn: fetchConveniosData,
     });
     
-    const [selection, setSelection] = useState<Map<string, boolean>>(new Map
+    const [selection, setSelection] = useState<Map<string, boolean>>(new Map());
+
+    if (isLoading) return <Loader />;
+    if (error) return <EmptyState icon="error" title="Error" message={(error as Error).message} />;
+
+    return (
+        <Card title="Convenios Nuevos" icon="handshake">
+            <EmptyState icon="construction" title="En Construcción" message="Esta sección para gestionar convenios nuevos está en desarrollo."/>
+        </Card>
+    );
+};
