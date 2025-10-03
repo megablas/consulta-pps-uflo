@@ -8,7 +8,6 @@ const NOTA_OPTIONS = ['Sin calificar', 'Entregado (sin corregir)', 'No Entregado
 
 interface InformeCorreccionCardProps {
   ppsGroup: InformeCorreccionPPS;
-  // FIX: Changed prop signature to accept the full student object to resolve type mismatch with parent.
   onNotaChange: (student: InformeCorreccionStudent, newNota: string) => Promise<void>;
   updatingNotaId: string | null;
   // Batch update props
@@ -96,8 +95,8 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
   }, [students]);
 
 
-  // FIX: Updated handler to pass the full student object to the onNotaChange prop.
   const handleNotaChange = async (student: InformeCorreccionStudent, newNota: string) => {
+    // FIX: Pass the full student object to the onNotaChange prop to match the expected signature from the parent component.
     await onNotaChange(student, newNota);
     setJustUpdatedPracticaId(student.practicaId || null);
     setTimeout(() => setJustUpdatedPracticaId(null), 1500); 
@@ -163,7 +162,7 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
                   <select
                       value={batchNota}
                       onChange={(e) => setBatchNota(e.target.value)}
-                      className="text-sm rounded-lg border border-slate-300/80 dark:border-slate-600 p-2 bg-white dark:bg-slate-700 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus-ring-blue-500/20"
+                      className="text-sm rounded-lg border border-slate-300/80 dark:border-slate-600 p-2 bg-white dark:bg-slate-700 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                       aria-label="Seleccionar nota para el lote"
                   >
                       {NOTA_OPTIONS.filter(o => o !== 'Sin calificar' && o !== 'No Entregado' && o !== 'Entregado (sin corregir)').map(option => (
@@ -228,7 +227,6 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
                     </td>
                     <td className="p-3">
                       <div className="flex items-center gap-2">
-                        {/* FIX: Updated NotaSelector call to pass the full student object. */}
                         <NotaSelector
                           value={student.nota || 'Sin calificar'}
                           onChange={(e) => handleNotaChange(student, e.target.value)}

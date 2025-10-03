@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import type { Practica } from '../types';
 import {
-  // FIX: Corrected typo in constant name
   FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS,
   FIELD_HORAS_PRACTICAS,
   FIELD_FECHA_INICIO_PRACTICAS,
@@ -17,7 +16,6 @@ import {
   normalizeStringForComparison
 } from '../utils/formatters';
 import EmptyState from './EmptyState';
-// FIX: Imported the 'Card' component to resolve 'Cannot find name' errors.
 import Card from './Card';
 
 const NOTA_OPTIONS = ['Sin calificar', 'Entregado (sin corregir)', 'No Entregado', 'Desaprobado', '4', '5', '6', '7', '8', '9', '10'];
@@ -78,7 +76,6 @@ const NotaEditor: React.FC<{
   justUpdatedPracticaId: string | null;
 }> = ({ practica, handleNotaChange, savingNotaId, justUpdatedPracticaId }) => {
     const nota = practica[FIELD_NOTA_PRACTICAS] || 'Sin calificar';
-    // FIX: Corrected typo in constant name
     const institucionRaw = practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
     const institucion = Array.isArray(institucionRaw) ? institucionRaw.join(', ') : institucionRaw;
     const isEditable = nota === 'Sin calificar' || nota === 'Entregado (sin corregir)';
@@ -140,7 +137,6 @@ const PracticasTable: React.FC<PracticasTableProps> = ({ practicas, handleNotaCh
         };
         switch (sortConfig.key) {
           case 'institucion':
-            // FIX: Corrected typo in constant name
             aValue = normalizeStringForComparison(Array.isArray(a[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]) ? a[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]?.[0] : a[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]);
             bValue = normalizeStringForComparison(Array.isArray(b[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]) ? b[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]?.[0] : b[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]);
             break;
@@ -207,7 +203,6 @@ const PracticasTable: React.FC<PracticasTableProps> = ({ practicas, handleNotaCh
           </thead>
           <tbody>
             {sortedPracticas.map((practica) => {
-              // FIX: Corrected typo in constant name
               const institucionRaw = practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
               const institucion = Array.isArray(institucionRaw) ? institucionRaw.join(', ') : institucionRaw;
               const statusRaw = practica[FIELD_ESTADO_PRACTICA];

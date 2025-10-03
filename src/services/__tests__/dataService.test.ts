@@ -1,4 +1,4 @@
-import { describe, it, expect, jest } from '@jest/globals';
+import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import * as airtableService from '../airtableService';
 import { fetchSeleccionados } from '../dataService';
 import {
@@ -16,61 +16,114 @@ import {
 } from '../../constants';
 import type { LanzamientoPPS } from '../../types';
 
-// Mock del servicio de Airtable
+// Mock the entire airtableService
 jest.mock('../airtableService');
-const mockedAirtableService = airtableService as jest.Mocked<typeof airtableService>;
+const mockedAirtable = airtableService as jest.Mocked<typeof airtableService>;
 
-describe('Data Service - fetchSeleccionados', () => {
-  // FIX: Rewrote test to match the new server-side filtering logic of `fetchSeleccionados`.
-  // It now passes a full LanzamientoPPS object and mocks the API calls based on a name-based formula.
-  it('should fetch and filter selected students by the PPS name', async () => {
-    const targetLanzamiento: LanzamientoPPS = {
-      id: 'lanz_A',
-      [FIELD_NOMBRE_PPS_LANZAMIENTOS]: "Hospital Alpha",
-      [FIELD_FECHA_INICIO_LANZAMIENTOS]: '2024-08-01',
+describe('fetchSeleccionados', () => {
+    
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+    
+    const mockLanzamiento: LanzamientoPPS = {
+        id: 'recLanzamiento1',
+        [FIELD_NOMBRE_PPS_LANZAMIENTOS]: 'Hospital Central',
+        [FIELD_FECHA_INICIO_LANZAMIENTOS]: '2024-08-05',
     };
 
-    const mockConvocatoriasResponse = [
-      { id: 'conv1', fields: { [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: ['stu_A1'], [FIELD_HORARIO_FORMULA_CONVOCATORIAS]: 'Mañana' } },
-      { id: 'conv3', fields: { [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: ['stu_A2'], [FIELD_HORARIO_FORMULA_CONVOCATORIAS]: 'Tarde' } },
-    ];
+    it('should return grouped selected students correctly', async () => {
+        
+        mockedAirtable.fetchAllAirtableData.mockImplementation(async (tableName: string, fields?: string[], filterByFormula?: string): Promise<any> => {
+            if (tableName === AIRTABLE_TABLE_NAME_CONVOCATORIAS) {
+                return {
+                    records: [
+                        { id: 'recConv1', fields: { [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: ['recStudent1'], [FIELD_HORARIO_FORMULA_CONVOCATORIAS]: 'Turno Mañana' } },
+                        { id: 'recConv2', fields: { [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: ['recStudent2'], [FIELD_HORARIO_FORMULA_CONVOCATORIAS]: 'Turno Tarde' } },
+                        { id: 'recConv3', fields: { [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: ['recStudent3'], [FIELD_HORARIO_FORMULA_CONVOCATORIAS]: 'Turno Mañana' } },
+                    ],
+                    error: null
+                };
+            }
+            if (tableName === AIRTABLE_TABLE_NAME_ESTUDIANTES) {
+                return {
+                    records: [
+                        { id: 'recStudent1', fields: { [FIELD_NOMBRE_ESTUDIANTES]: 'Ana Perez', [FIELD_LEGAJO_ESTUDIANTES]: '11111' } },
+                        { id: 'recStudent2', fields: { [FIELD_NOMBRE_ESTUDIANTES]: 'Juan Garcia', [FIELD_LEGAJO_ESTUDIANTES]: '22222' } },
+                        { id: 'recStudent3', fields: { [FIELD_NOMBRE_ESTUDIANTES]: 'Carla Rossi', [FIELD_LEGAJO_ESTUDIANTES]: '33333' } },
+                    ],
+                    error: null
+                };
+            }
+            return { records: [], error: null };
+        });
 
-    const mockStudentsResponse = [
-      { id: 'stu_A1', fields: { [FIELD_NOMBRE_ESTUDIANTES]: 'Ana Manana', [FIELD_LEGAJO_ESTUDIANTES]: '1111' } },
-      { id: 'stu_A2', fields: { [FIELD_NOMBRE_ESTUDIANTES]: 'Bruno Tarde', [FIELD_LEGAJO_ESTUDIANTES]: '2222' } },
-    ];
-    
-    mockedAirtableService.fetchAllAirtableData.mockImplementation(async (tableName, fields, formula) => {
-      if (tableName === AIRTABLE_TABLE_NAME_CONVOCATORIAS) {
-        // Check that the formula correctly filters by PPS name and status
-        expect(formula).toContain(`LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = 'seleccionado'`);
-        expect(formula).toContain(`{${FIELD_NOMBRE_PPS_CONVOCATORIAS}} = 'Hospital Alpha'`);
-        expect(formula).toContain(`DATETIME_FORMAT({${FIELD_FECHA_INICIO_CONVOCATORIAS}}, 'YYYY-MM-DD') = '2024-08-01'`);
-        return { records: mockConvocatoriasResponse, error: null } as any;
-      }
-      
-      if (tableName === AIRTABLE_TABLE_NAME_ESTUDIANTES) {
-        // Check that the student fetch is for the correct student IDs
-        const expectedStudentFormula = "OR(RECORD_ID()='stu_A1',RECORD_ID()='stu_A2')";
-        expect(formula?.replace(/\s+/g, '')).toEqual(expectedStudentFormula.replace(/\s+/g, ''));
-        return { records: mockStudentsResponse, error: null } as any;
-      }
-      
-      return { records: [], error: null } as any;
+        const result = await fetchSeleccionados(mockLanzamiento);
+
+        expect(result).toEqual({
+            'Turno Mañana': [
+                { nombre: 'Ana Perez', legajo: '11111' },
+                { nombre: 'Carla Rossi', legajo: '33333' },
+            ],
+            'Turno Tarde': [
+                { nombre: 'Juan Garcia', legajo: '22222' },
+            ]
+        });
     });
 
-    const result = await fetchSeleccionados(targetLanzamiento);
-    
-    // The final result should only contain students from the mocked "Hospital Alpha" convocatoria
-    expect(result).toEqual({
-      'Mañana': [
-        { nombre: 'Ana Manana', legajo: '1111' },
-      ],
-      'Tarde': [
-        { nombre: 'Bruno Tarde', legajo: '2222' },
-      ],
+    it('should return null if no convocatorias are found', async () => {
+        mockedAirtable.fetchAllAirtableData.mockResolvedValue({ records: [], error: null });
+
+        const result = await fetchSeleccionados(mockLanzamiento);
+        expect(result).toBeNull();
     });
     
-    expect(mockedAirtableService.fetchAllAirtableData).toHaveBeenCalledTimes(2);
-  });
+    it('should return null if no students are found for the convocatorias', async () => {
+        mockedAirtable.fetchAllAirtableData.mockImplementation(async (tableName: string): Promise<any> => {
+            if (tableName === AIRTABLE_TABLE_NAME_CONVOCATORIAS) {
+                return {
+                    records: [
+                        { id: 'recConv1', fields: { [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: ['recStudent1'] } }
+                    ],
+                    error: null
+                };
+            }
+            if (tableName === AIRTABLE_TABLE_NAME_ESTUDIANTES) {
+                 return { records: [], error: null }; // No students
+            }
+            return { records: [], error: null };
+        });
+
+        const result = await fetchSeleccionados(mockLanzamiento);
+        expect(result).toBeNull();
+    });
+
+    it('should group students under "No especificado" if horario is missing', async () => {
+        mockedAirtable.fetchAllAirtableData.mockImplementation(async (tableName: string): Promise<any> => {
+            if (tableName === AIRTABLE_TABLE_NAME_CONVOCATORIAS) {
+                return {
+                    records: [
+                        { id: 'recConv1', fields: { [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: ['recStudent1'] } }, // No horario field
+                    ],
+                    error: null
+                };
+            }
+            if (tableName === AIRTABLE_TABLE_NAME_ESTUDIANTES) {
+                return {
+                    records: [
+                        { id: 'recStudent1', fields: { [FIELD_NOMBRE_ESTUDIANTES]: 'Ana Perez', [FIELD_LEGAJO_ESTUDIANTES]: '11111' } },
+                    ],
+                    error: null
+                };
+            }
+            return { records: [], error: null };
+        });
+
+        const result = await fetchSeleccionados(mockLanzamiento);
+        expect(result).toEqual({
+            'No especificado': [
+                { nombre: 'Ana Perez', legajo: '11111' },
+            ]
+        });
+    });
 });

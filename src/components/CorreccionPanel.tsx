@@ -273,7 +273,6 @@ const CorreccionPanel: React.FC = () => {
         await db.practicas.update(currentPracticaId, { nota: valueToSend });
 
         setToastInfo({ message: 'Nota guardada exitosamente.', type: 'success' });
-        // FIX: Avoid direct state mutation by creating new objects for the updated student and group.
         setAllPpsGroups(prev => {
             const newGroups = new Map<string, InformeCorreccionPPS>(prev);
             const ppsGroup = newGroups.get(student.lanzamientoId);
@@ -302,8 +301,10 @@ const CorreccionPanel: React.FC = () => {
   const handleSelectionChange = useCallback((lanzamientoId: string, practicaId: string) => {
       setSelectedStudents(prev => {
           const newSelection = new Map(prev);
-          // FIX: Added `|| []` to ensure `new Set` receives an iterable, preventing errors if the key doesn't exist.
-          const groupSelection = new Set(newSelection.get(lanzamientoId) || []);
+          // FIX: Explicitly handle the case where the Set for the key doesn't exist to avoid passing `undefined` to the `Set` constructor.
+          // FIX: Use `instanceof Set` as a type guard to ensure `currentSet` is iterable, resolving the "Argument of type 'unknown' is not assignable..." error.
+          const currentSet = newSelection.get(lanzamientoId);
+          const groupSelection = currentSet instanceof Set ? new Set(currentSet) : new Set<string>();
           if (groupSelection.has(practicaId)) {
               groupSelection.delete(practicaId);
           } else {
@@ -317,8 +318,10 @@ const CorreccionPanel: React.FC = () => {
   const handleSelectAll = useCallback((lanzamientoId: string, practicaIds: string[], select: boolean) => {
       setSelectedStudents(prev => {
           const newSelection = new Map(prev);
-          // FIX: Added `|| []` to ensure `new Set` receives an iterable, preventing errors if the key doesn't exist.
-          const groupSelection = new Set(newSelection.get(lanzamientoId) || []);
+          // FIX: Explicitly handle the case where the Set for the key doesn't exist to avoid passing `undefined` to the `Set` constructor.
+          // FIX: Use `instanceof Set` as a type guard to ensure `currentSet` is iterable, resolving the "Argument of type 'unknown' is not assignable..." error.
+          const currentSet = newSelection.get(lanzamientoId);
+          const groupSelection = currentSet instanceof Set ? new Set(currentSet) : new Set<string>();
           if (select) {
               practicaIds.forEach(id => groupSelection.add(id));
           } else {
@@ -335,7 +338,6 @@ const CorreccionPanel: React.FC = () => {
 
       setBatchUpdatingLanzamientoId(lanzamientoId);
       
-      // FIX: Added explicit typing for `id` in the map function to resolve the `id: unknown` error.
       const recordsToUpdate = selectedPracticaIds.map((id: string) => ({
           id,
           fields: { nota: newNota }
@@ -348,7 +350,6 @@ const CorreccionPanel: React.FC = () => {
               const newGroups = new Map<string, InformeCorreccionPPS>(prev);
               const ppsGroup = newGroups.get(lanzamientoId);
               if (ppsGroup) {
-                  // FIX: Avoid direct mutation by creating a new students array.
                   const newStudents = ppsGroup.students.map(student => {
                       if (student.practicaId && selectedPracticaIds.includes(student.practicaId)) {
                           return { ...student, nota: newNota };
@@ -376,8 +377,7 @@ const CorreccionPanel: React.FC = () => {
       ? new Set((authenticatedUser?.orientaciones || []).map(normalizeStringForComparison))
       : new Set(managerConfig[activeManager].orientations.map(normalizeStringForComparison));
 
-    // FIX: Explicitly type `group` to ensure correct type inference within the filter.
-    const filteredGroups: InformeCorreccionPPS[] = Array.from(allPpsGroups.values()).filter((group: InformeCorreccionPPS) => {
+    const filteredGroups: InformeCorreccionPPS[] = [...allPpsGroups.values()].filter((group: InformeCorreccionPPS) => {
         const groupOrientations = (group.orientacion || '').split(',').map(o => normalizeStringForComparison(o.trim()));
         return groupOrientations.some(o => managerOrientations.has(o));
     });
@@ -417,14 +417,12 @@ const CorreccionPanel: React.FC = () => {
     let ppsFilteredGroups = filteredGroups;
     if (searchTerm) {
         const lowercasedFilter = searchTerm.toLowerCase();
-        // FIX: Explicitly type `group` to ensure correct type inference within the map.
         ppsFilteredGroups = ppsFilteredGroups.map((group: InformeCorreccionPPS) => {
             const matchingStudents = group.students.filter(student => student.studentName.toLowerCase().includes(lowercasedFilter));
             if (group.ppsName.toLowerCase().includes(lowercasedFilter)) {
                 return group;
             }
             if (matchingStudents.length > 0) {
-                // FIX: Correctly create a new group object with filtered students instead of mutating.
                 return { ...group, students: matchingStudents };
             }
             return null;
@@ -440,7 +438,6 @@ const CorreccionPanel: React.FC = () => {
     const oneMonthAgo = new Date(today);
     oneMonthAgo.setUTCDate(oneMonthAgo.getUTCDate() - 30);
 
-    // FIX: Added explicit types for sort parameters to ensure correct property access.
     const getPpsCategory = (pps: InformeCorreccionPPS): number => {
       const endDate = parseToUTCDate(pps.fechaFinalizacion);
       if (!endDate) return 3; // Lowest priority if no date
@@ -449,7 +446,6 @@ const CorreccionPanel: React.FC = () => {
       return 3; // Older: Finished more than a month ago
     };
 
-    // FIX: Added explicit types for sort parameters to ensure correct property access.
     pendientes.sort((a: InformeCorreccionPPS, b: InformeCorreccionPPS) => {
       const categoryA = getPpsCategory(a);
       const categoryB = getPpsCategory(b);

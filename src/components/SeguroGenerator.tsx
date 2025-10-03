@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-// FIX: The original code used `fetchAllAirtableData` which does not accept a `maxRecords` parameter.
-// Changed to `fetchAirtableData` to correctly limit the result to 1 record.
-import { fetchAllAirtableData, fetchAirtableData, updateAirtableRecords } from '../services/airtableService';
+import { fetchAllAirtableData, fetchAirtableData } from '../services/airtableService';
 import { formatDate, normalizeStringForComparison } from '../utils/formatters';
 import type { Convocatoria, ConvocatoriaFields, EstudianteFields, InstitucionFields, LanzamientoPPSFields } from '../types';
 import {
@@ -14,20 +12,12 @@ import {
     FIELD_DNI_ESTUDIANTES, FIELD_HORARIO_FORMULA_CONVOCATORIAS, FIELD_CORREO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES, FIELD_NOMBRE_SEPARADO_ESTUDIANTES, FIELD_APELLIDO_SEPARADO_ESTUDIANTES,
     FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
     AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
-    FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS,
-    FIELD_NOMBRE_PPS_LANZAMIENTOS,
-    FIELD_DIRECCION_LANZAMIENTOS,
-    FIELD_FECHA_INICIO_LANZAMIENTOS,
-    FIELD_FECHA_FIN_LANZAMIENTOS,
-    FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS,
-    FIELD_ORIENTACION_LANZAMIENTOS,
-    FIELD_HORAS_ACREDITADAS_LANZAMIENTOS,
     FIELD_PLANTILLA_SEGURO_LANZAMIENTOS,
     TEMPLATE_PPS_NAME,
-    EMAIL_SEGUROS,
     AIRTABLE_TABLE_NAME_INSTITUCIONES,
     FIELD_NOMBRE_INSTITUCIONES,
     FIELD_DIRECCION_INSTITUCIONES,
+    FIELD_NOMBRE_PPS_LANZAMIENTOS,
 } from '../constants';
 import Loader from './Loader';
 import EmptyState from './EmptyState';
@@ -51,16 +41,14 @@ interface StudentForReview {
     direccion: string;
     periodo: string;
     horario: string;
-    lugar: string; // for excel
-    duracion: string; // for excel
-    tutor: string; // for excel
+    lugar: string; 
+    duracion: string; 
+    tutor: string; 
     orientacion: string;
 };
 
-// Function moved here to resolve a build error
 function formatPhoneNumber(phone?: string): string {
   if (!phone) return '';
-  // Removes '+54', an optional space, an optional '9', and another optional space from the start.
   return phone.replace(/^\+54\s?9?\s?/, '').trim();
 }
 
@@ -84,46 +72,29 @@ const simpleNameSplit = (fullName: string): { nombre: string; apellido: string }
     return { nombre, apellido };
 };
 
-
-const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
+export const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
     const [step, setStep] = useState<'selection' | 'review'>('selection');
-    
     const [convocatorias, setConvocatorias] = useState<Convocatoria[]>([]);
     const [allIndividualConvocatorias, setAllIndividualConvocatorias] = useState<Convocatoria[]>([]);
     const [selectedConvocatorias, setSelectedConvocatorias] = useState<Set<string>>(new Set());
-    
     const [studentsForReview, setStudentsForReview] = useState<StudentForReview[]>([]);
     const [blankTemplateUrl, setBlankTemplateUrl] = useState<string | null>(null);
-    
     const [isLoading, setIsLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('');
     const [toastInfo, setToastInfo] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
     useEffect(() => {
         const fetchTemplate = async () => {
-            // FIX: Using fetchAirtableData to respect maxRecords parameter
             const { records, error } = await fetchAirtableData<LanzamientoPPSFields>(
                 AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
                 [FIELD_PLANTILLA_SEGURO_LANZAMIENTOS],
                 `{${FIELD_NOMBRE_PPS_LANZAMIENTOS}} = '${TEMPLATE_PPS_NAME}'`,
                 1
             );
-
-            if (error || records.length === 0) {
-                console.error("Could not fetch the master insurance template from Airtable.");
-                setBlankTemplateUrl(null);
-                return;
-            }
-
+            if (error || records.length === 0) return;
             const attachment = records[0].fields[FIELD_PLANTILLA_SEGURO_LANZAMIENTOS] as { url: string }[] | undefined;
-            if (attachment && attachment[0]?.url) {
-                setBlankTemplateUrl(attachment[0].url);
-            } else {
-                console.warn(`Template PPS record found ('${TEMPLATE_PPS_NAME}'), but it has no attachment in the '${FIELD_PLANTILLA_SEGURO_LANZAMIENTOS}' field.`);
-                setBlankTemplateUrl(null);
-            }
+            if (attachment && attachment[0]?.url) setBlankTemplateUrl(attachment[0].url);
         };
-
         fetchTemplate();
         handleFetchConvocatorias();
     }, []);
@@ -171,450 +142,250 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
     };
 
     const handleProceedToReview = async () => {
-        setIsLoading(true);
-        setLoadingMessage('Procesando estudiantes...');
-
-        const selectedGroups = convocatorias.filter(c => selectedConvocatorias.has(c.id));
-        const studentIds = Array.from(new Set(selectedGroups.flatMap(c => c[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] || [])));
-
-        if (studentIds.length === 0) {
-            showModal('Sin Estudiantes', 'No hay estudiantes en las convocatorias seleccionadas.');
-            setIsLoading(false);
-            setLoadingMessage('');
+        if (selectedConvocatorias.size === 0) {
+            showModal('Selección Vacía', 'Por favor, selecciona al menos una convocatoria para continuar.');
             return;
         }
+        setIsLoading(true);
+        setLoadingMessage('Recopilando datos de los alumnos...');
 
         try {
-            // Map student IDs to their individual convocatoria records from the selected groups
-            const studentIdToIndividualConvMap = new Map<string, Convocatoria>();
-            allIndividualConvocatorias.forEach(individualConv => {
-                const groupKey = [individualConv[FIELD_NOMBRE_PPS_CONVOCATORIAS], individualConv[FIELD_FECHA_INICIO_CONVOCATORIAS]].join('||');
-                if (selectedConvocatorias.has(groupKey)) {
-                    (individualConv[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] || []).forEach(studentId => {
-                        studentIdToIndividualConvMap.set(studentId, individualConv);
-                    });
+            const studentIdsToFetch = new Set<string>();
+            allIndividualConvocatorias.forEach(conv => {
+                const key = [conv[FIELD_NOMBRE_PPS_CONVOCATORIAS], conv[FIELD_FECHA_INICIO_CONVOCATORIAS]].join('||');
+                if (selectedConvocatorias.has(key)) {
+                    (conv[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] || []).forEach(id => studentIdsToFetch.add(id));
                 }
             });
 
-            // Fetch base student details (name, DNI, etc.)
-            const studentFormula = `OR(${studentIds.map(id => `RECORD_ID()='${id}'`).join(',')})`;
-            const { records: studentRecords, error: studentError } = await fetchAllAirtableData<EstudianteFields>(
-                AIRTABLE_TABLE_NAME_ESTUDIANTES, 
-                [FIELD_NOMBRE_ESTUDIANTES, FIELD_DNI_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES, FIELD_NOMBRE_SEPARADO_ESTUDIANTES, FIELD_APELLIDO_SEPARADO_ESTUDIANTES], 
-                studentFormula
-            );
-            if (studentError) throw new Error(`Error al obtener datos de estudiantes: ${typeof studentError.error === 'string' ? studentError.error : studentError.error.message}`);
-            const studentMap = new Map(studentRecords.map(r => [r.id, r.fields]));
-            
-            // NEW: Fetch institutions data to get the address
-            const { records: institutionRecords, error: institutionError } = await fetchAllAirtableData<InstitucionFields>(
-                AIRTABLE_TABLE_NAME_INSTITUCIONES,
-                [FIELD_NOMBRE_INSTITUCIONES, FIELD_DIRECCION_INSTITUCIONES]
-            );
-            if (institutionError) throw new Error(`Error al obtener datos de instituciones: ${typeof institutionError.error === 'string' ? institutionError.error : institutionError.error.message}`);
-            
-            // NEW: Create a map for easy lookup
-            const institutionMap = new Map(institutionRecords.map(r => [
-                normalizeStringForComparison(r.fields[FIELD_NOMBRE_INSTITUCIONES]), 
-                r.fields
-            ]));
-
-            // Get all unique Lanzamiento IDs to fetch their authoritative data
-            const allRelevantConvocatorias = [...studentIdToIndividualConvMap.values()];
-            const lanzamientoIds = [...new Set(allRelevantConvocatorias.flatMap(c => c[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || []))];
-            
-            let lanzamientoMap = new Map<string, LanzamientoPPSFields>();
-            if (lanzamientoIds.length > 0) {
-                const lanzamientoFormula = `OR(${lanzamientoIds.map(id => `RECORD_ID()='${id}'`).join(',')})`;
-                const { records: lanzamientoRecords, error: lanzamientoError } = await fetchAllAirtableData<LanzamientoPPSFields>(
-                    AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
-                    [
-                        FIELD_NOMBRE_PPS_LANZAMIENTOS,
-                        FIELD_DIRECCION_LANZAMIENTOS,
-                        FIELD_FECHA_INICIO_LANZAMIENTOS,
-                        FIELD_FECHA_FIN_LANZAMIENTOS,
-                        FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS,
-                        FIELD_ORIENTACION_LANZAMIENTOS,
-                        FIELD_HORAS_ACREDITADAS_LANZAMIENTOS,
-                    ],
-                    lanzamientoFormula
-                );
-
-                if (lanzamientoError) {
-                    throw new Error(`Error al obtener detalles de la PPS: ${typeof lanzamientoError.error === 'string' ? lanzamientoError.error : lanzamientoError.error.message}`);
-                }
-                lanzamientoMap = new Map(lanzamientoRecords.map(r => [r.id, r.fields]));
+            if (studentIdsToFetch.size === 0) {
+                throw new Error('No se encontraron estudiantes en las convocatorias seleccionadas.');
             }
 
-            // Build the final list for review using Instituciones for address
-            const studentsToReview = studentIds.map((studentId) => {
-                const student = studentMap.get(studentId);
-                const individualConv = studentIdToIndividualConvMap.get(studentId);
-                if (!student || !individualConv) return null;
+            const studentFormula = `OR(${Array.from(studentIdsToFetch).map(id => `RECORD_ID()='${id}'`).join(',')})`;
+            const { records: studentRecords, error: studentError } = await fetchAllAirtableData<EstudianteFields>(
+                AIRTABLE_TABLE_NAME_ESTUDIANTES,
+                [
+                    FIELD_NOMBRE_ESTUDIANTES, FIELD_APELLIDO_SEPARADO_ESTUDIANTES, FIELD_NOMBRE_SEPARADO_ESTUDIANTES,
+                    FIELD_DNI_ESTUDIANTES, FIELD_LEGAJO_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES
+                ],
+                studentFormula
+            );
 
-                const lanzamientoId = (individualConv[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])[0];
-                const ppsData = lanzamientoId ? lanzamientoMap.get(lanzamientoId) : null;
-                
-                const institucion = ppsData?.[FIELD_NOMBRE_PPS_LANZAMIENTOS] || individualConv[FIELD_NOMBRE_PPS_CONVOCATORIAS] || 'N/A';
-                
-                // FIX: Added type assertion to string to satisfy normalizeStringForComparison
-                const normalizedInstitucionName = normalizeStringForComparison(String(institucion));
-                const institutionDetails = institutionMap.get(normalizedInstitucionName);
-                // FIX: Added type assertion to string to satisfy normalizeStringForComparison
-                const direccion = institutionDetails?.[FIELD_DIRECCION_INSTITUCIONES] || 'Dirección no encontrada en Instituciones';
+            if (studentError) throw new Error('Error al obtener los detalles de los estudiantes.');
 
-                const fechaInicio = ppsData?.[FIELD_FECHA_INICIO_LANZAMIENTOS] || individualConv[FIELD_FECHA_INICIO_CONVOCATORIAS];
-                const fechaFin = ppsData?.[FIELD_FECHA_FIN_LANZAMIENTOS] || individualConv[FIELD_FECHA_FIN_CONVOCATORIAS];
-                const horario = individualConv[FIELD_HORARIO_FORMULA_CONVOCATORIAS] || ppsData?.[FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS] || 'N/A';
-                const orientacion = ppsData?.[FIELD_ORIENTACION_LANZAMIENTOS] || (individualConv[FIELD_ORIENTACION_CONVOCATORIAS] as string) || '';
-
-                const fullName = student?.[FIELD_NOMBRE_ESTUDIANTES] || '';
-                let nombre = student[FIELD_NOMBRE_SEPARADO_ESTUDIANTES] || '';
-                let apellido = student[FIELD_APELLIDO_SEPARADO_ESTUDIANTES] || '';
-                
-                if (!nombre || !apellido) {
-                    const split = simpleNameSplit(fullName);
-                    nombre = split.nombre;
-                    apellido = split.apellido;
-                }
-
-                const uniqueOrientations = Array.from(new Set(orientacion.split(',').map(o => o.trim()).filter(Boolean)));
-                const orientacionFinal = uniqueOrientations.length > 0 ? uniqueOrientations[0] : 'N/A';
-
-                const tutores = new Set<string>();
-                uniqueOrientations.map(o => normalizeStringForComparison(o)).forEach(o => {
-                    if (o === 'clinica') tutores.add('Selva Estrella');
-                    else if (o === 'educacional') tutores.add('Franco Pedraza');
-                    else if (o === 'laboral' || o === 'comunitaria') tutores.add('Cynthia Rossi');
-                });
-                
-                const periodoValue = `Del ${formatDate(fechaInicio as string | undefined)} al ${formatDate(fechaFin as string | undefined)}`;
-                
-                return {
-                    studentId, nombre, apellido,
-                    dni: student[FIELD_DNI_ESTUDIANTES] || 'N/A',
-                    legajo: student[FIELD_LEGAJO_ESTUDIANTES] || 'N/A',
-                    correo: student[FIELD_CORREO_ESTUDIANTES] || 'N/A',
-                    telefono: formatPhoneNumber(student[FIELD_TELEFONO_ESTUDIANTES] as string | undefined),
-                    institucion: institucion as string,
-                    direccion: direccion,
-                    periodo: periodoValue,
-                    horario: horario,
-                    lugar: `${institucion} - ${direccion}`,
-                    duracion: `Período: ${periodoValue}. Horario: ${horario}`,
-                    tutor: tutores.size > 0 ? Array.from(tutores).join(', ') : 'N/A',
-                    orientacion: orientacionFinal,
-                };
-            }).filter(Boolean) as StudentForReview[];
+            const studentDetailsMap = new Map<string, EstudianteFields>();
+            studentRecords.forEach(r => studentDetailsMap.set(r.id, r.fields));
             
-            setStudentsForReview(studentsToReview);
-            setStep('review');
+            // FIX: Add an explicit type annotation to the 'key' parameter to resolve the 'unknown' type error.
+            const institutionsFormula = `OR(${Array.from(selectedConvocatorias).map((key: string) => `{Nombre} = "${key.split('||')[0]}"`).join(',')})`;
+            const { records: institutionRecords, error: instError } = await fetchAllAirtableData<InstitucionFields>(
+                AIRTABLE_TABLE_NAME_INSTITUCIONES,
+                [FIELD_NOMBRE_INSTITUCIONES, FIELD_DIRECCION_INSTITUCIONES],
+                institutionsFormula
+            );
+            if(instError) console.warn("Could not fetch institution addresses for insurance generator");
 
-        } catch(e: any) {
-             showModal('Error', e.message || 'Ocurrió un error al procesar los estudiantes.');
+            const institutionAddressMap = new Map<string, string>();
+            institutionRecords.forEach(inst => {
+                if(inst.fields[FIELD_NOMBRE_INSTITUCIONES] && inst.fields[FIELD_DIRECCION_INSTITUCIONES]) {
+                    institutionAddressMap.set(normalizeStringForComparison(inst.fields[FIELD_NOMBRE_INSTITUCIONES]), inst.fields[FIELD_DIRECCION_INSTITUCIONES]);
+                }
+            });
+
+            const reviewList: StudentForReview[] = [];
+            allIndividualConvocatorias.forEach(conv => {
+                const key = [conv[FIELD_NOMBRE_PPS_CONVOCATORIAS], conv[FIELD_FECHA_INICIO_CONVOCATORIAS]].join('||');
+                if (!selectedConvocatorias.has(key)) return;
+
+                const studentId = (conv[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS] || [])[0];
+                if (!studentId) return;
+
+                const student = studentDetailsMap.get(studentId);
+                if (!student) return;
+                
+                const fullName = student[FIELD_NOMBRE_ESTUDIANTES] || '';
+                const { nombre, apellido } = (student[FIELD_APELLIDO_SEPARADO_ESTUDIANTES] && student[FIELD_NOMBRE_SEPARADO_ESTUDIANTES])
+                    ? { nombre: student[FIELD_NOMBRE_SEPARADO_ESTUDIANTES] || '', apellido: student[FIELD_APELLIDO_SEPARADO_ESTUDIANTES] || '' }
+                    : simpleNameSplit(fullName);
+                
+                const ppsName = Array.isArray(conv[FIELD_NOMBRE_PPS_CONVOCATORIAS]) ? conv[FIELD_NOMBRE_PPS_CONVOCATORIAS][0] : conv[FIELD_NOMBRE_PPS_CONVOCATORIAS];
+                const direccion = conv[FIELD_DIRECCION_CONVOCATORIAS] || institutionAddressMap.get(normalizeStringForComparison(ppsName || '')) || 'No especificada';
+
+                reviewList.push({
+                    studentId: studentId,
+                    nombre: nombre || '',
+                    apellido: apellido || '',
+                    dni: String(student[FIELD_DNI_ESTUDIANTES] || ''),
+                    legajo: String(student[FIELD_LEGAJO_ESTUDIANTES] || ''),
+                    correo: student[FIELD_CORREO_ESTUDIANTES] || '',
+                    telefono: formatPhoneNumber(student[FIELD_TELEFONO_ESTUDIANTES]),
+                    institucion: ppsName || 'N/A',
+                    direccion: direccion,
+                    periodo: `${formatDate(conv[FIELD_FECHA_INICIO_CONVOCATORIAS])} al ${formatDate(conv[FIELD_FECHA_FIN_CONVOCATORIAS])}`,
+                    horario: conv[FIELD_HORARIO_FORMULA_CONVOCATORIAS] || 'A convenir',
+                    lugar: direccion,
+                    duracion: '3 meses',
+                    tutor: 'A designar',
+                    orientacion: conv[FIELD_ORIENTACION_CONVOCATORIAS] || 'N/A',
+                });
+            });
+            
+            reviewList.sort((a, b) => a.institucion.localeCompare(b.institucion) || a.apellido.localeCompare(b.apellido));
+
+            setStudentsForReview(reviewList);
+            setStep('review');
+        } catch (err: any) {
+            showModal('Error', err.message || 'Ocurrió un error inesperado.');
         } finally {
             setIsLoading(false);
             setLoadingMessage('');
         }
     };
     
-    const handleGenerateSelectionExcel = () => {
+    const handleBackToSelection = () => {
+        setStep('selection');
+        setStudentsForReview([]);
+    };
+    
+    const handleGenerateExcel = () => {
         if (studentsForReview.length === 0) {
-            showModal('Sin Datos', 'No hay estudiantes en la lista para generar el reporte.');
+            showModal('Error', 'No hay estudiantes para generar la planilla.');
             return;
         }
+        const dataForSheet = studentsForReview.map(s => ({
+            'Nombre': s.nombre,
+            'Apellido': s.apellido,
+            'DNI': s.dni,
+            'Correo': s.correo,
+            'Teléfono': s.telefono,
+            'Lugar de Práctica': s.lugar,
+            'Duración': s.duracion,
+            'Período': s.periodo,
+            'Tutor': s.tutor,
+        }));
 
-        try {
-            const wb = XLSX.utils.book_new();
-            const studentsByInstitution = studentsForReview.reduce((acc, student) => {
-                const key = student.institucion;
-                if (!acc[key]) acc[key] = [];
-                acc[key].push(student);
-                return acc;
-            }, {} as Record<string, StudentForReview[]>);
+        const ws = XLSX.utils.json_to_sheet(dataForSheet);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Alumnos para Seguro');
+        XLSX.writeFile(wb, `Seguro_PPS_${new Date().toISOString().split('T')[0]}.xlsx`);
 
-            for (const institucion in studentsByInstitution) {
-                const group = studentsByInstitution[institucion];
-                const wsData: (string | number)[][] = [
-                    ['APELLIDO', 'NOMBRE', 'DNI', 'LEGAJO', 'CORREO', 'TELEFONO', 'HORARIO SELECCIONADO']
-                ];
+        setToastInfo({ message: 'Planilla de Excel generada.', type: 'success' });
+    };
 
-                group.forEach(student => {
-                    wsData.push([
-                        student.apellido,
-                        student.nombre,
-                        student.dni,
-                        student.legajo,
-                        student.correo,
-                        student.telefono,
-                        student.horario
-                    ]);
-                });
-
-                const ws = XLSX.utils.aoa_to_sheet(wsData);
-                ws['!cols'] = [ {wch:25}, {wch:25}, {wch:12}, {wch:12}, {wch:30}, {wch:20}, {wch:30} ];
-                
-                const headerStyle = { font: { bold: true }, alignment: { horizontal: "center", vertical: "center" }, fill: { fgColor: { rgb: "FFD9E2F3" } }}; // Light blue fill
-                wsData[0].forEach((_, col) => {
-                    const cellRef = XLSX.utils.encode_cell({r: 0, c: col});
-                    if(ws[cellRef]) ws[cellRef].s = headerStyle;
-                });
-                
-                let baseSheetName = institucion.replace(/[\\/?*[\]]/g, "").substring(0, 25);
-                XLSX.utils.book_append_sheet(wb, ws, baseSheetName);
+    const handleToggleSelection = (convocatoriaId: string) => {
+        setSelectedConvocatorias(prev => {
+            const newSelection = new Set(prev);
+            if (newSelection.has(convocatoriaId)) {
+                newSelection.delete(convocatoriaId);
+            } else {
+                newSelection.add(convocatoriaId);
             }
-
-            const ppsName = Array.from(new Set(studentsForReview.map(s => s.institucion)))
-                                 .join(' & ')
-                                 .replace(/[\\/?*[\]]/g, "")
-                                 .substring(0, 100);
-            const fileName = `Listado de alumnos (${ppsName || 'PPS'}).xlsx`;
-            XLSX.writeFile(wb, fileName);
-            setToastInfo({ message: 'Excel con lista de seleccionados generado.', type: 'success' });
-        } catch (e: any) {
-            showModal('Error al Generar Excel', e.message || 'Ocurrió un error inesperado.');
-        }
+            return newSelection;
+        });
     };
 
-    const toggleSelection = (id: string) => {
-        const newSelection = new Set(selectedConvocatorias);
-        newSelection.has(id) ? newSelection.delete(id) : newSelection.add(id);
-        setSelectedConvocatorias(newSelection);
-    };
-
-    const isProceedDisabled = useMemo(() => {
-        if (isLoading) return true;
-        return selectedConvocatorias.size === 0;
-    }, [isLoading, selectedConvocatorias]);
-
-
-    const renderSelectionStep = () => (
-        <div className="space-y-6">
-            <div>
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Paso 1: Seleccionar Convocatorias</h3>
-                <p className="text-slate-600 dark:text-slate-400 max-w-xl mt-1">Seleccione una o más de las últimas convocatorias con alumnos seleccionados para generar los reportes.</p>
+    if (isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center p-8">
+                <Loader />
+                <p className="mt-4 font-semibold text-slate-600 dark:text-slate-300">{loadingMessage}</p>
             </div>
-
-            {isLoading && !loadingMessage.includes('convocatorias') ? null : (isLoading ? <Loader /> : null)}
-            
-            {!isLoading && convocatorias.length === 0 && (
-                <EmptyState icon="event_busy" title="Sin Convocatorias" message="No se encontraron convocatorias con estudiantes seleccionados." />
-            )}
-
-            {!isLoading && convocatorias.length > 0 && (
-                <div className="overflow-x-auto">
-                    <table className="w-full min-w-[800px] border-collapse">
-                        <thead>
-                            <tr className="border-b-2 border-slate-200 dark:border-slate-700">
-                                <th className="p-4 w-16 text-left">
-                                    <Checkbox id="select-all" name="select-all" checked={selectedConvocatorias.size > 0 && selectedConvocatorias.size === convocatorias.length} onChange={() => setSelectedConvocatorias(selectedConvocatorias.size === convocatorias.length ? new Set() : new Set(convocatorias.map(c => c.id)))} label="" />
-                                </th>
-                                <th className="p-4 text-left font-semibold text-slate-500 dark:text-slate-400 uppercase text-xs tracking-wider">Institución</th>
-                                <th className="p-4 text-center font-semibold text-slate-500 dark:text-slate-400 uppercase text-xs tracking-wider">Nº Estudiantes</th>
-                                <th className="p-4 text-center font-semibold text-slate-500 dark:text-slate-400 uppercase text-xs tracking-wider">Período</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {convocatorias.map((convocatoria) => (
-                                <tr key={convocatoria.id} className="transition-colors duration-200 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 border-b border-slate-200/60 dark:border-slate-700/60 last:border-b-0">
-                                    <td className="p-4 align-middle">
-                                        <Checkbox id={`conv-${convocatoria.id}`} name="convocatoria" checked={selectedConvocatorias.has(convocatoria.id)} onChange={() => toggleSelection(convocatoria.id)} label="" />
-                                    </td>
-                                    <td className="p-4 align-middle font-semibold text-slate-800 dark:text-slate-100">{convocatoria[FIELD_NOMBRE_PPS_CONVOCATORIAS]}</td>
-                                    <td className="p-4 align-middle text-center text-slate-600 dark:text-slate-300 font-medium">{convocatoria[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]?.length || 0}</td>
-                                    <td className="p-4 align-middle text-center text-slate-600 dark:text-slate-300">{formatDate(convocatoria[FIELD_FECHA_INICIO_CONVOCATORIAS])} - {formatDate(convocatoria[FIELD_FECHA_FIN_CONVOCATORIAS])}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-             <div className="mt-6 flex justify-end">
-                <button onClick={handleProceedToReview} disabled={isProceedDisabled} className="bg-blue-600 text-white font-bold py-2.5 px-6 rounded-lg text-sm transition-colors shadow-md disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-blue-700">
-                    {isLoading ? (
-                        <>
-                            <div className="border-2 border-white/50 border-t-white rounded-full w-5 h-5 animate-spin"></div>
-                            <span>{loadingMessage || 'Procesando...'}</span>
-                        </>
-                    ) : (
-                        <>
-                            <span>Ir a Revisión</span>
-                            <span className="material-icons">arrow_forward</span>
-                        </>
-                    )}
-                </button>
-            </div>
-        </div>
-    );
-
-    const renderReviewStep = () => {
-      const groupedStudents = studentsForReview.reduce((acc, student) => {
-          // FIX: Explicitly type `acc` to ensure type safety within the reducer.
-          const key = `${student.institucion}::${student.tutor}`;
-          if (!acc[key]) {
-              acc[key] = {
-                  institucion: student.institucion,
-                  tutor: student.tutor,
-                  orientacion: student.orientacion,
-                  students: [],
-              };
-          }
-          acc[key].students.push(student);
-          return acc;
-      }, {} as Record<string, { institucion: string; tutor: string; orientacion: string; students: StudentForReview[] }>);
-
-      const handleCopyToClipboard = (students: StudentForReview[]) => {
-          const tsv = students.map(s => [
-              s.apellido, s.nombre, s.dni, s.legajo, 'Estudiante', s.lugar, s.duracion
-          ].join('\t')).join('\n');
-
-          navigator.clipboard.writeText(tsv).then(() => {
-              setToastInfo({ message: 'Datos de la tabla copiados.', type: 'success' });
-          }).catch(err => {
-              console.error('Failed to copy data: ', err);
-              setToastInfo({ message: 'Error al copiar los datos.', type: 'error' });
-          });
-      };
-
-      const handleDownloadBlankInsurance = async (institutionName: string) => {
-          if (!blankTemplateUrl) {
-              showModal('Plantilla no Encontrada', `No se encontró una plantilla de seguro. Por favor, asegúrese de que esté subida al registro '${TEMPLATE_PPS_NAME}' en Airtable.`);
-              return;
-          }
-          
-          try {
-              setToastInfo({ message: `Iniciando descarga de plantilla para '${institutionName}'...`, type: 'success' });
-              const response = await fetch(blankTemplateUrl);
-              if (!response.ok) {
-                  throw new Error(`Error del servidor: ${response.statusText}`);
-              }
-              const blob = await response.blob();
-      
-              const safeFileName = institutionName.replace(/[\\/?*[\]]/g, "").substring(0, 100);
-              const fileName = `Seguro - ${safeFileName}.xlsx`;
-      
-              const link = document.createElement('a');
-              link.href = URL.createObjectURL(blob);
-              link.download = fileName;
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-              
-          } catch (e: any) {
-              console.error('Error downloading insurance template:', e);
-              showModal('Error de Descarga', e.message || 'No se pudo descargar la plantilla del seguro. Verifique la consola para más detalles.');
-          }
-      };
-      
-        const handleSendEmail = (group: { institucion: string; students: StudentForReview[] }) => {
-            if (group.students.length === 0) return;
-
-            const mailToSubject = `Reporte de Seguro - ${group.institucion}`;
-            const mailToBody = `Buenos días,\n\nAdjunto el seguro de la PPS.\n\nSaludos.`;
-            const mailtoLink = `mailto:${EMAIL_SEGUROS}?subject=${encodeURIComponent(mailToSubject)}&body=${encodeURIComponent(mailToBody)}`;
-            
-            window.location.href = mailtoLink;
-        };
-
-
-      return (
-          <>
-              <div className="flex justify-between items-start mb-6">
-                  <div>
-                      <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Paso 2: Generar Documentación</h3>
-                      <p className="text-slate-600 dark:text-slate-400 max-w-2xl mt-1">Para cada grupo, descargue la plantilla del seguro y copie los datos de los alumnos para pegarlos en el archivo.</p>
-                  </div>
-                  <button onClick={() => setStep('selection')} className="bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold py-2 px-4 rounded-lg text-sm border border-slate-300 dark:border-slate-600 transition-colors flex items-center gap-2">
-                      <span className="material-icons">arrow_back</span>
-                      <span>Volver</span>
-                  </button>
-              </div>
-
-              {studentsForReview.length === 0 ? (
-                   <EmptyState icon="group_off" title="Sin Estudiantes para Revisar" message="No se encontraron estudiantes en las convocatorias seleccionadas." />
-              ) : (
-                <div className="space-y-8">
-                  {Object.values(groupedStudents).map((group, index) => (
-                      <Card key={index} className="animate-fade-in-up" style={{animationDelay: `${index * 100}ms`}}>
-                          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-5">
-                              <div className="space-y-1">
-                                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Institución: <span className="font-bold text-slate-800 dark:text-slate-100">{group.institucion}</span></p>
-                                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Tutor/a: <span className="font-bold text-slate-800 dark:text-slate-100">{group.tutor}</span></p>
-                                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Orientación: <span className="font-bold text-slate-800 dark:text-slate-100">{group.orientacion}</span></p>
-                              </div>
-                              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 self-start sm:self-center">
-                                  <button onClick={() => handleDownloadBlankInsurance(group.institucion)} disabled={!blankTemplateUrl} className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-md hover:bg-green-700 flex items-center gap-2 justify-center disabled:bg-green-300 disabled:cursor-not-allowed">
-                                      <span className="material-icons !text-base">download</span>
-                                      <span>Descargar Seguro</span>
-                                  </button>
-                                  <button onClick={() => handleCopyToClipboard(group.students)} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-md hover:bg-blue-700 flex items-center gap-2 justify-center">
-                                      <span className="material-icons !text-base">content_copy</span>
-                                      <span>Copiar Datos</span>
-                                  </button>
-                                  <button onClick={() => handleSendEmail(group)} className="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-md hover:bg-purple-700 flex items-center gap-2 justify-center">
-                                      <span className="material-icons !text-base">email</span>
-                                      <span>Enviar Mail</span>
-                                  </button>
-                              </div>
-                          </div>
-                          
-                          <div className="overflow-x-auto border-t border-slate-200 dark:border-slate-700 pt-4">
-                              <table className="w-full min-w-[1200px] text-sm text-left border-collapse">
-                                  <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase">
-                                      <tr className="border-b-2 border-slate-200 dark:border-slate-700">
-                                          <th className="p-3">Apellido</th>
-                                          <th className="p-3">Nombre</th>
-                                          <th className="p-3">DNI</th>
-                                          <th className="p-3">Legajo</th>
-                                          <th className="p-3">Cargo</th>
-                                          <th className="p-3">Lugar (Nombre-Dirección)</th>
-                                          <th className="p-3">Duración (Período, Días y Horario)</th>
-                                      </tr>
-                                  </thead>
-                                  <tbody className="text-slate-800 dark:text-slate-100">
-                                      {group.students.map(student => (
-                                          <tr key={student.studentId} className="border-b border-slate-200/60 dark:border-slate-700/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 last:border-b-0">
-                                              <td className="p-3 font-medium">{student.apellido}</td>
-                                              <td className="p-3 font-medium">{student.nombre}</td>
-                                              <td className="p-3">{student.dni}</td>
-                                              <td className="p-3">{student.legajo}</td>
-                                              <td className="p-3">Estudiante</td>
-                                              <td className="p-3">{student.lugar}</td>
-                                              <td className="p-3">{student.duracion}</td>
-                                          </tr>
-                                      ))}
-                                  </tbody>
-                              </table>
-                          </div>
-                      </Card>
-                  ))}
-                </div>
-              )}
-              
-              <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-end items-center gap-4">
-                  <button 
-                      onClick={handleGenerateSelectionExcel} 
-                      disabled={isLoading || studentsForReview.length === 0} 
-                      className="w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg text-sm transition-colors shadow-md disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-slate-800">
-                       <span className="material-icons">list_alt</span>
-                       <span>Generar Lista de Alumnos</span>
-                  </button>
-              </div>
-          </>
-      );
+        );
     }
 
+    const reviewHeaders = ['Nombre', 'Apellido', 'DNI', 'Institución', 'Período'];
+
     return (
-        <div className="animate-fade-in-up">
+        <div className="space-y-6">
             {toastInfo && <Toast message={toastInfo.message} type={toastInfo.type} onClose={() => setToastInfo(null)} />}
-            
-            <div className="mb-6">
-                 <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Generador de Reportes para Seguro</h2>
-            </div>
-            
-            {step === 'selection' ? renderSelectionStep() : renderReviewStep()}
+
+            {step === 'selection' && (
+                <Card
+                    title="Generador de Planilla de Seguros"
+                    icon="shield"
+                    description="Selecciona las convocatorias para incluir a los alumnos en la planilla de seguro ART."
+                    actions={
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleProceedToReview}
+                                disabled={selectedConvocatorias.size === 0}
+                                className="bg-blue-600 text-white font-bold py-2 px-5 rounded-lg text-sm transition-colors shadow-md hover:bg-blue-700 disabled:bg-slate-400"
+                            >
+                                Revisar Alumnos ({selectedConvocatorias.size})
+                            </button>
+                        </div>
+                    }
+                >
+                    {convocatorias.length > 0 ? (
+                        <div className="mt-6 border-t border-slate-200/60 dark:border-slate-700 pt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {convocatorias.map(conv => {
+                                const isSelected = selectedConvocatorias.has(conv.id);
+                                return (
+                                    <div key={conv.id} className={`p-4 rounded-lg border-2 ${isSelected ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20' : 'border-slate-200/80 dark:border-slate-700'}`}>
+                                        <Checkbox
+                                            id={conv.id}
+                                            name={conv.id}
+                                            checked={isSelected}
+                                            onChange={() => handleToggleSelection(conv.id)}
+                                            label={
+                                                <div>
+                                                    <p className="font-semibold text-slate-800 dark:text-slate-100">{Array.isArray(conv[FIELD_NOMBRE_PPS_CONVOCATORIAS]) ? conv[FIELD_NOMBRE_PPS_CONVOCATORIAS][0] : conv[FIELD_NOMBRE_PPS_CONVOCATORIAS]}</p>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400">{formatDate(conv[FIELD_FECHA_INICIO_CONVOCATORIAS])} - {conv[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]?.length} alumnos</p>
+                                                </div>
+                                            }
+                                        />
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <EmptyState icon="format_list_bulleted" title="Sin Convocatorias" message="No se encontraron convocatorias con alumnos seleccionados." />
+                    )}
+                </Card>
+            )}
+
+            {step === 'review' && (
+                <Card
+                    title="Revisar Datos para el Seguro"
+                    icon="person_search"
+                    description={`Verifica los datos de los ${studentsForReview.length} alumnos antes de generar la planilla de Excel.`}
+                    actions={
+                        <div className="flex items-center gap-3">
+                            <button onClick={handleBackToSelection} className="bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold py-2 px-5 rounded-lg text-sm border border-slate-300 dark:border-slate-600">
+                                Volver
+                            </button>
+                            <button onClick={handleGenerateExcel} className="bg-emerald-600 text-white font-bold py-2 px-5 rounded-lg text-sm">
+                                Generar Excel
+                            </button>
+                            {blankTemplateUrl && <a href={blankTemplateUrl} target="_blank" rel="noopener noreferrer" className="bg-slate-600 text-white font-bold py-2 px-5 rounded-lg text-sm">Plantilla Vacía</a>}
+                        </div>
+                    }
+                >
+                    <div className="mt-6 border-t border-slate-200/60 dark:border-slate-700 pt-6">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-slate-100/70 dark:bg-slate-800/70">
+                                    <tr>
+                                        {reviewHeaders.map(h => <th key={h} className="p-3 text-left font-semibold text-slate-600 dark:text-slate-300">{h}</th>)}
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-200/70 dark:divide-slate-700">
+                                    {studentsForReview.map((student, index) => (
+                                        <tr key={`${student.studentId}-${index}`} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/70">
+                                            <td className="p-3 text-slate-800 dark:text-slate-100 font-medium">{student.nombre}</td>
+                                            <td className="p-3 text-slate-800 dark:text-slate-100 font-medium">{student.apellido}</td>
+                                            <td className="p-3 text-slate-600 dark:text-slate-300">{student.dni}</td>
+                                            <td className="p-3 text-slate-600 dark:text-slate-300">{student.institucion}</td>
+                                            <td className="p-3 text-slate-600 dark:text-slate-300">{student.periodo}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </Card>
+            )}
         </div>
     );
 };
-
-export default SeguroGenerator;
