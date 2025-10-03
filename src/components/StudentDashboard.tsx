@@ -42,7 +42,9 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   const { solicitudes, isSolicitudesLoading, solicitudesError, refetchSolicitudes } = useStudentSolicitudes(user.legajo, studentAirtableId);
   const { 
     lanzamientos, myEnrollments, allLanzamientos, isConvocatoriasLoading, convocatoriasError,
-    enrollStudent, confirmInforme, refetchConvocatorias, institutionAddressMap
+    enrollStudent, confirmInforme, refetchConvocatorias, institutionAddressMap,
+    enrollInJornada,
+    asistencias,
   } = useConvocatorias(user.legajo, studentAirtableId, isSuperUserMode);
 
   // --- DERIVED STATE & MEMOIZATION ---
@@ -81,7 +83,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   }, [updateNota]);
   
   // --- MEMOIZED TAB CONTENT ---
-  const convocatoriasContent = useMemo(() => <ConvocatoriasList lanzamientos={lanzamientos} myEnrollments={myEnrollments} practicas={practicas} student={studentDetails} onInscribir={enrollStudent.mutate} institutionAddressMap={institutionAddressMap} />, [lanzamientos, myEnrollments, practicas, studentDetails, enrollStudent, institutionAddressMap]);
+  const convocatoriasContent = useMemo(() => <ConvocatoriasList lanzamientos={lanzamientos} myEnrollments={myEnrollments} practicas={practicas} student={studentDetails} onInscribir={enrollStudent.mutate} onInscribirJornada={enrollInJornada.mutate} institutionAddressMap={institutionAddressMap} asistencias={asistencias} />, [lanzamientos, myEnrollments, practicas, studentDetails, enrollStudent.mutate, enrollInJornada.mutate, institutionAddressMap, asistencias]);
   const calendarContent = useMemo(() => <CalendarView myEnrollments={myEnrollments} allLanzamientos={allLanzamientos} />, [myEnrollments, allLanzamientos]);
   const informesContent = useMemo(() => <InformesList tasks={informeTasks} onConfirmar={confirmInforme.mutate} />, [informeTasks, confirmInforme]);
   const solicitudesContent = useMemo(() => <SolicitudesList solicitudes={solicitudes} />, [solicitudes]);
@@ -185,34 +187,36 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
               <>
                   <WelcomeBanner studentName={studentNameForPanel} studentDetails={studentDetails} isLoading={isLoading} />
                   <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
-                  <Card icon="campaign" title="Convocatorias Abiertas">
+                  <Card icon="campaign" title="Convocatorias Abiertas" description="Postúlate a las PPS disponibles que se ajusten a tu interés y disponibilidad.">
                     {convocatoriasContent}
                   </Card>
               </>
           )}
 
           {currentActiveTab === 'calendario' && (
-              <>
+              <Card icon="calendar_month" title="Mi Calendario de Prácticas" description="Vista mensual de tus PPS en curso. Toca un día con eventos para ver los detalles.">
                   {calendarContent}
-              </>
+              </Card>
           )}
 
           {currentActiveTab === 'informes' && (
-              <>
+              <Card icon="assignment_turned_in" title="Entrega de Informes Finales" description="Sube tu informe final al campus y luego confirma la entrega aquí.">
                   {informesContent}
-              </>
+              </Card>
           )}
 
           {currentActiveTab === 'solicitudes' && (
-              <>
+              <Card icon="list_alt" title="Mis Solicitudes de PPS" description="Seguimiento del estado de las Prácticas Profesionales Supervisadas que has solicitado.">
                   {solicitudesContent}
-              </>
+              </Card>
           )}
           
           {currentActiveTab === 'practicas' && (
               <>
                   <CriteriosPanel criterios={criterios} selectedOrientacion={selectedOrientacion} handleOrientacionChange={handleOrientacionChange} showSaveConfirmation={showSaveConfirmation} />
-                  {practicasContent}
+                  <Card icon="work_history" title="Historial de Prácticas" description="Detalle de todas las prácticas que has realizado y sus calificaciones.">
+                    {practicasContent}
+                  </Card>
               </>
           )}
 

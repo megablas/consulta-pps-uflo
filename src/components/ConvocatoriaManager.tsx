@@ -312,7 +312,6 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
         setError(null);
         
         const [lanzamientosRes, institucionesRes] = await Promise.all([
-            // FIX: Changed generic type from LanzamientoPPS to LanzamientoPPSFields to ensure correct type inference.
             fetchAllAirtableData<LanzamientoPPSFields>(
                 AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
                 [
@@ -435,7 +434,6 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
             const lastYearStart = new Date(currentYear - 1, 0, 1).toISOString().split('T')[0];
             const filterFormula = `IS_AFTER({${FIELD_FECHA_INICIO_PRACTICAS}}, DATETIME_PARSE('${lastYearStart}', 'YYYY-MM-DD'))`;
     
-            // FIX: Changed generic type from Practica to PracticaFields to ensure correct type inference.
             const { records: recentPracticas, error: practicasError } = await fetchAllAirtableData<PracticaFields>(
                 AIRTABLE_TABLE_NAME_PRACTICAS,
                 [
@@ -451,8 +449,10 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
             if (practicasError) throw new Error('Error al obtener las prácticas antiguas desde Airtable.');
     
             const groupedPracticas = new Map<string, (PracticaFields & { id: string })[]>();
-            // FIX: Explicitly typed the 'practica' variable within the for...of loop to resolve type inference issues where it was being treated as 'unknown'.
-            for (const practica of recentPracticas.map((p) => ({ ...(p.fields as object), id: p.id } as PracticaFields & { id: string }))) {
+            // FIX: Fix type inference issue with `recentPracticas.map` by explicitly typing the map parameter. This resolves the error where properties 'id' and 'fields' were not found on the `unknown` type of the map parameter.
+            const mappedPracticas: Practica[] = recentPracticas.map((p: AirtableRecord<PracticaFields>) => ({ ...p.fields, id: p.id }));
+
+            for (const practica of mappedPracticas) {
                 const nameRaw = practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
                 const name = Array.isArray(nameRaw) ? nameRaw[0] : nameRaw;
                 const date = practica[FIELD_FECHA_INICIO_PRACTICAS];
@@ -473,13 +473,11 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                     const nameRaw = templatePractica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
                     const ppsName = Array.isArray(nameRaw) ? nameRaw[0] : nameRaw;
                     
-                    // FIX: Ensure ppsName is a string before calling toLowerCase
                     if (ppsName && String(ppsName).toLowerCase().includes('uflo')) {
                         continue;
                     }
 
                     const newLaunch = {
-                        // FIX: Ensure ppsName is a string for the new record
                         [FIELD_NOMBRE_PPS_LANZAMIENTOS]: String(ppsName),
                         [FIELD_FECHA_INICIO_LANZAMIENTOS]: templatePractica[FIELD_FECHA_INICIO_PRACTICAS],
                         [FIELD_FECHA_FIN_LANZAMIENTOS]: templatePractica[FIELD_FECHA_FIN_PRACTICAS],
@@ -501,7 +499,8 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
     
             let successfulCreations = 0;
             let failedCreations = 0;
-            const totalToCreate = newLaunchesToCreate.length;
+            // FIX: Add explicit type cast to fix 'unknown' type error.
+            const totalToCreate: number = (newLaunchesToCreate as Partial<LanzamientoPPS>[]).length;
 
             for (let i = 0; i < totalToCreate; i++) {
                 const launchData = newLaunchesToCreate[i];
@@ -535,255 +534,112 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
     };
 
     const filteredData = useMemo(() => {
-        return lanzamientos.filter(pps => {
-            const matchesSearch = searchTerm === '' || normalizeStringForComparison(pps[FIELD_NOMBRE_PPS_LANZAMIENTOS]).includes(normalizeStringForComparison(searchTerm));
-            
-            const ppsOrientations = (pps[FIELD_ORIENTACION_LANZAMIENTOS] || '').split(',').map(o => normalizeStringForComparison(o.trim()));
+        let processableItems = [...lanzamientos];
 
-            if (forcedOrientations && forcedOrientations.length > 0) {
-                const requiredOrientations = forcedOrientations.map(o => normalizeStringForComparison(o));
-                const hasMatchingOrientation = ppsOrientations.some(po => requiredOrientations.includes(po));
-                return matchesSearch && hasMatchingOrientation;
-            }
-            
-            const selectedOrientation = normalizeStringForComparison(orientationFilter);
-            const matchesOrientation = selectedOrientation === 'all' || ppsOrientations.includes(selectedOrientation);
-            
-            return matchesSearch && matchesOrientation;
-        });
-    }, [lanzamientos, searchTerm, orientationFilter, forcedOrientations]);
-
-    const { finalizadasParaReactivar, relanzamientosConfirmados, activasYPorFinalizar, activasIndefinidas } = useMemo(() => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        // 1. Group all launches by normalized institution name
-        const ppsGroups = new Map<string, LanzamientoPPS[]>();
-        for (const pps of filteredData) {
-            const ppsName = pps[FIELD_NOMBRE_PPS_LANZAMIENTOS];
-            if (!ppsName) continue;
-
-            const normalizedName = normalizeStringForComparison(ppsName);
-            if (!ppsGroups.has(normalizedName)) {
-                ppsGroups.set(normalizedName, []);
-            }
-            ppsGroups.get(normalizedName)!.push(pps);
-        }
-
-        const finalizadasParaReactivarList: LanzamientoPPS[] = [];
-        const relanzamientosConfirmadosList: LanzamientoPPS[] = [];
-        const activasYPorFinalizarList: LanzamientoPPS[] = [];
-        const activasIndefinidasList: LanzamientoPPS[] = [];
-
-        const nonManagedStatuses = ['Archivado', 'No se Relanza'];
-
-        // 2. Process each group
-        for (const group of ppsGroups.values()) {
-            const activeLaunches = group.filter(pps => {
-                const endDate = parseToUTCDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS]);
-                return !endDate || endDate >= today;
+        if (forcedOrientations && forcedOrientations.length > 0) {
+            const normalizedForced = forcedOrientations.map(normalizeStringForComparison);
+            processableItems = processableItems.filter(pps => {
+                const ppsOrientations = (pps[FIELD_ORIENTACION_LANZAMIENTOS] || '').split(',').map(o => normalizeStringForComparison(o.trim()));
+                return ppsOrientations.some(o => normalizedForced.includes(o));
             });
-
-            if (activeLaunches.length > 0) {
-                activeLaunches.forEach(pps => {
-                    const endDate = parseToUTCDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS]);
-                    if (!endDate) {
-                        activasIndefinidasList.push(pps);
-                    } else {
-                        activasYPorFinalizarList.push(pps);
-                    }
-                });
-            } else { // No active launches, so process finished ones
-                const sortedFinished = group.sort((a, b) => {
-                    const dateA = parseToUTCDate(a[FIELD_FECHA_FIN_LANZAMIENTOS])?.getTime() || 0;
-                    const dateB = parseToUTCDate(b[FIELD_FECHA_FIN_LANZAMIENTOS])?.getTime() || 0;
-                    return dateB - dateA; // Most recent first
-                });
-
-                const mostRecentFinished = sortedFinished[0];
-
-                if (mostRecentFinished) {
-                    const gestionStatus = mostRecentFinished[FIELD_ESTADO_GESTION_LANZAMIENTOS];
-                    if (nonManagedStatuses.includes(gestionStatus!)) {
-                        continue;
-                    }
-
-                    if (gestionStatus === 'Relanzamiento Confirmado') {
-                        relanzamientosConfirmadosList.push(mostRecentFinished);
-                    } else {
-                        finalizadasParaReactivarList.push(mostRecentFinished);
-                    }
-                }
-            }
+        } else if (orientationFilter !== 'all') {
+             processableItems = processableItems.filter(pps => normalizeStringForComparison(pps[FIELD_ORIENTACION_LANZAMIENTOS]) === normalizeStringForComparison(orientationFilter));
         }
 
-        // Sort the final lists
-        activasYPorFinalizarList.sort((a, b) => (parseToUTCDate(a[FIELD_FECHA_FIN_LANZAMIENTOS]!)?.getTime() || 0) - (parseToUTCDate(b[FIELD_FECHA_FIN_LANZAMIENTOS]!)?.getTime() || 0));
-        relanzamientosConfirmadosList.sort((a, b) => (parseToUTCDate(a[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]!)?.getTime() || 0) - (parseToUTCDate(b[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]!)?.getTime() || 0));
-        finalizadasParaReactivarList.sort((a, b) => {
-            const aIsEnConversacion = a[FIELD_ESTADO_GESTION_LANZAMIENTOS] === 'En Conversación';
-            const bIsEnConversacion = b[FIELD_ESTADO_GESTION_LANZAMIENTOS] === 'En Conversación';
-            if (aIsEnConversacion && !bIsEnConversacion) return -1;
-            if (!aIsEnConversacion && bIsEnConversacion) return 1;
-
-            const dateA = parseToUTCDate(a[FIELD_FECHA_FIN_LANZAMIENTOS])?.getTime() || 0;
-            const dateB = parseToUTCDate(b[FIELD_FECHA_FIN_LANZAMIENTOS])?.getTime() || 0;
-            return dateB - dateA; // Most recently finished first
-        });
-    
-        return { 
-            finalizadasParaReactivar: finalizadasParaReactivarList, 
-            relanzamientosConfirmados: relanzamientosConfirmadosList, 
-            activasYPorFinalizar: activasYPorFinalizarList, 
-            activasIndefinidas: activasIndefinidasList 
-        };
-    }, [filteredData]);
-    
-    const getInstitutionForPps = useCallback((pps: LanzamientoPPS) => {
-        const ppsName = pps[FIELD_NOMBRE_PPS_LANZAMIENTOS];
-        const normalizedPpsName = ppsName ? normalizeStringForComparison(ppsName) : '';
-        return institutionsMap.get(normalizedPpsName);
-    }, [institutionsMap]);
-    
-    const handleExportFinalizadas = useCallback(() => {
-        if (finalizadasParaReactivar.length === 0) return;
-
-        const dataToExport = finalizadasParaReactivar.map(pps => {
-            const institutionInfo = getInstitutionForPps(pps);
-            return {
-                'Nombre Institución': pps[FIELD_NOMBRE_PPS_LANZAMIENTOS] || '',
-                'Orientación': pps[FIELD_ORIENTACION_LANZAMIENTOS] || '',
-                'Fecha de Finalización': formatDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS]),
-                'Contacto': institutionInfo?.phone || 'N/A',
-                'Comentarios': '', // Empty column for comments
-            };
-        });
-
-        const ws = XLSX.utils.json_to_sheet(dataToExport);
-        ws['!cols'] = [
-            { wch: 40 }, // Nombre Institución
-            { wch: 15 }, // Orientación
-            { wch: 20 }, // Fecha de Finalización
-            { wch: 20 }, // Contacto
-            { wch: 30 }, // Comentarios
-        ];
+        if (searchTerm) {
+            const lowercasedTerm = searchTerm.toLowerCase();
+            processableItems = processableItems.filter(pps => (pps[FIELD_NOMBRE_PPS_LANZAMIENTOS] || '').toLowerCase().includes(lowercasedTerm));
+        }
         
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Finalizadas para Reactivar');
-        XLSX.writeFile(wb, 'Reporte_Finalizadas_Para_Reactivar.xlsx');
-    }, [finalizadasParaReactivar, getInstitutionForPps]);
+        const now = new Date();
+        now.setHours(0,0,0,0); // Start of today
+
+        const activasYPorFinalizar = processableItems.filter(pps => {
+            const endDate = parseToUTCDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS]);
+            return endDate && endDate >= now;
+        }).sort((a,b) => (parseToUTCDate(a[FIELD_FECHA_FIN_LANZAMIENTOS])?.getTime() || 0) - (parseToUTCDate(b[FIELD_FECHA_FIN_LANZAMIENTOS])?.getTime() || 0));
+
+        const activasIndefinidas = processableItems.filter(pps => !pps[FIELD_FECHA_FIN_LANZAMIENTOS]);
+
+        const finalizadasParaReactivar = processableItems.filter(pps => {
+            const endDate = parseToUTCDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS]);
+            const status = pps[FIELD_ESTADO_GESTION_LANZAMIENTOS] || '';
+            return endDate && endDate < now && status !== 'Relanzamiento Confirmado' && status !== 'Archivado' && status !== 'No se Relanza';
+        });
+
+        const relanzamientosConfirmados = processableItems.filter(pps => pps[FIELD_ESTADO_GESTION_LANZAMIENTOS] === 'Relanzamiento Confirmado');
+
+        return { activasYPorFinalizar, finalizadasParaReactivar, relanzamientosConfirmados, activasIndefinidas };
+    }, [lanzamientos, searchTerm, orientationFilter, forcedOrientations]);
 
 
     const renderContent = () => {
         if (loadingState === 'loading' || loadingState === 'initial') return <Loader />;
         if (loadingState === 'error') return <EmptyState icon="error" title="Error" message={error!} />;
-        if (lanzamientos.length === 0) return <EmptyState icon="folder_off" title="Sin Prácticas" message="No se encontraron prácticas para gestionar." />;
         
-        const hasActivas = activasYPorFinalizar.length > 0;
-        const hasFinalizadas = finalizadasParaReactivar.length > 0;
-        const hasConfirmados = relanzamientosConfirmados.length > 0;
-        const hasActivasIndefinidas = activasIndefinidas.length > 0;
-
-        if (!hasActivas && !hasFinalizadas && !hasConfirmados && !hasActivasIndefinidas && (searchTerm || orientationFilter !== 'all' || (forcedOrientations && forcedOrientations.length > 0))) {
-            return <EmptyState icon="search_off" title="Sin Resultados" message="No se encontraron prácticas que coincidan con los filtros aplicados." />;
+        const noResults = Object.values(filteredData).every(arr => arr.length === 0);
+        if (noResults) {
+             return <EmptyState icon="search_off" title="Sin Resultados" message="No se encontraron convocatorias que coincidan con los filtros seleccionados." />;
         }
 
         return (
-            <div className="space-y-6">
-                <section>
+             <div className="space-y-8">
+                {filteredData.relanzamientosConfirmados.length > 0 && (
                     <CollapsibleSection 
-                        title="Finalizadas (Para Reactivar)"
-                        count={finalizadasParaReactivar.length}
-                        icon="history"
-                        iconBgColor="bg-sky-100 dark:bg-sky-900/50"
-                        iconColor="text-sky-600 dark:text-sky-300"
-                        borderColor="border-sky-300 dark:border-sky-700"
-                        actions={
-                            hasFinalizadas ? (
-                                <button
-                                    onClick={handleExportFinalizadas}
-                                    className="inline-flex items-center gap-2 bg-green-600 text-white font-bold text-xs py-2 px-3 rounded-lg hover:bg-green-700 transition-colors shadow-sm"
-                                >
-                                    <span className="material-icons !text-base">download</span>
-                                    <span>Exportar</span>
-                                </button>
-                            ) : undefined
-                        }
-                    >
-                        {hasFinalizadas ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-4">
-                                {finalizadasParaReactivar.map(pps => (
-                                    <GestionCard key={pps.id} pps={pps} onSave={handleSave} isUpdating={updatingIds.has(pps.id)} cardType="finalizadasParaReactivar" institution={getInstitutionForPps(pps)} onSavePhone={handleUpdateInstitutionPhone} />
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="text-slate-500 dark:text-slate-400 text-sm p-4 bg-white dark:bg-slate-800/50 rounded-lg border border-slate-200/70 dark:border-slate-700">No hay prácticas finalizadas este año pendientes de gestión.</p>
-                        )}
-                    </CollapsibleSection>
-                </section>
-                
-                <section>
-                     <CollapsibleSection 
-                        title="Relanzamientos Confirmados"
-                        count={relanzamientosConfirmados.length}
+                        title="Relanzamientos Confirmados" 
+                        count={filteredData.relanzamientosConfirmados.length}
                         icon="event_repeat"
                         iconBgColor="bg-indigo-100 dark:bg-indigo-900/50"
                         iconColor="text-indigo-600 dark:text-indigo-300"
-                        borderColor="border-indigo-300 dark:border-indigo-700"
+                        borderColor="border-indigo-300 dark:border-indigo-600"
                     >
-                        {hasConfirmados ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-4">
-                               {relanzamientosConfirmados.map(pps => (
-                                    <GestionCard key={pps.id} pps={pps} onSave={handleSave} isUpdating={updatingIds.has(pps.id)} cardType="relanzamientosConfirmados" institution={getInstitutionForPps(pps)} onSavePhone={handleUpdateInstitutionPhone} />
-                               ))}
-                            </div>
-                        ) : (
-                            <p className="text-slate-500 dark:text-slate-400 text-sm p-4 bg-white dark:bg-slate-800/50 rounded-lg border border-slate-200/70 dark:border-slate-700">No hay prácticas con relanzamiento confirmado.</p>
-                        )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                            {filteredData.relanzamientosConfirmados.map(pps => <GestionCard key={pps.id} pps={pps} onSave={handleSave} isUpdating={updatingIds.has(pps.id)} cardType="relanzamientosConfirmados" institution={institutionsMap.get(normalizeStringForComparison(pps[FIELD_NOMBRE_PPS_LANZAMIENTOS] || ''))} onSavePhone={handleUpdateInstitutionPhone} />)}
+                        </div>
                     </CollapsibleSection>
-                </section>
-
-                <section>
-                    <CollapsibleSection 
-                        title="Activas (Sin Fecha de Fin)"
-                        count={activasIndefinidas.length}
+                )}
+                 {filteredData.activasIndefinidas.length > 0 && (
+                     <CollapsibleSection 
+                        title="Activas (Sin Fecha de Fin)" 
+                        count={filteredData.activasIndefinidas.length}
                         icon="hourglass_empty"
-                        iconBgColor="bg-slate-100 dark:bg-slate-700/80"
+                        iconBgColor="bg-slate-100 dark:bg-slate-700"
                         iconColor="text-slate-600 dark:text-slate-300"
                         borderColor="border-slate-300 dark:border-slate-600"
                     >
-                        {hasActivasIndefinidas ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-4">
-                                {activasIndefinidas.map(pps => (
-                                    <GestionCard key={pps.id} pps={pps} onSave={handleSave} isUpdating={updatingIds.has(pps.id)} cardType="activasIndefinidas" institution={getInstitutionForPps(pps)} onSavePhone={handleUpdateInstitutionPhone} />
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="text-slate-500 dark:text-slate-400 text-sm p-4 bg-white dark:bg-slate-800/50 rounded-lg border border-slate-200/70 dark:border-slate-700">No hay prácticas activas sin una fecha de finalización definida.</p>
-                        )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                            {filteredData.activasIndefinidas.map(pps => <GestionCard key={pps.id} pps={pps} onSave={handleSave} isUpdating={updatingIds.has(pps.id)} cardType="activasIndefinidas" institution={institutionsMap.get(normalizeStringForComparison(pps[FIELD_NOMBRE_PPS_LANZAMIENTOS] || ''))} onSavePhone={handleUpdateInstitutionPhone} />)}
+                        </div>
                     </CollapsibleSection>
-                </section>
-
-                <section>
+                 )}
+                {filteredData.activasYPorFinalizar.length > 0 && (
                     <CollapsibleSection 
-                        title="Activas y Próximas a Finalizar"
-                        count={activasYPorFinalizar.length}
+                        title="Activas y Próximas a Finalizar" 
+                        count={filteredData.activasYPorFinalizar.length}
                         icon="pending_actions"
+                        iconBgColor="bg-green-100 dark:bg-green-900/50"
+                        iconColor="text-green-600 dark:text-green-300"
+                        borderColor="border-green-300 dark:border-green-600"
+                    >
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                            {filteredData.activasYPorFinalizar.map(pps => <GestionCard key={pps.id} pps={pps} onSave={handleSave} isUpdating={updatingIds.has(pps.id)} cardType="activasYPorFinalizar" institution={institutionsMap.get(normalizeStringForComparison(pps[FIELD_NOMBRE_PPS_LANZAMIENTOS] || ''))} onSavePhone={handleUpdateInstitutionPhone} />)}
+                        </div>
+                    </CollapsibleSection>
+                )}
+                {filteredData.finalizadasParaReactivar.length > 0 && (
+                    <CollapsibleSection 
+                        title="Finalizadas para Reactivar" 
+                        count={filteredData.finalizadasParaReactivar.length}
+                        icon="history"
                         iconBgColor="bg-amber-100 dark:bg-amber-900/50"
                         iconColor="text-amber-600 dark:text-amber-300"
-                        borderColor="border-amber-300 dark:border-amber-700"
+                        borderColor="border-amber-300 dark:border-amber-600"
                     >
-                        {hasActivas ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-4">
-                               {activasYPorFinalizar.map(pps => (
-                                    <GestionCard key={pps.id} pps={pps} onSave={handleSave} isUpdating={updatingIds.has(pps.id)} cardType="activasYPorFinalizar" institution={getInstitutionForPps(pps)} onSavePhone={handleUpdateInstitutionPhone} />
-                               ))}
-                            </div>
-                        ) : (
-                            <p className="text-slate-500 dark:text-slate-400 text-sm p-4 bg-white dark:bg-slate-800/50 rounded-lg border border-slate-200/70 dark:border-slate-700">No hay prácticas activas o finalizando en los próximos 30 días.</p>
-                        )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                            {filteredData.finalizadasParaReactivar.map(pps => <GestionCard key={pps.id} pps={pps} onSave={handleSave} isUpdating={updatingIds.has(pps.id)} cardType="finalizadasParaReactivar" institution={institutionsMap.get(normalizeStringForComparison(pps[FIELD_NOMBRE_PPS_LANZAMIENTOS] || ''))} onSavePhone={handleUpdateInstitutionPhone} />)}
+                        </div>
                     </CollapsibleSection>
-                </section>
+                )}
             </div>
         );
     };
@@ -792,56 +648,54 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
         <div className="animate-fade-in-up space-y-6">
             {toastInfo && <Toast message={toastInfo.message} type={toastInfo.type} onClose={() => setToastInfo(null)} />}
             
-            <div className="bg-slate-50/70 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200/60 dark:border-slate-700">
-                <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
-                    <div className="flex-grow flex flex-col sm:flex-row gap-4">
-                        <div className="relative w-full sm:w-80">
-                            <input
-                                type="text"
-                                placeholder="Buscar por institución..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors"
-                            />
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 material-icons text-slate-400 dark:text-slate-500">search</span>
+             <div className="p-4 bg-slate-50/70 dark:bg-slate-800/50 rounded-xl border border-slate-200/60 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-4">
+                 <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Panel de Gestión de Prácticas</h2>
+                 <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                    {!forcedOrientations && (
+                        <div className="relative w-full sm:w-48">
+                             <select id="orientation-filter" value={orientationFilter} onChange={e => setOrientationFilter(e.target.value)} className="w-full appearance-none pl-4 pr-10 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors">
+                                 <option value="all">Todas las Orientaciones</option>
+                                 {ALL_ORIENTACIONES.map(o => <option key={o} value={o}>{o}</option>)}
+                             </select>
+                             <span className="absolute right-3 top-1/2 -translate-y-1/2 material-icons text-slate-400 dark:text-slate-500 pointer-events-none">expand_more</span>
                         </div>
-                        
-                        {!forcedOrientations ? (
-                            <div className="relative w-full sm:w-60">
-                                <select 
-                                value={orientationFilter} 
-                                onChange={(e) => setOrientationFilter(e.target.value)}
-                                className="w-full appearance-none pl-4 pr-10 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors"
-                                >
-                                    <option value="all">Todas las Orientaciones</option>
-                                    {ALL_ORIENTACIONES.map(o => <option key={o} value={o}>{o}</option>)}
-                                </select>
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 material-icons text-slate-400 dark:text-slate-500 pointer-events-none">expand_more</span>
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-2 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 text-sm font-semibold px-3 py-2 rounded-lg border border-blue-200/80 dark:border-blue-800/50">
-                                <span className="material-icons !text-base">filter_alt</span>
-                                <span>Mostrando: {forcedOrientations.join(' & ')}</span>
-                            </div>
-                        )}
+                    )}
+                    <div className="relative w-full sm:w-72">
+                        <input id="pps-filter" type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Filtrar por nombre de PPS..." className="w-full pl-10 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors" />
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 material-icons text-slate-400 dark:text-slate-500">search</span>
                     </div>
-                    <div className="w-full sm:w-auto">
-                        <button
-                            onClick={handleSync}
-                            disabled={isSyncing}
-                            className="w-full sm:w-auto bg-indigo-600 text-white font-bold py-2.5 px-5 rounded-lg text-sm transition-colors shadow-md disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-indigo-700"
-                        >
-                            {isSyncing ? (
-                                <><div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin"/><span>Sincronizando...</span></>
-                            ) : (
-                                <><span className="material-icons !text-base">sync</span><span>Sincronizar Prácticas Antiguas</span></>
-                            )}
-                        </button>
-                    </div>
-                </div>
+                 </div>
             </div>
 
             {renderContent()}
+             
+             <CollapsibleSection 
+                title="Acciones Avanzadas" 
+                count={1}
+                icon="build_circle"
+                iconBgColor="bg-rose-100 dark:bg-rose-900/50"
+                iconColor="text-rose-600 dark:text-rose-300"
+                borderColor="border-rose-300 dark:border-rose-600"
+                defaultOpen={false}
+            >
+                <div className="p-4 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                    <div>
+                        <h4 className="font-semibold text-slate-800 dark:text-slate-100">Sincronizar Prácticas Antiguas</h4>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 max-w-lg mt-1">
+                            Crea registros de "Lanzamiento" para prácticas de los últimos 2 años que no lo tengan.
+                            Útil para asegurar que todas las prácticas estén en el sistema de gestión.
+                        </p>
+                    </div>
+                     <button
+                        onClick={handleSync}
+                        disabled={isSyncing}
+                        className="bg-rose-600 text-white font-bold py-2.5 px-6 rounded-lg text-sm transition-colors shadow-md disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-rose-700"
+                    >
+                        <span className="material-icons">{isSyncing ? 'sync' : 'history'}</span>
+                        <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>
+                    </button>
+                </div>
+            </CollapsibleSection>
         </div>
     );
 };

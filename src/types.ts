@@ -173,7 +173,7 @@ export enum Orientacion {
   CLINICA = "Clinica",
   LABORAL = "Laboral",
   EDUCACIONAL = "Educacional",
-  COMUNITARIA = "Comunitaria", // Assuming this might be one of the 4 for rotation
+  COMUNITARIA = "Comunitaria",
   OTRA = "Otra"
 }
 
@@ -374,10 +374,14 @@ export type AnyReportData = ExecutiveReportData | ComparativeExecutiveReportData
 export type ReportType = '2024' | '2025' | 'comparative';
 
 // For the new Asistente feature
-export interface ConferenceModule {
+export interface ConferenceActivity {
     id: string;
     name: string;
+    day: 'martes' | 'miercoles' | 'jueves';
     date: string; // YYYY-MM-DD
+    time: string; // HH:MM
     orientation: Orientacion;
-    hours: number;
+    hours: 2; // Fixed at 2 hours
 }
+// FIX: Export JornadaBlockCounts to be used across the application
+export type JornadaBlockCounts = Map<string, number>;

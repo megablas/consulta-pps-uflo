@@ -4,6 +4,7 @@ import Modal from './Modal';
 import { EnrollmentForm } from './EnrollmentForm';
 import SeleccionadosModal from './SeleccionadosModal';
 import { FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS } from '../constants';
+import JornadaRegistrationForm from './JornadaRegistrationForm';
 
 const AppModals: React.FC = () => {
     const { 
@@ -17,7 +18,14 @@ const AppModals: React.FC = () => {
         seleccionadosData,
         convocatoriaForModal,
         isSubmittingEnrollment,
-        onSubmitEnrollment
+        onSubmitEnrollment,
+        // ADD: Jornada modal props from context
+        isJornadaModalOpen,
+        closeJornadaModal,
+        lanzamientoForJornada,
+        isSubmittingJornada,
+        onSubmitJornada,
+        jornadaBlockCounts,
     } = useModal();
 
     const horariosStr = selectedLanzamientoForEnrollment?.[FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS] || '';
@@ -46,6 +54,16 @@ const AppModals: React.FC = () => {
                 onClose={closeSeleccionadosModal}
                 seleccionados={seleccionadosData}
                 convocatoriaName={convocatoriaForModal}
+            />
+
+            {/* ADD: Render the new Jornada Registration Modal */}
+            <JornadaRegistrationForm
+                isOpen={isJornadaModalOpen}
+                onClose={closeJornadaModal}
+                onSubmit={onSubmitJornada || (() => Promise.resolve())}
+                convocatoriaName={lanzamientoForJornada?.['Nombre PPS'] || ''}
+                isSubmitting={isSubmittingJornada}
+                blockCounts={jornadaBlockCounts}
             />
         </>
     );

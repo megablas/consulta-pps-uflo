@@ -76,8 +76,8 @@ const TimelineView: React.FC = () => {
             return date && date.getUTCFullYear() === targetYear;
         });
 
-        // FIX: Explicitly convert cupos value to a number before adding to prevent type errors.
-        const totalCupos = launchesForYear.reduce((sum, launch) => sum + (Number(launch[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS]) || 0), 0);
+        // FIX: Explicitly cast cupos to a Number to prevent type errors in the reduce function.
+        const totalCupos = launchesForYear.reduce((sum, launch) => sum + Number(launch[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0), 0);
         
         const monthlyData: { [key: number]: {
             cuposTotal: number;
@@ -95,7 +95,7 @@ const TimelineView: React.FC = () => {
                 };
             }
             
-            const cupos = Number(launch[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS]) || 0;
+            const cupos = Number(launch[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0);
             monthlyData[monthIndex].cuposTotal += cupos;
             
             const ppsName = launch[FIELD_NOMBRE_PPS_LANZAMIENTOS];
@@ -165,7 +165,6 @@ const TimelineView: React.FC = () => {
                             className="w-full appearance-none pl-4 pr-10 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors"
                             aria-label="Seleccionar año"
                          >
-                            {/* FIX: Explicitly type 'year' to resolve type inference issues. */}
                              {availableYears.map((year: number) => <option key={year} value={year}>{year}</option>)}
                          </select>
                          <span className="absolute right-3 top-1/2 -translate-y-1/2 material-icons text-slate-400 dark:text-slate-500 pointer-events-none">expand_more</span>
@@ -183,11 +182,10 @@ const TimelineView: React.FC = () => {
                  <div className="relative w-full sm:w-48">
                      <select 
                         value={targetYear} 
-                        onChange={(e) => setTargetYear(Number(e.target.value))}
+                        onChange={e => setTargetYear(Number(e.target.value))}
                         className="w-full appearance-none pl-4 pr-10 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-colors"
                         aria-label="Seleccionar año"
                      >
-                        {/* FIX: Explicitly type 'year' to resolve type inference issues. */}
                          {availableYears.map((year: number) => <option key={year} value={year}>{year}</option>)}
                      </select>
                      <span className="absolute right-3 top-1/2 -translate-y-1/2 material-icons text-slate-400 dark:text-slate-500 pointer-events-none">expand_more</span>

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import type { Convocatoria, LanzamientoPPS, Practica, EstudianteFields } from '../types';
+import type { Convocatoria, LanzamientoPPS, Practica, EstudianteFields, AsistenciaJornada } from '../types';
 import ConvocatoriaCard from './ConvocatoriaCard';
 import { 
     FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, 
@@ -15,11 +15,18 @@ import {
     FIELD_FECHA_INICIO_LANZAMIENTOS,
     FIELD_NOMBRE_PPS_CONVOCATORIAS,
     FIELD_FECHA_INICIO_CONVOCATORIAS,
+    CONFERENCE_PPS_NAME,
+    CONFERENCE_ACTIVITIES,
+    FIELD_ASISTENCIA_MODULO_ID,
 } from '../constants';
 import EmptyState from './EmptyState';
-import { useModal } from '../contexts/ModalContext';
+import { useModal, type JornadaBlockCounts } from '../contexts/ModalContext';
 import { normalizeStringForComparison, parseToUTCDate } from '../utils/formatters';
 import { fetchSeleccionados } from '../services/dataService';
+import JornadaCard from './JornadaCard';
+import { useConvocatorias } from '../hooks/useConvocatorias';
+import { useAuth } from '../contexts/AuthContext';
+
 
 interface ConvocatoriasListProps {
   lanzamientos: LanzamientoPPS[];
@@ -27,11 +34,15 @@ interface ConvocatoriasListProps {
   practicas: Practica[];
   student: EstudianteFields | null;
   onInscribir: (lanzamiento: LanzamientoPPS) => void;
+  onInscribirJornada: (lanzamiento: LanzamientoPPS) => void;
   institutionAddressMap: Map<string, string>;
+  asistencias: (AsistenciaJornada & { id: string })[];
+  jornadaBlockCounts: JornadaBlockCounts;
 }
 
-const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myEnrollments, practicas, student, onInscribir, institutionAddressMap }) => {
+const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myEnrollments, practicas, student, onInscribir, onInscribirJornada, institutionAddressMap, asistencias, jornadaBlockCounts }) => {
     const { openSeleccionadosModal, showModal } = useModal();
+    const { isSubmittingJornada, lanzamientoForJornada } = useModal();
     
     const seleccionadosMutation = useMutation({
         mutationFn: (lanzamiento: LanzamientoPPS) => fetchSeleccionados(lanzamiento),
@@ -57,44 +68,61 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myE
     return (
         <div className="space-y-5">
           {lanzamientos.map((lanzamiento) => {
-            // FIX: Refactored the enrollment association logic to be even stricter. In addition to a date check,
-            // it now also verifies that the names match exactly, preventing incorrect associations due to faulty data links.
+            
+            // --- Special Card for the Conference ---
+            if (lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS] === CONFERENCE_PPS_NAME) {
+                const isEnrolledTheOldWay = myEnrollments.some(e => {
+                    const linkedIds = e[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [];
+                    return linkedIds.includes(lanzamiento.id);
+                });
+
+                const conferenceActivityIds = useMemo(() => new Set(CONFERENCE_ACTIVITIES.map(act => act.id)), []);
+                const isEnrolledTheNewWay = asistencias.some(a => conferenceActivityIds.has(a[FIELD_ASISTENCIA_MODULO_ID] as string));
+
+                const isEnrolledInJornada = isEnrolledTheOldWay || isEnrolledTheNewWay;
+
+                return (
+                    <JornadaCard 
+                        key={lanzamiento.id}
+                        lanzamiento={lanzamiento}
+                        onInscribir={onInscribirJornada}
+                        isEnrolled={isEnrolledInJornada}
+                        isEnrolling={isSubmittingJornada && lanzamientoForJornada?.id === lanzamiento.id}
+                        blockCounts={jornadaBlockCounts}
+                    />
+                );
+            }
+
+            // --- Regular Convocatoria Cards ---
             let enrollment = myEnrollments.find(e => {
                 const linkedIds = e[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [];
                 if (!linkedIds.includes(lanzamiento.id)) {
                     return false;
                 }
                 
-                // --- ENHANCED SANITY CHECK ---
-                // 1. NAME CHECK: If linked, the names must also match. This prevents associating "Hospital X" with "Hospital X - Pediatría".
                 const enrollmentPpsNameRaw = e[FIELD_NOMBRE_PPS_CONVOCATORIAS];
                 const enrollmentPpsName = Array.isArray(enrollmentPpsNameRaw) ? enrollmentPpsNameRaw[0] : enrollmentPpsNameRaw;
                 const lanzamientoPpsName = lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS];
 
                 const namesMatch = normalizeStringForComparison(enrollmentPpsName as string) === normalizeStringForComparison(lanzamientoPpsName);
                 if (!namesMatch) {
-                    return false; // Names don't match, this is an incorrect link.
+                    return false;
                 }
 
-                // 2. DATE CHECK: If linked and names match, the start dates should also be close.
                 const enrollmentStartDate = parseToUTCDate(e[FIELD_FECHA_INICIO_CONVOCATORIAS]);
                 const lanzamientoStartDate = parseToUTCDate(lanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS]);
 
                 if (enrollmentStartDate && lanzamientoStartDate) {
                     const timeDiff = Math.abs(enrollmentStartDate.getTime() - lanzamientoStartDate.getTime());
                     const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
-                    // Allow a 7-day tolerance for minor discrepancies.
                     return daysDiff <= 7;
                 }
                 
-                // If dates are missing but link and names match, trust it.
                 return true;
             });
 
-            // Fallback for older enrollment data that might not have a direct link.
             if (!enrollment) {
                 enrollment = myEnrollments.find(e => {
-                    // Only attempt fallback if the enrollment record itself is unlinked.
                     const isUnlinked = (e[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || []).length === 0;
                     if (!isUnlinked) {
                         return false;
@@ -112,7 +140,6 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myE
                         return false;
                     }
                     
-                    // Names must match exactly to prevent partial matches like "Hospital X" matching "Hospital X - Pediatría".
                     const namesMatch = normalizeStringForComparison(enrollmentPpsName as string) === normalizeStringForComparison(lanzamientoPpsName);
                     
                     const timeDiff = Math.abs(enrollmentStartDate.getTime() - lanzamientoStartDate.getTime());
@@ -125,13 +152,11 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myE
             const enrollmentStatus = enrollment ? enrollment[FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS] : null;
             
             const isCompleted = practicas.some(practica => {
-                // New, preferred method: check for a direct link.
                 const linkedLanzamientoId = (practica[FIELD_LANZAMIENTO_VINCULADO_PRACTICAS] as string[] | undefined)?.[0];
                 if (linkedLanzamientoId) {
                     return linkedLanzamientoId === lanzamiento.id;
                 }
 
-                // Fallback for older data: requires exact name, orientation, and close start date match.
                 const practicaInstitucionRaw = practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
                 const practicaInstitucion = Array.isArray(practicaInstitucionRaw) ? practicaInstitucionRaw[0] : practicaInstitucionRaw;
                 const practicaOrientacion = practica[FIELD_ESPECIALIDAD_PRACTICAS];
@@ -145,14 +170,12 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myE
                     return false;
                 }
                 
-                // Stricter name comparison. A match only occurs if the names are identical after normalization.
                 const namesMatch = normalizeStringForComparison(practicaInstitucion as string) === normalizeStringForComparison(lanzamientoInstitucion);
 
                 if (!namesMatch) {
-                    return false; // If names are different in any way, it's not the same practice.
+                    return false;
                 }
 
-                // If names match, we also check orientation and date proximity.
                 const orientationsMatch = normalizeStringForComparison(practicaOrientacion) === normalizeStringForComparison(lanzamientoOrientacion);
                 
                 const timeDiff = Math.abs(practicaFechaInicio.getTime() - lanzamientoFechaInicio.getTime());

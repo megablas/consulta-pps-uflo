@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import SubTabs from '../../components/SubTabs';
 import AdminSearch from '../../components/AdminSearch';
-import SeguroGenerator from '../../components/SeguroGenerator';
-import NuevosConvenios from '../../components/NuevosConvenios';
+// FIX: Module '"file:///src/components/SeguroGenerator"' has no default export.
+import { SeguroGenerator } from '../../components/SeguroGenerator';
+import { NuevosConvenios } from '../../components/NuevosConvenios';
 import RepitentesPanel from '../../components/RepitentesPanel';
 import ExecutiveReportGenerator from '../../components/ExecutiveReportGenerator';
 import PenalizationManager from '../../components/PenalizationManager';

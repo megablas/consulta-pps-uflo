@@ -6,7 +6,6 @@ import { formatDate } from '../utils/formatters';
 
 interface CorreccionRapidaViewProps {
   students: FlatCorreccionStudent[];
-  // FIX: Changed prop signature to accept the full student object to resolve type mismatch with parent.
   onNotaChange: (student: FlatCorreccionStudent, newNota: string) => Promise<void>;
   updatingNotaId: string | null;
   searchTerm: string;
@@ -61,8 +60,8 @@ const CorreccionRapidaView: React.FC<CorreccionRapidaViewProps> = ({ students, o
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' }>({ key: 'correctionDeadline', direction: 'ascending' });
   const [justUpdatedPracticaId, setJustUpdatedPracticaId] = useState<string | null>(null);
 
-  // FIX: Updated handler to pass the full student object to the onNotaChange prop.
   const handleNotaChange = async (student: FlatCorreccionStudent, newNota: string) => {
+    // FIX: Pass the full student object to the onNotaChange prop to match the expected signature from the parent component.
     await onNotaChange(student, newNota);
     setJustUpdatedPracticaId(student.practicaId || null);
     setTimeout(() => setJustUpdatedPracticaId(null), 1500); 
@@ -164,7 +163,6 @@ const CorreccionRapidaView: React.FC<CorreccionRapidaViewProps> = ({ students, o
                   </td>
                   <td className="p-3">
                     <div className="flex items-center gap-2">
-                      {/* FIX: Updated NotaSelector call to pass the full student object. */}
                       <NotaSelector
                         value={student.nota || 'Sin calificar'}
                         onChange={(e) => handleNotaChange(student, e.target.value)}

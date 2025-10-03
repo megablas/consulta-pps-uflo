@@ -1,7 +1,11 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { LanzamientoPPS, GroupedSeleccionados } from '../types';
+import { LanzamientoPPS, GroupedSeleccionados, JornadaBlockCounts } from '../types';
 
 type OnSubmitEnrollment = (formData: any) => Promise<void>;
+type OnSubmitJornada = (selectedShiftIds: string[]) => Promise<void>;
+
+// Type for mapping block IDs to their registration counts
+export type { JornadaBlockCounts };
 
 interface ModalContextType {
   // Generic Modal
@@ -24,6 +28,16 @@ interface ModalContextType {
   convocatoriaForModal: string;
   openSeleccionadosModal: (data: GroupedSeleccionados | null, title: string) => void;
   closeSeleccionadosModal: () => void;
+
+  // Jornada Registration Modal
+  isJornadaModalOpen: boolean;
+  lanzamientoForJornada: LanzamientoPPS | null;
+  openJornadaModal: (lanzamiento: LanzamientoPPS, onSubmit: OnSubmitJornada, blockCounts: JornadaBlockCounts) => void;
+  closeJornadaModal: () => void;
+  onSubmitJornada: OnSubmitJornada | null;
+  isSubmittingJornada: boolean;
+  setIsSubmittingJornada: (isSubmitting: boolean) => void;
+  jornadaBlockCounts: JornadaBlockCounts | null; // ADD: State for block counts
 }
 
 const ModalContext = createContext<ModalContextType | undefined>(undefined);
@@ -38,6 +52,13 @@ export const ModalProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [isSeleccionadosModalOpen, setIsSeleccionadosModalOpen] = useState(false);
   const [seleccionadosData, setSeleccionadosData] = useState<GroupedSeleccionados | null>(null);
   const [convocatoriaForModal, setConvocatoriaForModal] = useState('');
+  
+  const [isJornadaModalOpen, setIsJornadaModalOpen] = useState(false);
+  const [lanzamientoForJornada, setLanzamientoForJornada] = useState<LanzamientoPPS | null>(null);
+  const [onSubmitJornada, setOnSubmitJornada] = useState<OnSubmitJornada | null>(null);
+  const [isSubmittingJornada, setIsSubmittingJornada] = useState(false);
+  const [jornadaBlockCounts, setJornadaBlockCounts] = useState<JornadaBlockCounts | null>(null);
+
 
   const showModal = useCallback((title: string, message: string) => {
     setModalInfo({ title, message });
@@ -49,7 +70,7 @@ export const ModalProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const openEnrollmentForm = useCallback((lanzamiento: LanzamientoPPS, onSubmit: OnSubmitEnrollment) => {
     setSelectedLanzamientoForEnrollment(lanzamiento);
-    setOnSubmitEnrollment(() => onSubmit); // Store the function itself
+    setOnSubmitEnrollment(() => onSubmit);
     setIsEnrollmentFormOpen(true);
   }, []);
 
@@ -70,6 +91,20 @@ export const ModalProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setSeleccionadosData(null);
     setConvocatoriaForModal('');
   }, []);
+
+  const openJornadaModal = useCallback((lanzamiento: LanzamientoPPS, onSubmit: OnSubmitJornada, blockCounts: JornadaBlockCounts) => {
+      setLanzamientoForJornada(lanzamiento);
+      setOnSubmitJornada(() => onSubmit);
+      setJornadaBlockCounts(blockCounts); // Store the counts
+      setIsJornadaModalOpen(true);
+  }, []);
+
+  const closeJornadaModal = useCallback(() => {
+      setIsJornadaModalOpen(false);
+      setLanzamientoForJornada(null);
+      setOnSubmitJornada(null);
+      setJornadaBlockCounts(null); // Clear the counts
+  }, []);
   
   const value = {
     modalInfo,
@@ -87,6 +122,14 @@ export const ModalProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     convocatoriaForModal,
     openSeleccionadosModal,
     closeSeleccionadosModal,
+    isJornadaModalOpen,
+    lanzamientoForJornada,
+    openJornadaModal,
+    closeJornadaModal,
+    onSubmitJornada,
+    isSubmittingJornada,
+    setIsSubmittingJornada,
+    jornadaBlockCounts, // Provide counts through context
   };
 
   return (
