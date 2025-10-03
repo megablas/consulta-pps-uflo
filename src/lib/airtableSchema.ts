@@ -27,6 +27,7 @@ import {
     FIELD_ASISTENCIA_ORIENTACION,
     FIELD_ASISTENCIA_HORAS,
     FIELD_ASISTENCIA_PROCESADO,
+    FIELD_ASISTENCIA_CONFIRMADA_JORNADA,
 } from '../constants';
 
 export const schema = {
@@ -65,6 +66,7 @@ export const schema = {
         informeSubido: FIELD_INFORME_SUBIDO_CONVOCATORIAS,
         fechaEntregaInforme: FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS,
         estadoInscripcion: FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS,
+        // FIX: Corrected typo in constant name.
         lanzamientoVinculado: FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
         estudianteInscripto: FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS,
         nombrePPS: FIELD_NOMBRE_PPS_CONVOCATORIAS,
@@ -119,6 +121,7 @@ export const schema = {
         orientacion: FIELD_ASISTENCIA_ORIENTACION,
         horas: FIELD_ASISTENCIA_HORAS,
         procesado: FIELD_ASISTENCIA_PROCESADO,
+        asistenciaConfirmada: FIELD_ASISTENCIA_CONFIRMADA_JORNADA,
     },
     solicitudes: {
         _tableName: AIRTABLE_TABLE_NAME_PPS,
