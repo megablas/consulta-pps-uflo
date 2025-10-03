@@ -70,12 +70,13 @@ const fetchPendingDataForAccreditation = async (): Promise<{ students: StudentTo
     if (!conferenceInstitutionId) throw new Error(`Registro maestro de INSTITUCIÓN para "${CONFERENCE_PPS_NAME}" no encontrado. Asegúrese de que exista en la tabla 'Instituciones'.`);
 
     const asistenciasRes = await db.asistenciasJornada.getAll({
-        filterByFormula: `NOT({Procesado})`,
+        // Fetch all attendances; filtering for pending vs accredited will happen client-side.
         fields: [
             FIELD_ASISTENCIA_ESTUDIANTE,
             FIELD_ASISTENCIA_MODULO_ID,
             FIELD_ASISTENCIA_MODULO_NOMBRE,
             FIELD_ASISTENCIA_FECHA,
+            FIELD_ASISTENCIA_CONFIRMADA_JORNADA,
         ],
     });
     const asistencias = asistenciasRes.map(a => ({...a.fields, id: a.id}));
@@ -141,20 +142,23 @@ const fetchPendingDataForAccreditation = async (): Promise<{ students: StudentTo
         const isEligible = completedShiftCount > 0;
         const hasFullAttendance = completedShiftCount === totalConferenceShifts;
         
-        finalStudentList.push({
-            studentId,
-            studentInfo,
-            totalAttendances: confirmedAttendances.length,
-            totalHours,
-            asistenciaIds: studentAsistencias.map(a => a.id),
-            isEligible,
-            hasFullAttendance,
-            attendedActivities: studentAsistencias.map(a => ({
-                id: a.id,
-                name: (a[FIELD_ASISTENCIA_MODULO_NOMBRE] as string || 'Actividad') + (a[FIELD_ASISTENCIA_CONFIRMADA_JORNADA] ? ' ✓' : ''),
-                date: a[FIELD_ASISTENCIA_FECHA] as string | undefined,
-            })),
-        });
+        // Only include students who have at least one confirmed attendance.
+        if (confirmedAttendances.length > 0) {
+            finalStudentList.push({
+                studentId,
+                studentInfo,
+                totalAttendances: confirmedAttendances.length,
+                totalHours,
+                asistenciaIds: studentAsistencias.map(a => a.id),
+                isEligible,
+                hasFullAttendance,
+                attendedActivities: studentAsistencias.map(a => ({
+                    id: a.id,
+                    name: (a[FIELD_ASISTENCIA_MODULO_NOMBRE] as string || 'Actividad') + (a[FIELD_ASISTENCIA_CONFIRMADA_JORNADA] ? ' ✓' : ''),
+                    date: a[FIELD_ASISTENCIA_FECHA] as string | undefined,
+                })),
+            });
+        }
     }
 
     return {
@@ -343,6 +347,12 @@ const AcreditacionJornada: React.FC = () => {
         enabled: !!pendingData?.conferenceLaunchId
     });
 
+    const trulyPendingStudents = useMemo(() => {
+        if (!pendingData?.students || !accreditedData) return [];
+        const accreditedStudentIds = new Set(accreditedData.map(s => s.studentId));
+        return pendingData.students.filter(s => !accreditedStudentIds.has(s.studentId));
+    }, [pendingData, accreditedData]);
+
     const accreditationMutation = useMutation({
         mutationFn: async (studentToAccredit: StudentToAccredit) => {
             const { conferenceLaunchId, conferenceInstitutionId } = pendingData!;
@@ -363,9 +373,6 @@ const AcreditacionJornada: React.FC = () => {
                 fechaFin: practiceEndDate,
             };
             await db.practicas.create(newPracticeData);
-
-            const attendanceIdsToUpdate = studentToAccredit.asistenciaIds.map(id => ({ id, fields: { procesado: true } }));
-            await db.asistenciasJornada.updateMany(attendanceIdsToUpdate);
         },
         onMutate: (studentToAccredit: StudentToAccredit) => {
             setAccreditingStudentId(studentToAccredit.studentId);
@@ -385,10 +392,7 @@ const AcreditacionJornada: React.FC = () => {
 
     const revertAccreditationMutation = useMutation({
         mutationFn: async ({ practicaId, asistenciaIds }: { practicaId: string, asistenciaIds: string[] }) => {
-            const deletePromise = db.practicas.delete(practicaId);
-            const updateRecords = asistenciaIds.map(id => ({ id, fields: { procesado: false } }));
-            const updatePromise = db.asistenciasJornada.updateMany(updateRecords);
-            await Promise.all([deletePromise, updatePromise]);
+            await db.practicas.delete(practicaId);
         },
         onMutate: ({ practicaId }) => {
             setDeletingPracticaId(practicaId);
@@ -433,7 +437,7 @@ const AcreditacionJornada: React.FC = () => {
     const error = pendingError || accreditedError;
 
     const tabs = [
-        { id: 'pending', label: `Pendientes (${pendingData?.students.length ?? 0})` },
+        { id: 'pending', label: `Pendientes (${trulyPendingStudents?.length ?? 0})` },
         { id: 'accredited', label: `Acreditados (${accreditedData?.length ?? 0})` },
     ];
 
@@ -458,9 +462,9 @@ const AcreditacionJornada: React.FC = () => {
                 {error && <EmptyState icon="error" title="Error" message={error.message} />}
                 
                 {!isLoading && activeTab === 'pending' && (
-                    pendingData && pendingData.students.length > 0 ? (
+                    trulyPendingStudents && trulyPendingStudents.length > 0 ? (
                         <div className="space-y-4">
-                            {pendingData.students.map(student => (
+                            {trulyPendingStudents.map(student => (
                                 <StudentAccreditationCard
                                     key={student.studentId}
                                     student={student}

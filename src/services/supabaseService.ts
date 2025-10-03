@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabaseClient';
-import { mapAirtableToSupabase, airtableToSupabaseMapping } from '../lib/schemaMapping';
+// FIX: Corrected import path to 'airtableSchema' which contains the required exports.
+import { mapAirtableToSupabase, airtableToSupabaseMapping } from '../lib/airtableSchema';
 import type { AirtableRecord } from '../types';
 
 /**

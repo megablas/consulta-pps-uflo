@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import Card from './Card';
 import { fetchAllAirtableData } from '../services/airtableService';
-import { airtableToSupabaseMapping, mapAirtableToSupabase } from '../lib/schemaMapping';
+// FIX: Changed import to 'airtableSchema' which contains the correct exports.
+import { airtableToSupabaseMapping, mapAirtableToSupabase } from '../lib/airtableSchema';
 import { supabase } from '../lib/supabaseClient';
 import { 
     AIRTABLE_TABLE_NAME_ESTUDIANTES, 

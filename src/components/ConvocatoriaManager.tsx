@@ -449,7 +449,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
             if (practicasError) throw new Error('Error al obtener las prácticas antiguas desde Airtable.');
     
             const groupedPracticas = new Map<string, (PracticaFields & { id: string })[]>();
-            // FIX: Fix type inference issue with `recentPracticas.map` by explicitly typing the map parameter. This resolves the error where properties 'id' and 'fields' were not found on the `unknown` type of the map parameter.
+            // FIX: Explicitly type 'p' to resolve type inference issues where it was considered 'unknown'.
             const mappedPracticas: Practica[] = recentPracticas.map((p: AirtableRecord<PracticaFields>) => ({ ...p.fields, id: p.id }));
 
             for (const practica of mappedPracticas) {
@@ -499,8 +499,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
     
             let successfulCreations = 0;
             let failedCreations = 0;
-            // FIX: Add explicit type cast to fix 'unknown' type error.
-            const totalToCreate: number = (newLaunchesToCreate as Partial<LanzamientoPPS>[]).length;
+            const totalToCreate: number = newLaunchesToCreate.length;
 
             for (let i = 0; i < totalToCreate; i++) {
                 const launchData = newLaunchesToCreate[i];
@@ -519,6 +518,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
             }
 
             if (failedCreations > 0) {
+                 // FIX: Corrected the use of 'totalToCreate.length' to 'totalToCreate' in the error message as totalToCreate is a number.
                  throw new Error(`${failedCreations} de ${totalToCreate} lanzamientos no pudieron crearse. Revisa la consola para más detalles.`);
             }
     

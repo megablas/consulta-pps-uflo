@@ -10,23 +10,23 @@ interface State {
 }
 
 class ErrorBoundary extends Component<Props, State> {
-  public state: State = { hasError: false };
+  state: State = { hasError: false };
 
-  public handleRefresh = () => {
+  handleRefresh = () => {
     window.location.reload();
   };
 
-  public static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): State {
     // Actualiza el estado para que el siguiente renderizado muestre la UI de fallback.
     return { hasError: true, error };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // También puedes registrar el error en un servicio de reporte de errores
     console.error("Error no capturado:", error, errorInfo);
   }
 
-  public render() {
+  render(): ReactNode {
     if (this.state.hasError) {
       // Puedes renderizar cualquier UI de fallback personalizada
       return (
@@ -52,8 +52,7 @@ class ErrorBoundary extends Component<Props, State> {
         </div>
       );
     }
-    
-    // FIX: Property 'props' does not exist on type 'ErrorBoundary'. Accessing `this.props.children` is the correct way to render child components within a React class component's render method.
+
     return this.props.children;
   }
 }

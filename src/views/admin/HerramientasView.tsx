@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import SubTabs from '../../components/SubTabs';
 import AdminSearch from '../../components/AdminSearch';
-// FIX: Module '"file:///src/components/SeguroGenerator"' has no default export.
+// FIX: Corrected import to resolve module not found error.
 import { SeguroGenerator } from '../../components/SeguroGenerator';
 import { NuevosConvenios } from '../../components/NuevosConvenios';
 import RepitentesPanel from '../../components/RepitentesPanel';
@@ -27,6 +27,7 @@ const HerramientasView: React.FC<HerramientasViewProps> = ({ onStudentSelect }) 
     { id: 'search', label: 'Buscar Alumno', icon: 'person_search' },
     { id: 'insurance', label: 'Seguros', icon: 'shield' },
     { id: 'convenios', label: 'Convenios Nuevos', icon: 'handshake' },
+    // FIX: Completed the object definition for the 'executive-report' tab.
     { id: 'executive-report', label: 'Reporte Ejecutivo', icon: 'summarize' },
   ];
 

@@ -133,7 +133,7 @@ export const FIELD_ASISTENCIA_FECHA = 'Fecha';
 export const FIELD_ASISTENCIA_ORIENTACION = 'Orientacion';
 export const FIELD_ASISTENCIA_HORAS = 'Horas';
 export const FIELD_ASISTENCIA_PROCESADO = 'Procesado';
-export const FIELD_ASISTENCIA_CONFIRMADA_JORNADA = 'Asistencia Confirmada';
+export const FIELD_ASISTENCIA_CONFIRMADA_JORNADA = 'Procesado';
 
 
 // --- Academic criteria constants ---
