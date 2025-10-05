@@ -70,12 +70,25 @@ export const useConvocatorias = (legajo: string, studentAirtableId: string | nul
     const jornadaBlockCounts = useMemo(() => {
         const counts: JornadaBlockCounts = new Map<string, number>();
         if (allAsistenciasJornada) {
-            for (const asistencia of allAsistenciasJornada) {
+            const enrollmentsByShift = new Map<string, Set<string>>(); // shift_id -> Set<student_id>
+            
+            allAsistenciasJornada.forEach(asistencia => {
                 const moduleId = asistencia[FIELD_ASISTENCIA_MODULO_ID] as string;
-                if (moduleId && JORNADA_BLOCK_MAPPING[moduleId as keyof typeof JORNADA_BLOCK_MAPPING]) {
-                    const blockId = JORNADA_BLOCK_MAPPING[moduleId as keyof typeof JORNADA_BLOCK_MAPPING];
-                    counts.set(blockId, (counts.get(blockId) || 0) + 1);
+                const studentId = (asistencia[FIELD_ASISTENCIA_ESTUDIANTE] as string[] | undefined)?.[0];
+                
+                if (moduleId && studentId) {
+                    const shiftId = JORNADA_BLOCK_MAPPING[moduleId as keyof typeof JORNADA_BLOCK_MAPPING];
+                    if (shiftId) {
+                        if (!enrollmentsByShift.has(shiftId)) {
+                            enrollmentsByShift.set(shiftId, new Set());
+                        }
+                        enrollmentsByShift.get(shiftId)!.add(studentId);
+                    }
                 }
+            });
+
+            for (const [shiftId, studentIds] of enrollmentsByShift.entries()) {
+                counts.set(shiftId, studentIds.size);
             }
         }
         return counts;
@@ -135,12 +148,24 @@ export const useConvocatorias = (legajo: string, studentAirtableId: string | nul
             const records = await db.asistenciasJornada.getAll();
             const latestAsistencias = records.map(r => r.fields);
             const latestCounts: JornadaBlockCounts = new Map<string, number>();
-            for (const asistencia of latestAsistencias) {
+            
+            const enrollmentsByShift = new Map<string, Set<string>>();
+            latestAsistencias.forEach(asistencia => {
                 const moduleId = asistencia[FIELD_ASISTENCIA_MODULO_ID] as string;
-                if (moduleId && JORNADA_BLOCK_MAPPING[moduleId as keyof typeof JORNADA_BLOCK_MAPPING]) {
-                    const blockId = JORNADA_BLOCK_MAPPING[moduleId as keyof typeof JORNADA_BLOCK_MAPPING];
-                    latestCounts.set(blockId, (latestCounts.get(blockId) || 0) + 1);
+                const studentId = (asistencia[FIELD_ASISTENCIA_ESTUDIANTE] as string[] | undefined)?.[0];
+                if(moduleId && studentId) {
+                    const shiftId = JORNADA_BLOCK_MAPPING[moduleId as keyof typeof JORNADA_BLOCK_MAPPING];
+                    if(shiftId) {
+                        if(!enrollmentsByShift.has(shiftId)) {
+                            enrollmentsByShift.set(shiftId, new Set());
+                        }
+                        enrollmentsByShift.get(shiftId)!.add(studentId);
+                    }
                 }
+            });
+
+            for (const [shiftId, studentIds] of enrollmentsByShift.entries()) {
+                latestCounts.set(shiftId, studentIds.size);
             }
             
             // Validate capacity for each selected shift
