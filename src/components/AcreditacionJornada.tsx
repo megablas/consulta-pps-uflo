@@ -13,6 +13,7 @@ import {
     FIELD_ASISTENCIA_ESTUDIANTE,
     FIELD_ASISTENCIA_MODULO_NOMBRE,
     FIELD_ASISTENCIA_FECHA,
+    FIELD_ASISTENCIA_CONFIRMADA_JORNADA,
     CONFERENCE_SHIFTS_BY_DAY,
     Orientacion,
     JORNADA_BLOCK_MAPPING,
@@ -25,20 +26,20 @@ import {
     FIELD_FECHA_INICIO_PRACTICAS,
     FIELD_FECHA_FIN_PRACTICAS,
     FIELD_INSTITUCION_LINK_PRACTICAS,
-    FIELD_ASISTENCIA_CONFIRMADA_JORNADA,
 } from '../constants';
 import { formatDate } from '../utils/formatters';
-import type { PracticaFields, EstudianteFields, AsistenciaJornadaFields, AsistenciaJornada } from '../types';
+import type { PracticaFields, EstudianteFields, AsistenciaJornadaFields, AsistenciaJornada, AirtableRecord } from '../types';
 
 interface StudentToAccredit {
     studentId: string;
     studentInfo: { legajo: string; nombre: string; };
     totalAttendances: number;
-    totalHours: number; // The hours to be credited
+    totalHours: number; // The hours to be credited from ATTENDANCE
+    inscriptionHours: number; // The hours to be credited from INSCRIPTION
     asistenciaIds: string[];
     isEligible: boolean;
     hasFullAttendance: boolean;
-    attendedActivities: { name: string; id: string; date?: string; }[];
+    attendedActivities: (AsistenciaJornada & { id: string })[];
 }
 
 interface AccreditedStudent {
@@ -70,7 +71,6 @@ const fetchPendingDataForAccreditation = async (): Promise<{ students: StudentTo
     if (!conferenceInstitutionId) throw new Error(`Registro maestro de INSTITUCIÓN para "${CONFERENCE_PPS_NAME}" no encontrado. Asegúrese de que exista en la tabla 'Instituciones'.`);
 
     const asistenciasRes = await db.asistenciasJornada.getAll({
-        // Fetch all attendances; filtering for pending vs accredited will happen client-side.
         fields: [
             FIELD_ASISTENCIA_ESTUDIANTE,
             FIELD_ASISTENCIA_MODULO_ID,
@@ -111,12 +111,30 @@ const fetchPendingDataForAccreditation = async (): Promise<{ students: StudentTo
     for (const [studentId, studentAsistencias] of studentAttendancesMap.entries()) {
         const studentInfo = studentsMap.get(studentId);
         if (!studentInfo) continue;
+        
+        // Deduplicate activities based on module ID, prioritizing confirmed ones
+        const uniqueActivities = new Map<string, (AsistenciaJornadaFields & { id: string })>();
+        for (const asistencia of studentAsistencias) {
+            const moduleId = asistencia[FIELD_ASISTENCIA_MODULO_ID] as string;
+            if (!moduleId) continue;
 
-        const confirmedAttendances = studentAsistencias.filter(a => a[FIELD_ASISTENCIA_CONFIRMADA_JORNADA] === true);
+            const existing = uniqueActivities.get(moduleId);
+            // If there's no existing entry, or if the current one is confirmed and the existing isn't, replace it.
+            if (!existing || (asistencia[FIELD_ASISTENCIA_CONFIRMADA_JORNADA] && !existing[FIELD_ASISTENCIA_CONFIRMADA_JORNADA])) {
+                uniqueActivities.set(moduleId, asistencia);
+            }
+        }
+        const deduplicatedAsistencias = Array.from(uniqueActivities.values());
 
-        const shiftAttendance: { [key: string]: { required: number, attendedUniqueIds: Set<string> } } = {};
+        const confirmedAttendances = deduplicatedAsistencias.filter(a => a[FIELD_ASISTENCIA_CONFIRMADA_JORNADA] === true);
+
+        if (confirmedAttendances.length === 0) {
+            continue;
+        }
+
+        const attendanceShiftCounter: { [key: string]: { required: number, attendedUniqueIds: Set<string> } } = {};
         CONFERENCE_SHIFTS_BY_DAY.forEach(d => d.shifts.forEach(s => {
-            shiftAttendance[s.shift_id] = { required: s.activities.length, attendedUniqueIds: new Set() };
+            attendanceShiftCounter[s.shift_id] = { required: s.activities.length, attendedUniqueIds: new Set() };
         }));
 
         confirmedAttendances.forEach(asistencia => {
@@ -124,41 +142,61 @@ const fetchPendingDataForAccreditation = async (): Promise<{ students: StudentTo
             if (!moduleId) return;
 
             const shiftId = JORNADA_BLOCK_MAPPING[moduleId as keyof typeof JORNADA_BLOCK_MAPPING];
-            if (shiftId && shiftAttendance[shiftId]) {
-                shiftAttendance[shiftId].attendedUniqueIds.add(moduleId);
+            if (shiftId && attendanceShiftCounter[shiftId]) {
+                attendanceShiftCounter[shiftId].attendedUniqueIds.add(moduleId);
             }
         });
 
-        let completedShiftCount = 0;
-        for (const shiftId in shiftAttendance) {
-            const shift = shiftAttendance[shiftId];
-            const attendedCount = shift.attendedUniqueIds.size;
-            if (attendedCount > 0 && attendedCount >= shift.required) {
-                completedShiftCount++;
+        let completedAttendanceShifts = 0;
+        for (const shiftId in attendanceShiftCounter) {
+            const shift = attendanceShiftCounter[shiftId];
+            if (shift.attendedUniqueIds.size > 0 && shift.attendedUniqueIds.size >= shift.required) {
+                completedAttendanceShifts++;
             }
         }
-
-        const totalHours = completedShiftCount * 5;
-        const isEligible = completedShiftCount > 0;
-        const hasFullAttendance = completedShiftCount === totalConferenceShifts;
         
-        // Only include students who have at least one confirmed attendance.
-        if (confirmedAttendances.length > 0) {
-            finalStudentList.push({
-                studentId,
-                studentInfo,
-                totalAttendances: confirmedAttendances.length,
-                totalHours,
-                asistenciaIds: studentAsistencias.map(a => a.id),
-                isEligible,
-                hasFullAttendance,
-                attendedActivities: studentAsistencias.map(a => ({
-                    id: a.id,
-                    name: (a[FIELD_ASISTENCIA_MODULO_NOMBRE] as string || 'Actividad') + (a[FIELD_ASISTENCIA_CONFIRMADA_JORNADA] ? ' ✓' : ''),
-                    date: a[FIELD_ASISTENCIA_FECHA] as string | undefined,
-                })),
-            });
+        let attendanceHours = completedAttendanceShifts * 5;
+        if (attendanceHours === 0 && confirmedAttendances.length > 0) {
+            attendanceHours = 5;
         }
+        
+        const inscriptionShiftCounter: { [key: string]: { required: number, attendedUniqueIds: Set<string> } } = {};
+        CONFERENCE_SHIFTS_BY_DAY.forEach(d => d.shifts.forEach(s => {
+            inscriptionShiftCounter[s.shift_id] = { required: s.activities.length, attendedUniqueIds: new Set() };
+        }));
+
+        deduplicatedAsistencias.forEach(asistencia => {
+            const moduleId = asistencia[FIELD_ASISTENCIA_MODULO_ID] as string;
+            if (!moduleId) return;
+            const shiftId = JORNADA_BLOCK_MAPPING[moduleId as keyof typeof JORNADA_BLOCK_MAPPING];
+            if (shiftId && inscriptionShiftCounter[shiftId]) {
+                inscriptionShiftCounter[shiftId].attendedUniqueIds.add(moduleId);
+            }
+        });
+
+        let completedInscriptionShifts = 0;
+        for (const shiftId in inscriptionShiftCounter) {
+            const shift = inscriptionShiftCounter[shiftId];
+            if (shift.attendedUniqueIds.size > 0 && shift.attendedUniqueIds.size >= shift.required) {
+                completedInscriptionShifts++;
+            }
+        }
+        const inscriptionHours = completedInscriptionShifts * 5;
+
+        const isEligible = attendanceHours > 0;
+        const hasFullAttendance = completedAttendanceShifts === totalConferenceShifts;
+        
+        finalStudentList.push({
+            studentId,
+            studentInfo,
+            totalAttendances: confirmedAttendances.length,
+            totalHours: attendanceHours,
+            inscriptionHours: inscriptionHours,
+            asistenciaIds: studentAsistencias.map(a => a.id),
+            isEligible,
+            hasFullAttendance,
+            attendedActivities: deduplicatedAsistencias,
+        });
     }
 
     return {
@@ -168,25 +206,108 @@ const fetchPendingDataForAccreditation = async (): Promise<{ students: StudentTo
     };
 };
 
-const StudentAccreditationCard: React.FC<{
+interface StudentAccreditationCardProps {
     student: StudentToAccredit;
-    onAccredit: (student: StudentToAccredit) => void;
+    onAccredit: (student: StudentToAccredit, hours: number) => void;
     isAccrediting: boolean;
     onDeleteAll: (asistenciaIds: string[]) => void;
     isDeleting: boolean;
-}> = ({ student, onAccredit, isAccrediting, onDeleteAll, isDeleting }) => {
+    isAccredited: boolean;
+    accreditedHours?: number;
+    setToastInfo: (info: { message: string, type: 'success' | 'error' } | null) => void;
+}
+
+
+const StudentAccreditationCard: React.FC<StudentAccreditationCardProps> = ({ student, onAccredit, isAccrediting, onDeleteAll, isDeleting, isAccredited, accreditedHours, setToastInfo }) => {
     const [isExpanded, setIsExpanded] = useState(false);
-    const { isEligible, hasFullAttendance, totalAttendances, totalHours } = student;
+    const { hasFullAttendance, totalAttendances, totalHours, inscriptionHours } = student;
+
+    const detailedBlocks = useMemo(() => {
+        const studentRegisteredModuleIds = new Set(student.attendedActivities.map(a => a[FIELD_ASISTENCIA_MODULO_ID]));
+        const studentConfirmedModuleIds = new Set(student.attendedActivities.filter(a => a[FIELD_ASISTENCIA_CONFIRMADA_JORNADA]).map(a => a[FIELD_ASISTENCIA_MODULO_ID]));
+
+        return CONFERENCE_SHIFTS_BY_DAY.map(dayGroup => ({
+            day: dayGroup.day,
+            shifts: dayGroup.shifts.map(shift => {
+                const requiredCount = shift.activities.length;
+                let attendedCount = 0;
+                let isRegisteredForShift = false;
+
+                const activities = shift.activities.map(activity => {
+                    const isRegistered = studentRegisteredModuleIds.has(activity.id);
+                    const isAttended = studentConfirmedModuleIds.has(activity.id);
+                    if (isRegistered) isRegisteredForShift = true;
+                    if (isAttended) attendedCount++;
+                    return { name: activity.name, isAttended, isRegistered };
+                });
+
+                let status: 'COMPLETADO' | 'INCOMPLETO' | 'AUSENTE' | 'NO INSCRIPTO';
+                let statusClasses: string;
+
+                if (!isRegisteredForShift) {
+                    status = 'NO INSCRIPTO';
+                    statusClasses = 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300';
+                } else if (attendedCount >= requiredCount) {
+                    status = 'COMPLETADO';
+                    statusClasses = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300';
+                } else if (attendedCount > 0) {
+                    status = 'INCOMPLETO';
+                    statusClasses = 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300';
+                } else {
+                    status = 'AUSENTE';
+                    statusClasses = 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300';
+                }
+
+                return {
+                    name: shift.name,
+                    requiredCount,
+                    attendedCount,
+                    status,
+                    statusClasses,
+                    activities
+                };
+            })
+        }));
+    }, [student.attendedActivities]);
+    
+    const handleExport = () => {
+        let report = `*Resumen de Asistencia - ${student.studentInfo.nombre} (${student.studentInfo.legajo})*\n\n`;
+        report += `*Total de Asistencias Confirmadas:* ${totalAttendances}\n`;
+        report += `*Horas por Inscripción (potencial):* ${inscriptionHours} hs\n`;
+        report += `*Horas por Asistencia Efectiva:* ${totalHours} hs\n\n`;
+        report += `*Detalle de Asistencia por Turno:*\n`;
+    
+        detailedBlocks.forEach(dayGroup => {
+            report += `\n*${dayGroup.day}*\n`;
+            dayGroup.shifts.forEach(shift => {
+                if (shift.status !== 'NO INSCRIPTO') {
+                    report += `- *${shift.name}:* ${shift.status} (Asistió a ${shift.attendedCount}/${shift.requiredCount})\n`;
+                    shift.activities.forEach(activity => {
+                        if (activity.isRegistered) {
+                             report += `  - ${activity.name}: ${activity.isAttended ? 'Presente' : 'Ausente'}\n`;
+                        }
+                    });
+                }
+            });
+        });
+    
+        navigator.clipboard.writeText(report).then(() => {
+            setToastInfo({ message: 'Resumen de asistencia copiado.', type: 'success' });
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+            setToastInfo({ message: 'Error al copiar el resumen.', type: 'error' });
+        });
+    };
 
     return (
-        <Card className={`bg-white dark:bg-slate-800/80 transition-all ${!isEligible ? 'opacity-70 bg-slate-50 dark:bg-slate-800/50' : ''}`}>
+        <Card className={`bg-white dark:bg-slate-800/80 transition-all ${isAccredited ? 'border-emerald-300 dark:border-emerald-700' : ''}`}>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h3 className="font-bold text-lg text-slate-900 dark:text-slate-50">{student.studentInfo.nombre}</h3>
                     <p className="text-sm text-slate-500 dark:text-slate-400 font-mono">{student.studentInfo.legajo}</p>
                 </div>
                 
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-4">
                      {hasFullAttendance && (
                         <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-400/20 dark:text-yellow-300 ring-1 ring-yellow-200 dark:ring-yellow-500/30 inline-flex items-center gap-1.5">
                             <span className="material-icons !text-sm">star</span>
@@ -197,57 +318,98 @@ const StudentAccreditationCard: React.FC<{
                         <p className="font-black text-2xl text-slate-700 dark:text-slate-200">{totalAttendances}</p>
                         <p className="text-xs text-slate-500 dark:text-slate-400 -mt-1">Asistencias</p>
                     </div>
+                    <div className="text-center">
+                        <p className="font-black text-2xl text-purple-600 dark:text-purple-400">{inscriptionHours}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 -mt-1">Horas por Inscripción</p>
+                    </div>
                      <div className="text-center">
                         <p className="font-black text-2xl text-blue-600 dark:text-blue-400">{totalHours}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 -mt-1">Horas a acreditar</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 -mt-1">Horas por Asistencia</p>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center flex-wrap gap-2">
                     <button onClick={() => setIsExpanded(!isExpanded)} className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline px-2">
                         {isExpanded ? 'Ocultar' : 'Detalle'}
                     </button>
-                    <button
-                        onClick={() => onDeleteAll(student.asistenciaIds)}
-                        disabled={isAccrediting || isDeleting}
-                        className="bg-rose-100 text-rose-700 font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-sm border border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-700/50 hover:bg-rose-200 dark:hover:bg-rose-800/50 disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                         {isDeleting ? <div className="w-4 h-4 border-2 border-rose-400/50 border-t-rose-500 rounded-full animate-spin"/> : <span className="material-icons !text-base">delete</span>}
-                         {isDeleting ? 'Eliminando' : 'Eliminar Asistencias'}
-                    </button>
-                    <div className="relative group/tooltip">
-                        <button
-                            onClick={() => onAccredit(student)}
-                            disabled={isAccrediting || !isEligible || isDeleting}
-                            className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-md hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-w-[120px]"
-                        >
-                            {isAccrediting ? <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin"/> : <span className="material-icons !text-base">add_task</span>}
-                            {isAccrediting ? 'Acreditando' : 'Acreditar'}
-                        </button>
-                        {!isEligible && (
-                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-3 py-1.5 bg-slate-800 text-white text-xs rounded-md opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none" role="tooltip">
-                                No completó ningún turno
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-slate-800"></div>
-                            </div>
-                        )}
-                    </div>
+                    
+                    {isAccredited ? (
+                         <div className="bg-emerald-100 text-emerald-800 font-bold py-2 px-4 rounded-lg text-sm border border-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-200 dark:border-emerald-700/50 flex items-center gap-2">
+                            <span className="material-icons !text-base">check_circle</span>
+                            Acreditado con {accreditedHours}hs
+                        </div>
+                    ) : (
+                        <>
+                            <button
+                                onClick={() => onDeleteAll(student.asistenciaIds)}
+                                disabled={isAccrediting || isDeleting}
+                                className="bg-rose-100 text-rose-700 font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-sm border border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-700/50 hover:bg-rose-200 dark:hover:bg-rose-800/50 disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {isDeleting ? <div className="w-4 h-4 border-2 border-rose-400/50 border-t-rose-500 rounded-full animate-spin"/> : <span className="material-icons !text-base">delete</span>}
+                                {isDeleting ? 'Eliminando' : 'Eliminar Asistencias'}
+                            </button>
+                            
+                            <button
+                                onClick={() => onAccredit(student, inscriptionHours)}
+                                disabled={isAccrediting || inscriptionHours === 0 || isDeleting}
+                                className="bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-md border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {isAccrediting ? '...' : `Acreditar Inscripción (${inscriptionHours}hs)`}
+                            </button>
+                            <button
+                                onClick={() => onAccredit(student, totalHours)}
+                                disabled={isAccrediting || totalHours === 0 || isDeleting}
+                                className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-md hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-w-[120px]"
+                            >
+                                {isAccrediting ? <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin"/> : <span className="material-icons !text-base">add_task</span>}
+                                {isAccrediting ? 'Acreditando...' : `Acreditar Asistencia (${totalHours}hs)`}
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
             
-            {!isEligible && (
-                 <div className="mt-4 p-2 text-center text-xs font-semibold bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 rounded-md border border-amber-200 dark:border-amber-700/50">
-                    Este estudiante no completó ningún turno de forma íntegra para acreditar horas.
-                </div>
-            )}
-
             {isExpanded && (
-                <div className="mt-4 pt-4 border-t border-slate-200/80 dark:border-slate-700/80 animate-fade-in-up" style={{ animationDuration: '300ms' }}>
-                    <h4 className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-2">Actividades Registradas (✓ = Confirmada):</h4>
-                     <ul className="list-disc list-inside pl-2 text-sm text-slate-600 dark:text-slate-400 space-y-1">
-                        {student.attendedActivities.map(asistencia => (
-                            <li key={asistencia.id}>{asistencia.name}</li>
+                <div className="mt-6 pt-6 border-t border-slate-200/80 dark:border-slate-700/80 animate-fade-in-up" style={{ animationDuration: '300ms' }}>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {detailedBlocks.map(dayGroup => (
+                            <div key={dayGroup.day} className="space-y-4">
+                                <h4 className="font-bold text-slate-800 dark:text-slate-200 text-lg">{dayGroup.day}</h4>
+                                {dayGroup.shifts.map(shift => (
+                                    <div key={shift.name} className="p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                                        <div className="flex justify-between items-start gap-2">
+                                            <div>
+                                                <p className="font-semibold text-slate-900 dark:text-slate-100">{shift.name}</p>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400">Asistió a {shift.attendedCount} de {shift.requiredCount} actividades</p>
+                                            </div>
+                                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${shift.statusClasses}`}>{shift.status}</span>
+                                        </div>
+                                        <ul className="mt-3 space-y-2">
+                                            {shift.activities.map((activity, i) => (
+                                                <li key={i} className={`flex items-center gap-2 text-sm ${activity.isAttended ? 'text-slate-800 dark:text-slate-200' : 'text-slate-500 dark:text-slate-400'}`}>
+                                                    <span className={`material-icons !text-base ${activity.isAttended ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600'}`}>
+                                                        {activity.isAttended ? 'check_box' : 'check_box_outline_blank'}
+                                                    </span>
+                                                    <span className={!activity.isRegistered && !activity.isAttended ? 'line-through opacity-70' : ''}>
+                                                        {activity.name}
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                ))}
+                            </div>
                         ))}
-                    </ul>
+                    </div>
+                    <div className="flex justify-end mt-6">
+                        <button
+                            onClick={handleExport}
+                            className="inline-flex items-center gap-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs py-2 px-3 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                        >
+                            <span className="material-icons !text-base">content_copy</span>
+                            Copiar Resumen para Email
+                        </button>
+                    </div>
                 </div>
             )}
         </Card>
@@ -347,26 +509,29 @@ const AcreditacionJornada: React.FC = () => {
         enabled: !!pendingData?.conferenceLaunchId
     });
 
-    const trulyPendingStudents = useMemo(() => {
-        if (!pendingData?.students || !accreditedData) return [];
-        const accreditedStudentIds = new Set(accreditedData.map(s => s.studentId));
-        return pendingData.students.filter(s => !accreditedStudentIds.has(s.studentId));
-    }, [pendingData, accreditedData]);
+    const accreditedStudentIds = useMemo(() => {
+        return new Set(accreditedData?.map(s => s.studentId) || []);
+    }, [accreditedData]);
+    
+    const pendingStudentsToDisplay = useMemo(() => {
+        if (!pendingData?.students) return [];
+        return pendingData.students.filter(student => !accreditedStudentIds.has(student.studentId));
+    }, [pendingData, accreditedStudentIds]);
 
     const accreditationMutation = useMutation({
-        mutationFn: async (studentToAccredit: StudentToAccredit) => {
+        mutationFn: async ({ student, hours }: { student: StudentToAccredit, hours: number }) => {
             const { conferenceLaunchId, conferenceInstitutionId } = pendingData!;
             if (!conferenceLaunchId || !conferenceInstitutionId) throw new Error("ID del lanzamiento o institución maestro no disponible.");
-            if (!studentToAccredit.isEligible) throw new Error("El estudiante no cumple los requisitos para la acreditación.");
+            if (hours === 0) throw new Error("No se pueden acreditar 0 horas.");
             
             const practiceStartDate = '2025-10-07';
             const practiceEndDate = '2025-10-09';
             
             const newPracticeData = {
-                estudianteLink: [studentToAccredit.studentId],
+                estudianteLink: [student.studentId],
                 lanzamientoVinculado: [conferenceLaunchId],
                 institucionLink: [conferenceInstitutionId],
-                horasRealizadas: studentToAccredit.totalHours,
+                horasRealizadas: hours,
                 especialidad: Orientacion.COMUNITARIA,
                 estado: 'Finalizada',
                 fechaInicio: practiceStartDate,
@@ -374,19 +539,19 @@ const AcreditacionJornada: React.FC = () => {
             };
             await db.practicas.create(newPracticeData);
         },
-        onMutate: (studentToAccredit: StudentToAccredit) => {
-            setAccreditingStudentId(studentToAccredit.studentId);
+        onMutate: async ({ student, hours }: { student: StudentToAccredit, hours: number }) => {
+            setAccreditingStudentId(student.studentId);
         },
-        onSuccess: (_, studentToAccredit: StudentToAccredit) => {
-            setToastInfo({ message: `Asistencia de ${studentToAccredit.studentInfo.nombre} acreditada con éxito.`, type: 'success' });
-            queryClient.invalidateQueries({ queryKey: ['pendingJornadaAccreditation'] });
-             queryClient.invalidateQueries({ queryKey: ['accreditedJornadaStudents'] });
+        onSuccess: (_, { student, hours }) => {
+            setToastInfo({ message: `${hours}hs acreditadas a ${student.studentInfo.nombre} con éxito.`, type: 'success' });
         },
         onError: (error: Error) => {
             setToastInfo({ message: `Error al acreditar: ${error.message}`, type: 'error' });
         },
         onSettled: () => {
             setAccreditingStudentId(null);
+            queryClient.invalidateQueries({ queryKey: ['pendingJornadaAccreditation'] });
+            queryClient.invalidateQueries({ queryKey: ['accreditedJornadaStudents'] });
         }
     });
 
@@ -437,7 +602,7 @@ const AcreditacionJornada: React.FC = () => {
     const error = pendingError || accreditedError;
 
     const tabs = [
-        { id: 'pending', label: `Pendientes (${trulyPendingStudents?.length ?? 0})` },
+        { id: 'pending', label: `Gestión de Acreditación (${pendingStudentsToDisplay?.length ?? 0})` },
         { id: 'accredited', label: `Acreditados (${accreditedData?.length ?? 0})` },
     ];
 
@@ -462,16 +627,18 @@ const AcreditacionJornada: React.FC = () => {
                 {error && <EmptyState icon="error" title="Error" message={error.message} />}
                 
                 {!isLoading && activeTab === 'pending' && (
-                    trulyPendingStudents && trulyPendingStudents.length > 0 ? (
+                    pendingStudentsToDisplay && pendingStudentsToDisplay.length > 0 ? (
                         <div className="space-y-4">
-                            {trulyPendingStudents.map(student => (
+                            {pendingStudentsToDisplay.map(student => (
                                 <StudentAccreditationCard
                                     key={student.studentId}
                                     student={student}
-                                    onAccredit={accreditationMutation.mutate}
+                                    onAccredit={(s, h) => accreditationMutation.mutate({ student: s, hours: h })}
                                     isAccrediting={accreditingStudentId === student.studentId}
                                     onDeleteAll={deletePendingMutation.mutate}
                                     isDeleting={deletingPendingId === student.studentId}
+                                    isAccredited={false}
+                                    setToastInfo={setToastInfo}
                                 />
                             ))}
                         </div>

@@ -449,7 +449,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
             if (practicasError) throw new Error('Error al obtener las prácticas antiguas desde Airtable.');
     
             const groupedPracticas = new Map<string, (PracticaFields & { id: string })[]>();
-            // FIX: Explicitly type 'p' to resolve type inference issues where it was considered 'unknown'.
+            // FIX: Explicitly typing the parameter 'p' in the map function resolves the 'unknown' type error.
             const mappedPracticas: Practica[] = recentPracticas.map((p: AirtableRecord<PracticaFields>) => ({ ...p.fields, id: p.id }));
 
             for (const practica of mappedPracticas) {
@@ -518,7 +518,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
             }
 
             if (failedCreations > 0) {
-                 // FIX: Corrected the use of 'totalToCreate.length' to 'totalToCreate' in the error message as totalToCreate is a number.
+                 // FIX: Corrected the use of 'totalToCreate' (a number) instead of attempting to access 'totalToCreate.length'.
                  throw new Error(`${failedCreations} de ${totalToCreate} lanzamientos no pudieron crearse. Revisa la consola para más detalles.`);
             }
     

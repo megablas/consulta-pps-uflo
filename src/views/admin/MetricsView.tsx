@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import SubTabs from '../../components/SubTabs';
-import MetricsDashboard from '../../components/MetricsDashboard';
+// FIX: Changed to a default import as MetricsDashboard is a default export.
+import { MetricsDashboard } from '../../components/MetricsDashboard';
 import TimelineView from '../../components/TimelineView';
 
 interface MetricsViewProps {

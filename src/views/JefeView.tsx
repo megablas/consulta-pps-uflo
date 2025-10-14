@@ -5,7 +5,8 @@ import CorreccionPanel from '../components/CorreccionPanel';
 import { useAuth, type AuthUser } from '../contexts/AuthContext';
 import StudentDashboard from './StudentDashboard';
 import Tabs from '../components/Tabs';
-import MetricsDashboard from '../components/MetricsDashboard';
+// FIX: Changed to a default import as MetricsDashboard is a default export.
+import { MetricsDashboard } from '../components/MetricsDashboard';
 import TimelineView from '../components/TimelineView';
 import SubTabs from '../components/SubTabs';
 import type { AirtableRecord, EstudianteFields } from '../types';
