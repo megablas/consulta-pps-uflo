@@ -299,11 +299,9 @@ function computeMetrics(data: Awaited<ReturnType<typeof fetchMetricsData>>, targ
       (l) =>
         !normalizeStringForComparison(getText(l[FIELD_NOMBRE_PPS_LANZAMIENTOS])).includes('relevamiento')
     )
-    // FIX: Explicitly convert cupos to a number to prevent type errors during addition.
     .reduce((sum, l) => sum + Number(l[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0), 0);
   
   // Se calcula el total de cupos, incluyendo las de "Relevamiento Profesional", para la descripción de la tarjeta.
-  // FIX: Explicitly convert cupos to a number to prevent type errors during addition.
   const cuposTotalesConRelevamiento = lanzamientosYear.reduce((sum, l) => sum + Number(l[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0), 0);
 
   const convocatoriasYear = convocatorias.filter(
@@ -890,7 +888,6 @@ interface MetricsDashboardProps {
   onStudentSelect?: (student: { legajo: string; nombre: string }) => void;
 }
 
-// FIX: Changed export to a named export to resolve module import errors.
 export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSelect }) => {
   const [modalData, setModalData] = useState<ModalData | null>(null);
   const [proximosModalOpen, setProximosModalOpen] = useState(false);
@@ -1146,3 +1143,81 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSel
                   value={metrics.alumnosActivos.value}
                   icon="school"
                   description="Total de estudiantes que aún no finalizan."
+                  isLoading={isLoading}
+                  onClick={() => openModal({ title: 'Estudiantes Activos (Total)', students: metrics.alumnosActivos.list })}
+              />
+               <MetricCard
+                  title="Con PPS Activa"
+                  value={metrics.alumnosEnPPS.value}
+                  icon="work"
+                  description="Estudiantes con una práctica activa durante el ciclo."
+                  isLoading={isLoading}
+                  onClick={() => openModal({ title: 'Alumnos con PPS Activa', students: metrics.alumnosEnPPS.list, headers: [{ key: 'nombre', label: 'Nombre' }, { key: 'legajo', label: 'Legajo' }, { key: 'institucion', label: 'Institución' }, { key: 'fechaFin', label: 'Finaliza' }] })}
+              />
+              <MetricCard
+                  title="Próximos a Finalizar"
+                  value={metrics.alumnosProximosAFinalizar.value}
+                  icon="flag"
+                  description="Con 230+ horas o con 250+ y práctica en curso."
+                  isLoading={isLoading}
+                  onClick={() => setProximosModalOpen(true)}
+              />
+              <MetricCard
+                  title="Activos sin PPS (Campo)"
+                  value={metrics.alumnosSinPPS.value}
+                  icon="person_search"
+                  description="Aún no tienen PPS de campo registrada (excluye Relevamiento)."
+                  isLoading={isLoading}
+                  onClick={() => openModal({ title: 'Activos sin PPS (Campo)', students: metrics.alumnosSinPPS.list })}
+              />
+              <MetricCard
+                  title="Listos para Acreditar"
+                  value={metrics.alumnosParaAcreditar.value}
+                  icon="military_tech"
+                  description="Cumplen con todos los criterios para finalizar."
+                  isLoading={isLoading}
+                  onClick={() => openModal({ title: 'Listos para Acreditar', students: metrics.alumnosParaAcreditar.list, headers: [{ key: 'nombre', label: 'Nombre' }, { key: 'legajo', label: 'Legajo' }, { key: 'totalHoras', label: 'Horas' }, { key: 'orientaciones', label: 'Orientaciones' }] })}
+              />
+               <MetricCard
+                  title="Finalizados este Ciclo"
+                  value={metrics.alumnosFinalizados.value}
+                  icon="school"
+                  description={`Estudiantes que solicitaron acreditación en ${targetYear}.`}
+                  isLoading={isLoading}
+                  onClick={() => openModal({ title: `Finalizados en ${targetYear}`, students: metrics.alumnosFinalizados.list })}
+              />
+            </div>
+          )}
+           {activeTab === 'institutions' && (
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <MetricCard
+                  title="PPS Lanzadas"
+                  value={metrics.ppsLanzadas.value}
+                  icon="rocket_launch"
+                  description={`Total de instituciones con lanzamientos en ${targetYear}.`}
+                  isLoading={isLoading}
+                  onClick={() => openModal({ title: `PPS Lanzadas (${targetYear})`, students: metrics.ppsLanzadas.list, headers: [{ key: 'nombre', label: 'Institución' }, { key: 'legajo', label: 'Info' }, { key: 'cupos', label: 'Cupos' }] })}
+              />
+              <MetricCard
+                  title="Convenios Nuevos"
+                  value={metrics.nuevosConvenios.value}
+                  icon="handshake"
+                  description={`Instituciones con su primer lanzamiento en ${targetYear}.`}
+                  isLoading={isLoading}
+                  onClick={() => openModal({ title: `Convenios Nuevos (${targetYear})`, students: metrics.nuevosConvenios.list, headers: [{ key: 'nombre', label: 'Institución' }, { key: 'cupos', label: 'Cupos Ofertados' }] })}
+              />
+              <MetricCard
+                  title="Instituciones Activas"
+                  value={metrics.activeInstitutions.value}
+                  icon="apartment"
+                  description={`Instituciones con al menos un lanzamiento en ${targetYear}.`}
+                  isLoading={isLoading}
+                  onClick={() => openModal({ title: `Instituciones Activas (${targetYear})`, students: metrics.activeInstitutions.list, headers: [{ key: 'nombre', label: 'Institución' }, { key: 'legajo', label: 'Orientaciones' }] })}
+              />
+            </div>
+          )}
+        </>
+      )}
+    </>
+  );
+};

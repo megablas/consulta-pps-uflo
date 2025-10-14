@@ -76,8 +76,12 @@ const TimelineView: React.FC = () => {
             return date && date.getUTCFullYear() === targetYear;
         });
         
-        // FIX: Explicitly cast the 'cupos' value to a Number before addition to prevent arithmetic operation errors with potentially non-numeric types from Airtable.
-        const totalCupos = launchesForYear.reduce((sum, launch) => sum + Number(launch[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0), 0);
+        const totalCupos = launchesForYear.reduce((sum, launch) => {
+            // FIX: The left-hand and right-hand side of an arithmetic operation must be of type 'number'.
+            // This ensures that 'cuposValue' is treated as a number before the addition.
+            const cuposValue = launch[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS];
+            return sum + (typeof cuposValue === 'number' ? cuposValue : 0);
+        }, 0);
         
         const monthlyData: { [key: number]: {
             cuposTotal: number;

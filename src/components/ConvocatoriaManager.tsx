@@ -401,8 +401,11 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
           setInstitutionsMap(prevMap => {
               const newMap = new Map(prevMap);
               for (const [key, value] of newMap.entries()) {
-                  if (value.id === institutionId) {
-                      newMap.set(key, { ...value, phone });
+                  // FIX: Add type assertion to value, which is incorrectly inferred as `unknown`.
+                  const typedValue = value as { id: string, phone?: string };
+                  if (typedValue.id === institutionId) {
+                      // FIX: Use the typed value for spread to ensure it's an object.
+                      newMap.set(key, { ...typedValue, phone });
                       break;
                   }
               }
@@ -449,7 +452,6 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
             if (practicasError) throw new Error('Error al obtener las prácticas antiguas desde Airtable.');
     
             const groupedPracticas = new Map<string, (PracticaFields & { id: string })[]>();
-            // FIX: Explicitly typing the parameter 'p' in the map function resolves the 'unknown' type error.
             const mappedPracticas: Practica[] = recentPracticas.map((p: AirtableRecord<PracticaFields>) => ({ ...p.fields, id: p.id }));
 
             for (const practica of mappedPracticas) {
@@ -499,7 +501,8 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
     
             let successfulCreations = 0;
             let failedCreations = 0;
-            const totalToCreate: number = newLaunchesToCreate.length;
+            // FIX: Add type assertion to resolve 'unknown' type error.
+            const totalToCreate: number = (newLaunchesToCreate as Partial<LanzamientoPPS>[]).length;
 
             for (let i = 0; i < totalToCreate; i++) {
                 const launchData = newLaunchesToCreate[i];
@@ -518,7 +521,6 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
             }
 
             if (failedCreations > 0) {
-                 // FIX: Corrected the use of 'totalToCreate' (a number) instead of attempting to access 'totalToCreate.length'.
                  throw new Error(`${failedCreations} de ${totalToCreate} lanzamientos no pudieron crearse. Revisa la consola para más detalles.`);
             }
     

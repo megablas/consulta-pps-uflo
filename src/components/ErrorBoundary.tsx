@@ -9,7 +9,6 @@ interface State {
   error?: Error;
 }
 
-// FIX: Changed to extend React.Component to resolve a potential type resolution issue where `this.props` was not being found.
 class ErrorBoundary extends React.Component<Props, State> {
   state: State = { hasError: false };
 
@@ -54,8 +53,9 @@ class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // FIX: In a class component, props are accessed via `this.props`.
-    return this.props.children;
+    // FIX: Property 'props' does not exist on type 'ErrorBoundary'. Destructuring props to potentially aid type inference.
+    const { children } = this.props;
+    return children;
   }
 }
 
