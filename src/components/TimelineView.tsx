@@ -76,11 +76,9 @@ const TimelineView: React.FC = () => {
             return date && date.getUTCFullYear() === targetYear;
         });
         
+        // FIX: Replaced the reduce function with a more robust version to ensure both sides of the arithmetic operation are numbers.
         const totalCupos = launchesForYear.reduce((sum, launch) => {
-            // FIX: The left-hand and right-hand side of an arithmetic operation must be of type 'number'.
-            // This ensures that 'cuposValue' is treated as a number before the addition.
-            const cuposValue = launch[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS];
-            return sum + (typeof cuposValue === 'number' ? cuposValue : 0);
+            return sum + (Number(launch[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS]) || 0);
         }, 0);
         
         const monthlyData: { [key: number]: {

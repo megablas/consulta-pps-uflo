@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import * as XLSX from 'xlsx';
-import { fetchAllAirtableData, updateAirtableRecord, createAirtableRecord } from '../services/airtableService';
+import { fetchAllAirtableData, updateAirtableRecord, createAirtableRecord, updateAirtableRecords } from '../services/airtableService';
 import type { LanzamientoPPS, Practica, InstitucionFields, AirtableRecord, LanzamientoPPSFields, PracticaFields } from '../types';
 import {
   AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
@@ -41,6 +41,12 @@ interface GestionCardProps {
   institution?: { id: string; phone?: string };
   onSavePhone: (institutionId: string, phone: string) => Promise<boolean>;
 }
+
+const getGroupName = (name: string | undefined): string => {
+    if (!name) return 'Sin Nombre';
+    // Splits by " - " and takes the first part. Handles cases where there's no hyphen.
+    return name.split(' - ')[0].trim();
+};
 
 const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpdating, cardType, institution, onSavePhone }) => {
   const [status, setStatus] = useState(pps[FIELD_ESTADO_GESTION_LANZAMIENTOS] || 'Pendiente de Gestión');
@@ -365,6 +371,69 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
         fetchData();
     }, [fetchData]);
 
+    useEffect(() => {
+        if (loadingState !== 'loaded' || lanzamientos.length === 0) {
+            return;
+        }
+    
+        const confirmedRelaunches = lanzamientos.filter(
+            pps => pps[FIELD_ESTADO_GESTION_LANZAMIENTOS] === 'Relanzamiento Confirmado'
+        );
+    
+        if (confirmedRelaunches.length === 0) {
+            return;
+        }
+    
+        const updatesToPerform: { id: string; fields: Partial<LanzamientoPPSFields> }[] = [];
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+    
+        confirmedRelaunches.forEach(oldLaunch => {
+            const hasActiveRelaunch = lanzamientos.some(newLaunch => {
+                if (newLaunch.id === oldLaunch.id) return false;
+    
+                const oldName = getGroupName(oldLaunch[FIELD_NOMBRE_PPS_LANZAMIENTOS]);
+                const newName = getGroupName(newLaunch[FIELD_NOMBRE_PPS_LANZAMIENTOS]);
+    
+                if (normalizeStringForComparison(newName) !== normalizeStringForComparison(oldName)) {
+                    return false;
+                }
+    
+                const newStartDate = parseToUTCDate(newLaunch[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+                const oldRelaunchDate = parseToUTCDate(oldLaunch[FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS]);
+                const oldEndDate = parseToUTCDate(oldLaunch[FIELD_FECHA_FIN_LANZAMIENTOS]);
+                const referenceDate = oldRelaunchDate || oldEndDate;
+    
+                if (!newStartDate || !referenceDate || newStartDate <= referenceDate) {
+                    return false;
+                }
+    
+                const newEndDate = parseToUTCDate(newLaunch[FIELD_FECHA_FIN_LANZAMIENTOS]);
+                return !newEndDate || newEndDate >= now;
+            });
+    
+            if (hasActiveRelaunch) {
+                updatesToPerform.push({
+                    id: oldLaunch.id,
+                    fields: { [FIELD_ESTADO_GESTION_LANZAMIENTOS]: 'Archivado' }
+                });
+            }
+        });
+    
+        if (updatesToPerform.length > 0) {
+            const batchUpdate = async () => {
+                const { error } = await updateAirtableRecords(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, updatesToPerform);
+                if (error) {
+                    setToastInfo({ message: 'Error al archivar relanzamientos completados.', type: 'error' });
+                } else {
+                    setToastInfo({ message: `${updatesToPerform.length} relanzamiento(s) completado(s) fue(ron) archivado(s) automáticamente.`, type: 'success' });
+                    setTimeout(() => fetchData(), 500);
+                }
+            };
+            batchUpdate();
+        }
+    }, [lanzamientos, loadingState, fetchData]);
+
     const handleSave = useCallback(async (id: string, updates: Partial<LanzamientoPPS>): Promise<boolean> => {
         setUpdatingIds(prev => new Set(prev).add(id));
 
@@ -401,11 +470,8 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
           setInstitutionsMap(prevMap => {
               const newMap = new Map(prevMap);
               for (const [key, value] of newMap.entries()) {
-                  // FIX: Add type assertion to value, which is incorrectly inferred as `unknown`.
-                  const typedValue = value as { id: string, phone?: string };
-                  if (typedValue.id === institutionId) {
-                      // FIX: Use the typed value for spread to ensure it's an object.
-                      newMap.set(key, { ...typedValue, phone });
+                  if ((value as { id: string, phone?: string }).id === institutionId) {
+                      newMap.set(key, { ...(value as { id: string, phone?: string }), phone });
                       break;
                   }
               }
@@ -501,8 +567,8 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
     
             let successfulCreations = 0;
             let failedCreations = 0;
-            // FIX: Add type assertion to resolve 'unknown' type error.
-            const totalToCreate: number = (newLaunchesToCreate as Partial<LanzamientoPPS>[]).length;
+            // FIX: The type `unknown` does not have a `length` property. The `newLaunchesToCreate` variable is already an array, so a direct access is correct and the type assertion is unnecessary.
+            const totalToCreate: number = newLaunchesToCreate.length;
 
             for (let i = 0; i < totalToCreate; i++) {
                 const launchData = newLaunchesToCreate[i];
@@ -554,22 +620,46 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
         }
         
         const now = new Date();
-        now.setHours(0,0,0,0); // Start of today
+        now.setHours(0, 0, 0, 0); // Start of today
 
+        // Priority 1: Active PPS (with end date)
         const activasYPorFinalizar = processableItems.filter(pps => {
             const endDate = parseToUTCDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS]);
             return endDate && endDate >= now;
-        }).sort((a,b) => (parseToUTCDate(a[FIELD_FECHA_FIN_LANZAMIENTOS])?.getTime() || 0) - (parseToUTCDate(b[FIELD_FECHA_FIN_LANZAMIENTOS])?.getTime() || 0));
+        }).sort((a, b) => (parseToUTCDate(a[FIELD_FECHA_FIN_LANZAMIENTOS])?.getTime() || 0) - (parseToUTCDate(b[FIELD_FECHA_FIN_LANZAMIENTOS])?.getTime() || 0));
 
-        const activasIndefinidas = processableItems.filter(pps => !pps[FIELD_FECHA_FIN_LANZAMIENTOS]);
+        // Priority 2: Active PPS (without end date) but recent
+        const fiveMonthsAgo = new Date(now);
+        fiveMonthsAgo.setMonth(now.getMonth() - 5);
 
-        const finalizadasParaReactivar = processableItems.filter(pps => {
-            const endDate = parseToUTCDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS]);
-            const status = pps[FIELD_ESTADO_GESTION_LANZAMIENTOS] || '';
-            return endDate && endDate < now && status !== 'Relanzamiento Confirmado' && status !== 'Archivado' && status !== 'No se Relanza';
+        const activasIndefinidas = processableItems.filter(pps => {
+            // Must not have an end date to be in this category
+            const hasEndDate = !!pps[FIELD_FECHA_FIN_LANZAMIENTOS];
+            if (hasEndDate) {
+                return false;
+            }
+
+            const startDate = parseToUTCDate(pps[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+            // Hide if no start date is present, or if the start date is older than 5 months
+            return startDate ? startDate >= fiveMonthsAgo : false;
         });
-
-        const relanzamientosConfirmados = processableItems.filter(pps => pps[FIELD_ESTADO_GESTION_LANZAMIENTOS] === 'Relanzamiento Confirmado');
+        
+        // Get all remaining PPS (i.e., finished ones)
+        const finishedPps = processableItems.filter(pps => {
+            const endDate = parseToUTCDate(pps[FIELD_FECHA_FIN_LANZAMIENTOS]);
+            return endDate && endDate < now;
+        });
+        
+        // Priority 3: Confirmed Relaunches from the finished pile
+        const relanzamientosConfirmados = finishedPps.filter(
+            pps => pps[FIELD_ESTADO_GESTION_LANZAMIENTOS] === 'Relanzamiento Confirmado'
+        );
+        
+        // Priority 4: Finished PPS needing action from the finished pile
+        const finalizadasParaReactivar = finishedPps.filter(pps => {
+            const status = pps[FIELD_ESTADO_GESTION_LANZAMIENTOS] || '';
+            return status !== 'Relanzamiento Confirmado' && status !== 'Archivado' && status !== 'No se Relanza';
+        });
 
         return { activasYPorFinalizar, finalizadasParaReactivar, relanzamientosConfirmados, activasIndefinidas };
     }, [lanzamientos, searchTerm, orientationFilter, forcedOrientations]);

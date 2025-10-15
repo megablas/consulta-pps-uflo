@@ -53,7 +53,7 @@ class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // FIX: Property 'props' does not exist on type 'ErrorBoundary'. Destructuring props to potentially aid type inference.
+    // FIX: The `this.props` object was not being correctly identified by TypeScript. Destructuring it can resolve such type inference issues.
     const { children } = this.props;
     return children;
   }
