@@ -567,7 +567,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
     
             let successfulCreations = 0;
             let failedCreations = 0;
-            // FIX: The type `unknown` does not have a `length` property. The `newLaunchesToCreate` variable is already an array, so a direct access is correct and the type assertion is unnecessary.
+            // FIX: The `newLaunchesToCreate` variable is already an array, so the cast to `unknown` was incorrect and caused a type error. Direct access to `length` is correct.
             const totalToCreate: number = newLaunchesToCreate.length;
 
             for (let i = 0; i < totalToCreate; i++) {

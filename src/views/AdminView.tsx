@@ -11,7 +11,7 @@ import ConvocatoriaManager from '../components/ConvocatoriaManager';
 import ConvocatoriaStatusManager from '../components/ConvocatoriaStatusManager';
 import AdminSearch from '../components/AdminSearch';
 // FIX: Corrected import to resolve module not found error.
-import { SeguroGenerator } from '../components/SeguroGenerator';
+import SeguroGenerator from '../components/SeguroGenerator';
 import { NuevosConvenios } from '../components/NuevosConvenios';
 import RepitentesPanel from '../components/RepitentesPanel';
 import ExecutiveReportGenerator from '../components/ExecutiveReportGenerator';

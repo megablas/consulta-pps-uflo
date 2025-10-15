@@ -53,9 +53,8 @@ class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // FIX: The `this.props` object was not being correctly identified by TypeScript. Destructuring it can resolve such type inference issues.
-    const { children } = this.props;
-    return children;
+    // FIX: The `this.props` object was not being correctly identified by TypeScript. Returning `this.props.children` directly can resolve this type inference issue.
+    return this.props.children;
   }
 }
 

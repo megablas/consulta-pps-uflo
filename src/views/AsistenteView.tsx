@@ -155,6 +155,7 @@ const AsistenteView: React.FC = () => {
                                              <div key={att.id} className={`p-0.5 rounded-lg border-2 transition-colors ${att[FIELD_ASISTENCIA_CONFIRMADA_JORNADA] ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700' : 'bg-transparent border-transparent'}`}>
                                                 <Checkbox
                                                     id={att.id}
+                                                    name={att.id}
                                                     label={`${att[FIELD_ASISTENCIA_MODULO_NOMBRE]}`}
                                                     checked={!!att[FIELD_ASISTENCIA_CONFIRMADA_JORNADA]}
                                                     onChange={(e) => updateAttendanceMutation.mutate({ asistenciaId: att.id, isConfirmed: e.target.checked })}

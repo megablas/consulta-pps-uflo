@@ -134,7 +134,12 @@ export const useConvocatorias = (legajo: string, studentAirtableId: string | nul
 
     const enrollStudent = {
         mutate: (selectedLanzamiento: LanzamientoPPS) => {
-            openEnrollmentForm(selectedLanzamiento, (formData) => enrollmentMutation.mutateAsync({ formData, selectedLanzamiento }));
+// FIX: The onSubmit callback for openEnrollmentForm expects a function that returns Promise<void>.
+// enrollmentMutation.mutateAsync returns Promise<AirtableRecord<...>>, which is a type mismatch.
+// Wrapping it in an async function that doesn't return the result fixes the issue.
+            openEnrollmentForm(selectedLanzamiento, async (formData) => {
+                await enrollmentMutation.mutateAsync({ formData, selectedLanzamiento });
+            });
         },
         isPending: enrollmentMutation.isPending,
     };
