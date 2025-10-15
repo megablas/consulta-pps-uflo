@@ -29,12 +29,60 @@ import {
   FIELD_NOMBRE_INSTITUCIONES,
   FIELD_DIRECCION_INSTITUCIONES,
   FIELD_NOMBRE_BUSQUEDA_PRACTICAS,
-  // FIX: Imported the missing constant to resolve the error.
   FIELD_LEGAJO_PPS,
+  // FIX: Imported missing constants to resolve multiple 'Cannot find name' errors.
+  FIELD_DNI_ESTUDIANTES,
+  FIELD_CORREO_ESTUDIANTES,
+  FIELD_TELEFONO_ESTUDIANTES,
+  FIELD_ESPECIALIDAD_PRACTICAS,
+  FIELD_HORAS_PRACTICAS,
+  FIELD_FECHA_FIN_PRACTICAS,
+  FIELD_EMPRESA_PPS_SOLICITUD,
+  FIELD_ESTADO_PPS,
+  FIELD_NOTAS_PPS,
+  FIELD_ORIENTACION_LANZAMIENTOS,
 } from '../constants';
 import { normalizeStringForComparison, parseToUTCDate } from '../utils/formatters';
 
+// --- MOCK DATA FOR TESTING USER ---
+const mockStudentDetails: EstudianteFields = {
+  [FIELD_LEGAJO_ESTUDIANTES]: '99999',
+  [FIELD_NOMBRE_ESTUDIANTES]: 'Usuario de Prueba',
+  'Orientación Elegida': 'Clinica',
+  [FIELD_DNI_ESTUDIANTES]: 12345678,
+  [FIELD_CORREO_ESTUDIANTES]: 'testing@uflo.edu.ar',
+  [FIELD_TELEFONO_ESTUDIANTES]: '1122334455',
+  [FIELD_GENERO_ESTUDIANTES]: 'Otro',
+};
+
+const mockPracticas: Practica[] = [
+  { id: 'prac_mock_1', [FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]: ['Hospital Central'], [FIELD_ESPECIALIDAD_PRACTICAS]: 'Clinica', [FIELD_HORAS_PRACTICAS]: 120, [FIELD_FECHA_INICIO_PRACTICAS]: '2023-08-01', [FIELD_FECHA_FIN_PRACTICAS]: '2023-12-15', [FIELD_ESTADO_PRACTICA]: 'Finalizada', [FIELD_NOTA_PRACTICAS]: '9' },
+  { id: 'prac_mock_2', [FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]: ['Colegio San Martín'], [FIELD_ESPECIALIDAD_PRACTICAS]: 'Educacional', [FIELD_HORAS_PRACTICAS]: 80, [FIELD_FECHA_INICIO_PRACTICAS]: '2024-03-01', [FIELD_FECHA_FIN_PRACTICAS]: '2024-07-15', [FIELD_ESTADO_PRACTICA]: 'En curso' },
+  { id: 'prac_mock_3', [FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS]: ['Empresa Tech Solutions'], [FIELD_ESPECIALIDAD_PRACTICAS]: 'Laboral', [FIELD_HORAS_PRACTICAS]: 50, [FIELD_FECHA_INICIO_PRACTICAS]: '2024-08-01', [FIELD_FECHA_FIN_PRACTICAS]: '2024-10-01', [FIELD_ESTADO_PRACTICA]: 'Finalizada' },
+];
+
+const mockSolicitudes: SolicitudPPS[] = [
+    { id: 'sol_mock_1', [FIELD_EMPRESA_PPS_SOLICITUD]: 'Consultora Global', [FIELD_ESTADO_PPS]: 'En conversaciones', [FIELD_ULTIMA_ACTUALIZACION_PPS]: '2024-05-20', [FIELD_NOTAS_PPS]: 'Se contactó para coordinar entrevista.' }
+];
+
+const mockLanzamientos: LanzamientoPPS[] = [
+    { id: 'lanz_mock_1', [FIELD_NOMBRE_PPS_LANZAMIENTOS]: 'Hogar de Ancianos "Amanecer"', [FIELD_ORIENTACION_LANZAMIENTOS]: 'Comunitaria', [FIELD_FECHA_INICIO_LANZAMIENTOS]: '2024-09-01', [FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]: 'Abierta', [FIELD_INFORME_LANZAMIENTOS]: 'http://example.com' },
+    { id: 'lanz_mock_2', [FIELD_NOMBRE_PPS_LANZAMIENTOS]: 'Fundación "Crecer Juntos"', [FIELD_ORIENTACION_LANZAMIENTOS]: 'Educacional', [FIELD_FECHA_INICIO_LANZAMIENTOS]: '2024-08-15', [FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]: 'Cerrado', [FIELD_INFORME_LANZAMIENTOS]: 'http://example.com' },
+];
+
+const mockMyEnrollments: Convocatoria[] = [
+    { id: 'conv_mock_1', [FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS]: 'Seleccionado', [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS]: ['lanz_mock_2'], [FIELD_NOMBRE_PPS_CONVOCATORIAS]: 'Fundación "Crecer Juntos"', [FIELD_FECHA_INICIO_CONVOCATORIAS]: '2024-08-15' }
+];
+
+
 export const fetchStudentData = async (legajo: string): Promise<{ studentDetails: EstudianteFields | null; studentAirtableId: string | null; }> => {
+  if (legajo === '99999') {
+    return Promise.resolve({
+      studentDetails: mockStudentDetails,
+      studentAirtableId: 'recTestingUser123',
+    });
+  }
+
   const records = await db.estudiantes.get({ filterByFormula: `{${FIELD_LEGAJO_ESTUDIANTES}} = '${legajo}'`, maxRecords: 1 });
   
   const studentRecord = records[0];
@@ -60,6 +108,10 @@ export const fetchStudentData = async (legajo: string): Promise<{ studentDetails
 };
 
 export const fetchPracticas = async (legajo: string): Promise<Practica[]> => {
+  if (legajo === '99999') {
+    return Promise.resolve(mockPracticas);
+  }
+
   const records = await db.practicas.getAll({ filterByFormula: `SEARCH('${legajo}', {${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}} & '')` });
 
   const validationResult = practicaArraySchema.safeParse(records);
@@ -75,6 +127,10 @@ export const fetchPracticas = async (legajo: string): Promise<Practica[]> => {
 };
 
 export const fetchSolicitudes = async (legajo: string, studentAirtableId: string | null): Promise<SolicitudPPS[]> => {
+  if (legajo === '99999') {
+    return Promise.resolve(mockSolicitudes);
+  }
+
   const formula = `SEARCH('${legajo}', {${FIELD_LEGAJO_PPS}} & '')`;
   const records = await db.solicitudes.getAll({ 
     filterByFormula: formula, 
@@ -99,6 +155,15 @@ export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: 
     allLanzamientos: LanzamientoPPS[],
     institutionAddressMap: Map<string, string>,
 }> => {
+  if (legajo === '99999') {
+    return Promise.resolve({
+      lanzamientos: mockLanzamientos.filter(l => l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS] !== 'Oculto'),
+      myEnrollments: mockMyEnrollments,
+      allLanzamientos: mockLanzamientos,
+      institutionAddressMap: new Map(),
+    });
+  }
+
   const formula = studentAirtableId
     ? `OR(FIND('${studentAirtableId}', ARRAYJOIN({${FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS}})), SEARCH('${legajo}', {${FIELD_LEGAJO_CONVOCATORIAS}} & ''))`
     : `SEARCH('${legajo}', {${FIELD_LEGAJO_CONVOCATORIAS}} & '')`;
@@ -284,6 +349,20 @@ export const processInformeTasks = (myEnrollments: Convocatoria[], allLanzamient
 };
 
 export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<GroupedSeleccionados | null> => {
+    // --- MOCK FOR TESTING USER ---
+    if (lanzamiento.id === 'lanz_mock_2') {
+        return Promise.resolve({
+            'Turno Mañana': [
+                { nombre: 'Ana Rodriguez', legajo: '99901' },
+                { nombre: 'Carlos Gomez', legajo: '99902' },
+            ],
+            'Turno Tarde': [
+                { nombre: 'Lucia Fernandez', legajo: '99903' },
+            ],
+        });
+    }
+    // --- END MOCK ---
+
     const ppsName = lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS];
     const startDate = lanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS]; // e.g., '2024-08-05'
 

@@ -1,28 +1,28 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import CriteriosPanel from './CriteriosPanel';
-import PracticasTable from './PracticasTable';
-import SolicitudesList from './SolicitudesList';
-import EmptyState from './EmptyState';
-import Tabs from './Tabs';
-import Card from './Card';
-import WelcomeBanner from './WelcomeBanner';
-import ConvocatoriasList from './ConvocatoriasList';
-import InformesList from './InformesList';
-import WhatsAppExportButton from './WhatsAppExportButton';
+import CriteriosPanel from '../components/CriteriosPanel';
+import PracticasTable from '../components/PracticasTable';
+import SolicitudesList from '../components/SolicitudesList';
+import EmptyState from '../components/EmptyState';
+import Tabs from '../components/Tabs';
+import Card from '../components/Card';
+import WelcomeBanner from '../components/WelcomeBanner';
+import ConvocatoriasList from '../components/ConvocatoriasList';
+import InformesList from '../components/InformesList';
+import WhatsAppExportButton from '../components/WhatsAppExportButton';
 import { useAuth } from '../contexts/AuthContext';
 import type { AuthUser } from '../contexts/AuthContext';
 import type { TabId, Orientacion } from '../types';
 import { calculateCriterios } from '../utils/criteriaCalculations';
-import DashboardLoadingSkeleton from './DashboardLoadingSkeleton';
-import ErrorState from './ErrorState';
+import DashboardLoadingSkeleton from '../components/DashboardLoadingSkeleton';
+import ErrorState from '../components/ErrorState';
 import { useStudentData } from '../hooks/useStudentData';
 import { useStudentPracticas } from '../hooks/useStudentPracticas';
 import { useStudentSolicitudes } from '../hooks/useStudentSolicitudes';
 import { useConvocatorias } from '../hooks/useConvocatorias';
 import { processInformeTasks } from '../services/dataService';
-import ProfileView from './ProfileView';
-import CalendarView from './CalendarView';
-import PrintableReport from './PrintableReport';
+import ProfileView from '../components/ProfileView';
+import CalendarView from '../components/CalendarView';
+import PrintableReport from '../components/PrintableReport';
 
 interface StudentDashboardProps {
   user: AuthUser;
@@ -45,6 +45,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
     enrollStudent, confirmInforme, refetchConvocatorias, institutionAddressMap,
     enrollInJornada,
     asistencias,
+// FIX: Destructure jornadaBlockCounts from the useConvocatorias hook.
+    jornadaBlockCounts, // Get the new block counts
   } = useConvocatorias(user.legajo, studentAirtableId, isSuperUserMode);
 
   // --- DERIVED STATE & MEMOIZATION ---
@@ -83,7 +85,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   }, [updateNota]);
   
   // --- MEMOIZED TAB CONTENT ---
-  const convocatoriasContent = useMemo(() => <ConvocatoriasList lanzamientos={lanzamientos} myEnrollments={myEnrollments} practicas={practicas} student={studentDetails} onInscribir={enrollStudent.mutate} onInscribirJornada={enrollInJornada.mutate} institutionAddressMap={institutionAddressMap} asistencias={asistencias} />, [lanzamientos, myEnrollments, practicas, studentDetails, enrollStudent.mutate, enrollInJornada.mutate, institutionAddressMap, asistencias]);
+// FIX: Pass the required `jornadaBlockCounts` prop to the ConvocatoriasList component.
+  const convocatoriasContent = useMemo(() => <ConvocatoriasList lanzamientos={lanzamientos} myEnrollments={myEnrollments} practicas={practicas} student={studentDetails} onInscribir={enrollStudent.mutate} onInscribirJornada={enrollInJornada.mutate} institutionAddressMap={institutionAddressMap} asistencias={asistencias} jornadaBlockCounts={jornadaBlockCounts} />, [lanzamientos, myEnrollments, practicas, studentDetails, enrollStudent.mutate, enrollInJornada.mutate, institutionAddressMap, asistencias, jornadaBlockCounts]);
   const calendarContent = useMemo(() => <CalendarView myEnrollments={myEnrollments} allLanzamientos={allLanzamientos} />, [myEnrollments, allLanzamientos]);
   const informesContent = useMemo(() => <InformesList tasks={informeTasks} onConfirmar={confirmInforme.mutate} />, [informeTasks, confirmInforme]);
   const solicitudesContent = useMemo(() => <SolicitudesList solicitudes={solicitudes} />, [solicitudes]);

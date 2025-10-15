@@ -20,6 +20,8 @@ import { useModal } from '../contexts/ModalContext';
 import type { AirtableRecord, EstudianteFields } from '../types';
 import AcreditacionJornada from '../components/AcreditacionJornada';
 import JornadaDashboard from '../components/JornadaDashboard';
+import { useAuth } from '../contexts/AuthContext';
+
 
 interface StudentTabInfo {
     id: string; // legajo
@@ -28,12 +30,13 @@ interface StudentTabInfo {
 }
 
 const AdminView: React.FC = () => {
+    const { isAdminTesterMode } = useAuth();
     const [studentTabs, setStudentTabs] = useState<StudentTabInfo[]>([]);
-    const [activeTabId, setActiveTabId] = useState('metrics');
+    const [activeTabId, setActiveTabId] = useState(isAdminTesterMode ? 'herramientas' : 'metrics');
     
     const [activeMetricsTabId, setActiveMetricsTabId] = useState('dashboard');
     const [activeGestionTabId, setActiveGestionTabId] = useState('manager');
-    const [activeHerramientasTabId, setActiveHerramientasTabId] = useState('repitentes');
+    const [activeHerramientasTabId, setActiveHerramientasTabId] = useState(isAdminTesterMode ? 'acreditar_jornada' : 'repitentes');
     const { showModal } = useModal();
 
 
@@ -60,9 +63,9 @@ const AdminView: React.FC = () => {
     const handleCloseTab = useCallback((tabId: string) => {
         setStudentTabs(prev => prev.filter(s => s.id !== tabId));
         if (activeTabId === tabId) {
-            setActiveTabId('metrics'); // Fallback to a default tab
+            setActiveTabId(isAdminTesterMode ? 'herramientas' : 'metrics'); // Fallback to a default tab
         }
-    }, [activeTabId]);
+    }, [activeTabId, isAdminTesterMode]);
 
     const allTabs = useMemo(() => {
         const metricsSubTabs = [
@@ -75,7 +78,7 @@ const AdminView: React.FC = () => {
             { id: 'status-manager', label: 'Control de Estados', icon: 'toggle_on' },
         ];
 
-        const herramientasSubTabs = [
+        let herramientasSubTabs = [
             { id: 'repitentes', label: 'Repitentes', icon: 'history_edu' },
             { id: 'penalizaciones', label: 'Penalizaciones', icon: 'gavel' },
             { id: 'inscripciones_jornada', label: 'Inscripciones Jornada', icon: 'event_note' },
@@ -85,6 +88,11 @@ const AdminView: React.FC = () => {
             { id: 'convenios', label: 'Convenios Nuevos', icon: 'handshake' },
             { id: 'executive-report', label: 'Reporte Ejecutivo', icon: 'summarize' },
         ];
+
+        if (isAdminTesterMode) {
+            const allowedTools = new Set(['acreditar_jornada', 'search', 'insurance', 'executive-report']);
+            herramientasSubTabs = herramientasSubTabs.filter(tab => allowedTools.has(tab.id));
+        }
         
         const mainTabs = [
             {
@@ -159,7 +167,8 @@ const AdminView: React.FC = () => {
         activeMetricsTabId, 
         activeGestionTabId, 
         activeHerramientasTabId,
-        showModal
+        showModal,
+        isAdminTesterMode
     ]);
 
     return (

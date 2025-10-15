@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useModal } from '../contexts/ModalContext';
 import { fetchConvocatoriasData } from '../services/dataService';
 import { db } from '../lib/db';
-import type { LanzamientoPPS, ConvocatoriaFields, InformeTask, Convocatoria, ConferenceActivity, JornadaBlockCounts } from '../types';
+import type { LanzamientoPPS, ConvocatoriaFields, InformeTask, Convocatoria, JornadaBlockCounts } from '../types';
 import {
     FIELD_LEGAJO_ESTUDIANTES, FIELD_DNI_ESTUDIANTES, FIELD_CORREO_ESTUDIANTES,
     FIELD_FECHA_NACIMIENTO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES,
@@ -23,6 +23,12 @@ import {
     FIELD_ASISTENCIA_ESTUDIANTE,
     JORNADA_BLOCK_MAPPING,
     FIELD_ASISTENCIA_MODULO_ID,
+    FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS,
+    FIELD_INFORME_LANZAMIENTOS,
+    FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS,
+    FIELD_NOMBRE_PPS_CONVOCATORIAS,
+    FIELD_FECHA_INICIO_CONVOCATORIAS,
+    FIELD_HORARIO_FORMULA_CONVOCATORIAS,
 } from '../constants';
 import { useMemo } from 'react';
 
@@ -41,13 +47,52 @@ export const useConvocatorias = (legajo: string, studentAirtableId: string | nul
         refetch: refetchConvocatorias
     } = useQuery({
         queryKey: ['convocatorias', legajo, studentAirtableId],
-        queryFn: () => fetchConvocatoriasData(legajo, studentAirtableId, isSuperUserMode),
-        enabled: !!studentAirtableId || isSuperUserMode,
+        queryFn: () => {
+            if (legajo === '99999') {
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = today.getMonth() + 1; // 1-indexed for date strings
+                const calendarStartDate = `${year}-${String(month).padStart(2, '0')}-05`;
+                const calendarEndDate = `${year}-${String(month).padStart(2, '0')}-25`;
+
+                const mockLanzamientos: LanzamientoPPS[] = [
+                    { id: 'lanz_mock_1', [FIELD_NOMBRE_PPS_LANZAMIENTOS]: 'Hogar de Ancianos "Amanecer" (Prueba)', [FIELD_ORIENTACION_LANZAMIENTOS]: 'Comunitaria', [FIELD_FECHA_INICIO_LANZAMIENTOS]: '2024-09-01', [FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]: 'Abierta', [FIELD_INFORME_LANZAMIENTOS]: 'http://example.com', [FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS]: 'Turno Mañana; Turno Tarde' },
+                    { 
+                        id: 'lanz_mock_2', 
+                        [FIELD_NOMBRE_PPS_LANZAMIENTOS]: 'Fundación "Crecer Juntos" (Calendario)', 
+                        [FIELD_ORIENTACION_LANZAMIENTOS]: 'Educacional', 
+                        [FIELD_FECHA_INICIO_LANZAMIENTOS]: calendarStartDate, 
+                        [FIELD_FECHA_FIN_LANZAMIENTOS]: calendarEndDate,
+                        [FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS]: 'Turno Tarde (Lunes y Miércoles)',
+                        [FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]: 'Cerrado', 
+                        [FIELD_INFORME_LANZAMIENTOS]: 'http://example.com' 
+                    },
+                ];
+                const mockMyEnrollments: Convocatoria[] = [
+                    { 
+                        id: 'conv_mock_1', 
+                        [FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS]: 'Seleccionado', 
+                        [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS]: ['lanz_mock_2'], 
+                        [FIELD_NOMBRE_PPS_CONVOCATORIAS]: 'Fundación "Crecer Juntos" (Calendario)', 
+                        [FIELD_FECHA_INICIO_CONVOCATORIAS]: calendarStartDate,
+                        [FIELD_HORARIO_FORMULA_CONVOCATORIAS]: 'Turno Tarde (Lunes y Miércoles)',
+                    }
+                ];
+                return Promise.resolve({
+                  lanzamientos: mockLanzamientos,
+                  myEnrollments: mockMyEnrollments,
+                  allLanzamientos: mockLanzamientos,
+                  institutionAddressMap: new Map(),
+                });
+            }
+            return fetchConvocatoriasData(legajo, studentAirtableId, isSuperUserMode);
+        },
+        enabled: !!studentAirtableId || isSuperUserMode || legajo === '99999',
     });
     
     const { lanzamientos = [], myEnrollments = [], allLanzamientos = [], institutionAddressMap = new Map() } = convocatoriasData || {};
 
-    const { data: asistencias = [], refetch: refetchAsistencias } = useQuery({
+    const { data: asistencias = [], isLoading: isLoadingAsistencias } = useQuery({
         queryKey: ['asistenciasJornada', legajo],
         queryFn: async () => {
             if (!studentAirtableId) return [];
@@ -59,7 +104,7 @@ export const useConvocatorias = (legajo: string, studentAirtableId: string | nul
         enabled: !!studentAirtableId,
     });
 
-    const { data: allAsistenciasJornada } = useQuery({
+    const { data: allAsistenciasJornada, isLoading: isLoadingAllAsistencias } = useQuery({
         queryKey: ['allAsistenciasJornada'],
         queryFn: async () => {
             const records = await db.asistenciasJornada.getAll();
@@ -95,26 +140,19 @@ export const useConvocatorias = (legajo: string, studentAirtableId: string | nul
     }, [allAsistenciasJornada]);
 
     const enrollmentMutation = useMutation({
-        mutationFn: ({ formData, selectedLanzamiento }: { formData: any, selectedLanzamiento: LanzamientoPPS }) => {
+        mutationFn: async ({ formData, selectedLanzamiento }: { formData: any, selectedLanzamiento: LanzamientoPPS }) => {
+            if (legajo === '99999') {
+                await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate processing
+                return null;
+            }
+
             const studentDetails = queryClient.getQueryData(['student', legajo]) as any;
             if (!studentAirtableId || !studentDetails?.studentDetails) throw new Error("No se pudo identificar al estudiante.");
             
             const newRecord: Partial<ConvocatoriaFields> = {
                 [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS]: [selectedLanzamiento.id],
                 [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: [studentAirtableId],
-                [FIELD_NOMBRE_PPS_LANZAMIENTOS]: selectedLanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS],
-                [FIELD_FECHA_INICIO_LANZAMIENTOS]: selectedLanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS],
-                [FIELD_FECHA_FIN_LANZAMIENTOS]: selectedLanzamiento[FIELD_FECHA_FIN_LANZAMIENTOS],
-                [FIELD_DIRECCION_LANZAMIENTOS]: selectedLanzamiento[FIELD_DIRECCION_LANZAMIENTOS],
-                [FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS]: formData.horarios.join('; '),
-                [FIELD_ORIENTACION_LANZAMIENTOS]: selectedLanzamiento[FIELD_ORIENTACION_LANZAMIENTOS],
-                [FIELD_HORAS_ACREDITADAS_LANZAMIENTOS]: selectedLanzamiento[FIELD_HORAS_ACREDITADAS_LANZAMIENTOS],
-                [FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS]: selectedLanzamiento[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS],
-                [FIELD_LEGAJO_ESTUDIANTES]: studentDetails.studentDetails[FIELD_LEGAJO_ESTUDIANTES],
-                [FIELD_DNI_ESTUDIANTES]: studentDetails.studentDetails[FIELD_DNI_ESTUDIANTES],
-                [FIELD_CORREO_ESTUDIANTES]: studentDetails.studentDetails[FIELD_CORREO_ESTUDIANTES],
-                [FIELD_FECHA_NACIMIENTO_ESTUDIANTES]: studentDetails.studentDetails[FIELD_FECHA_NACIMIENTO_ESTUDIANTES],
-                [FIELD_TELEFONO_ESTUDIANTES]: studentDetails.studentDetails[FIELD_TELEFONO_ESTUDIANTES],
+                [FIELD_HORARIO_FORMULA_CONVOCATORIAS]: formData.horarios.join('; '),
                 [FIELD_TERMINO_CURSAR_CONVOCATORIAS]: formData.terminoDeCursar ? "Sí" : "No",
                 [FIELD_CURSANDO_ELECTIVAS_CONVOCATORIAS]: formData.cursandoElectivas ? "Sí" : "No",
                 [FIELD_FINALES_ADEUDA_CONVOCATORIAS]: formData.finalesAdeudados,
@@ -134,9 +172,6 @@ export const useConvocatorias = (legajo: string, studentAirtableId: string | nul
 
     const enrollStudent = {
         mutate: (selectedLanzamiento: LanzamientoPPS) => {
-// FIX: The onSubmit callback for openEnrollmentForm expects a function that returns Promise<void>.
-// enrollmentMutation.mutateAsync returns Promise<AirtableRecord<...>>, which is a type mismatch.
-// Wrapping it in an async function that doesn't return the result fixes the issue.
             openEnrollmentForm(selectedLanzamiento, async (formData) => {
                 await enrollmentMutation.mutateAsync({ formData, selectedLanzamiento });
             });
@@ -146,10 +181,15 @@ export const useConvocatorias = (legajo: string, studentAirtableId: string | nul
 
     const enrollInJornadaMutation = useMutation({
         mutationFn: async ({ selectedShiftIds }: { selectedShiftIds: string[] }) => {
+            if (legajo === '99999') {
+                if (selectedShiftIds.length === 0) throw new Error("No se seleccionó ningún turno de prueba.");
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                return null;
+            }
+
             if (!studentAirtableId) throw new Error("No se pudo identificar al estudiante.");
             if (selectedShiftIds.length === 0) throw new Error("No se seleccionó ningún turno.");
     
-            // Re-fetch latest counts for race condition check
             const records = await db.asistenciasJornada.getAll();
             const latestAsistencias = records.map(r => r.fields);
             const latestCounts: JornadaBlockCounts = new Map<string, number>();
@@ -173,7 +213,6 @@ export const useConvocatorias = (legajo: string, studentAirtableId: string | nul
                 latestCounts.set(shiftId, studentIds.size);
             }
             
-            // Validate capacity for each selected shift
             for (const shiftId of selectedShiftIds) {
                 const capacity = JORNADA_CAPACITIES[shiftId as keyof typeof JORNADA_CAPACITIES];
                 const currentCount = latestCounts.get(shiftId) || 0;
@@ -274,7 +313,8 @@ export const useConvocatorias = (legajo: string, studentAirtableId: string | nul
         allLanzamientos,
         institutionAddressMap,
         asistencias,
-        isConvocatoriasLoading: isConvocatoriasLoading || !asistencias || !allAsistenciasJornada,
+        // FIX: The `isConvocatoriasLoading` flag now correctly combines the loading states from all relevant queries to prevent race conditions and ensure all data is available before rendering.
+        isConvocatoriasLoading: isConvocatoriasLoading || isLoadingAsistencias || isLoadingAllAsistencias,
         convocatoriasError,
         refetchConvocatorias,
         enrollStudent,

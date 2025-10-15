@@ -43,9 +43,24 @@ interface ConvocatoriasListProps {
 const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({ lanzamientos, myEnrollments, practicas, student, onInscribir, onInscribirJornada, institutionAddressMap, asistencias, jornadaBlockCounts }) => {
     const { openSeleccionadosModal, showModal } = useModal();
     const { isSubmittingJornada, lanzamientoForJornada } = useModal();
+    const { authenticatedUser } = useAuth();
+    const isTesting = authenticatedUser?.legajo === '99999';
     
     const seleccionadosMutation = useMutation({
-        mutationFn: (lanzamiento: LanzamientoPPS) => fetchSeleccionados(lanzamiento),
+        mutationFn: (lanzamiento: LanzamientoPPS) => {
+            if (isTesting && lanzamiento.id === 'lanz_mock_2') {
+                 return Promise.resolve({
+                    'Turno Mañana': [
+                        { nombre: 'Ana Rodriguez (Ejemplo)', legajo: '99901' },
+                        { nombre: 'Carlos Gomez (Ejemplo)', legajo: '99902' },
+                    ],
+                    'Turno Tarde': [
+                        { nombre: 'Lucia Fernandez (Ejemplo)', legajo: '99903' },
+                    ],
+                });
+            }
+            return fetchSeleccionados(lanzamiento);
+        },
         onSuccess: (data, lanzamiento) => {
             const title = lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'Convocatoria';
             openSeleccionadosModal(data, title);

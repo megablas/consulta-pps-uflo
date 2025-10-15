@@ -15,10 +15,11 @@ const JefeView = lazy(() => import('./views/JefeView'));
 const StudentView = lazy(() => import('./views/StudentView'));
 const DirectivoView = lazy(() => import('./views/DirectivoView'));
 const AsistenteView = lazy(() => import('./views/AsistenteView'));
+const AdminTestingView = lazy(() => import('./views/AdminTestingView'));
 
 
 const App: React.FC = () => {
-  const { authenticatedUser, isAuthLoading, isSuperUserMode, isJefeMode, isDirectivoMode, isAsistenteMode } = useAuth();
+  const { authenticatedUser, isAuthLoading, isSuperUserMode, isJefeMode, isDirectivoMode, isAsistenteMode, isAdminTesterMode } = useAuth();
 
   if (isAuthLoading) {
     return (
@@ -50,6 +51,8 @@ const App: React.FC = () => {
                   <DirectivoView />
                 ) : isAsistenteMode ? (
                   <AsistenteView />
+                ) : isAdminTesterMode ? (
+                  <AdminTestingView />
                 ) : (
                   <StudentView />
                 )}
