@@ -96,7 +96,6 @@ const InformeCorreccionCard: React.FC<InformeCorreccionCardProps> = ({
 
 
   const handleNotaChange = async (student: InformeCorreccionStudent, newNota: string) => {
-    // FIX: Pass the full student object to the onNotaChange prop to match the expected signature from the parent component.
     await onNotaChange(student, newNota);
     setJustUpdatedPracticaId(student.practicaId || null);
     setTimeout(() => setJustUpdatedPracticaId(null), 1500); 

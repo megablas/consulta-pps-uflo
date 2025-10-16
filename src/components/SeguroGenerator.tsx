@@ -236,12 +236,15 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                 const lanzamientoId = (individualConv[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])[0];
                 const ppsData = lanzamientoId ? lanzamientoMap.get(lanzamientoId) : null;
                 
-                const institucion = ppsData?.[FIELD_NOMBRE_PPS_LANZAMIENTOS] || individualConv[FIELD_NOMBRE_PPS_CONVOCATORIAS] || 'N/A';
-                const direccion = ppsData?.[FIELD_DIRECCION_LANZAMIENTOS] || individualConv[FIELD_DIRECCION_CONVOCATORIAS] || 'N/A';
-                const fechaInicio = ppsData?.[FIELD_FECHA_INICIO_LANZAMIENTOS] || individualConv[FIELD_FECHA_INICIO_CONVOCATORIAS];
-                const fechaFin = ppsData?.[FIELD_FECHA_FIN_LANZAMIENTOS] || individualConv[FIELD_FECHA_FIN_CONVOCATORIAS];
-                const horario = individualConv[FIELD_HORARIO_FORMULA_CONVOCATORIAS] || ppsData?.[FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS] || 'N/A';
-                const orientacion = ppsData?.[FIELD_ORIENTACION_LANZAMIENTOS] || (individualConv[FIELD_ORIENTACION_CONVOCATORIAS] as string) || '';
+                // FIX: Ensure values from Airtable are consistently treated as strings to avoid type errors.
+                const institucion = String(ppsData?.[FIELD_NOMBRE_PPS_LANZAMIENTOS] || individualConv[FIELD_NOMBRE_PPS_CONVOCATORIAS] || 'N/A');
+                const direccion = String(ppsData?.[FIELD_DIRECCION_LANZAMIENTOS] || individualConv[FIELD_DIRECCION_CONVOCATORIAS] || 'N/A');
+                // FIX: Explicitly cast Airtable field values to string to prevent type errors.
+                const fechaInicio = String(ppsData?.[FIELD_FECHA_INICIO_LANZAMIENTOS] || individualConv[FIELD_FECHA_INICIO_CONVOCATORIAS] || '');
+                // FIX: Explicitly cast Airtable field values to string to prevent type errors.
+                const fechaFin = String(ppsData?.[FIELD_FECHA_FIN_LANZAMIENTOS] || individualConv[FIELD_FECHA_FIN_CONVOCATORIAS] || '');
+                const horario = String(individualConv[FIELD_HORARIO_FORMULA_CONVOCATORIAS] || ppsData?.[FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS] || 'N/A');
+                const orientacion = String(ppsData?.[FIELD_ORIENTACION_LANZAMIENTOS] || (individualConv[FIELD_ORIENTACION_CONVOCATORIAS] as string) || '');
 
                 const fullName = student?.[FIELD_NOMBRE_ESTUDIANTES] || '';
                 let nombre = student[FIELD_NOMBRE_SEPARADO_ESTUDIANTES] || '';
@@ -263,7 +266,7 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                     else if (o === 'laboral' || o === 'comunitaria') tutores.add('Cynthia Rossi');
                 });
                 
-                const periodoValue = `Del ${formatDate(fechaInicio as string | undefined)} al ${formatDate(fechaFin as string | undefined)}`;
+                const periodoValue = `Del ${formatDate(fechaInicio)} al ${formatDate(fechaFin)}`;
                 
                 return {
                     studentId, nombre, apellido,
@@ -366,8 +369,8 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
     const renderSelectionStep = () => (
         <div className="space-y-6">
             <div>
-                <h3 className="text-xl font-bold text-slate-800">Paso 1: Seleccionar Convocatorias</h3>
-                <p className="text-slate-600 max-w-xl mt-1">Seleccione una o más de las últimas convocatorias con alumnos seleccionados para generar los reportes.</p>
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Paso 1: Seleccionar Convocatorias</h3>
+                <p className="text-slate-600 dark:text-slate-400 max-w-xl mt-1">Seleccione una o más de las últimas convocatorias con alumnos seleccionados para generar los reportes.</p>
             </div>
 
             {isLoading && !loadingMessage.includes('convocatorias') ? null : (isLoading ? <Loader /> : null)}
@@ -380,24 +383,24 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                 <div className="overflow-x-auto">
                     <table className="w-full min-w-[800px] border-collapse">
                         <thead>
-                            <tr className="border-b-2 border-slate-200">
+                            <tr className="border-b-2 border-slate-200 dark:border-slate-700">
                                 <th className="p-4 w-16 text-left">
                                     <Checkbox id="select-all" name="select-all" checked={selectedConvocatorias.size > 0 && selectedConvocatorias.size === convocatorias.length} onChange={() => setSelectedConvocatorias(selectedConvocatorias.size === convocatorias.length ? new Set() : new Set(convocatorias.map(c => c.id)))} label="" />
                                 </th>
-                                <th className="p-4 text-left font-semibold text-slate-500 uppercase text-xs tracking-wider">Institución</th>
-                                <th className="p-4 text-center font-semibold text-slate-500 uppercase text-xs tracking-wider">Nº Estudiantes</th>
-                                <th className="p-4 text-center font-semibold text-slate-500 uppercase text-xs tracking-wider">Período</th>
+                                <th className="p-4 text-left font-semibold text-slate-500 dark:text-slate-400 uppercase text-xs tracking-wider">Institución</th>
+                                <th className="p-4 text-center font-semibold text-slate-500 dark:text-slate-400 uppercase text-xs tracking-wider">Nº Estudiantes</th>
+                                <th className="p-4 text-center font-semibold text-slate-500 dark:text-slate-400 uppercase text-xs tracking-wider">Período</th>
                             </tr>
                         </thead>
                         <tbody>
                             {convocatorias.map((convocatoria) => (
-                                <tr key={convocatoria.id} className="transition-colors duration-200 hover:bg-slate-50/50 border-b border-slate-200/60 last:border-b-0">
+                                <tr key={convocatoria.id} className="transition-colors duration-200 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 border-b border-slate-200/60 dark:border-slate-700 last:border-b-0">
                                     <td className="p-4 align-middle">
                                         <Checkbox id={`conv-${convocatoria.id}`} name="convocatoria" checked={selectedConvocatorias.has(convocatoria.id)} onChange={() => toggleSelection(convocatoria.id)} label="" />
                                     </td>
-                                    <td className="p-4 align-middle font-semibold text-slate-800">{convocatoria[FIELD_NOMBRE_PPS_CONVOCATORIAS]}</td>
-                                    <td className="p-4 align-middle text-center text-slate-600 font-medium">{convocatoria[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]?.length || 0}</td>
-                                    <td className="p-4 align-middle text-center text-slate-600">{formatDate(convocatoria[FIELD_FECHA_INICIO_CONVOCATORIAS])} - {formatDate(convocatoria[FIELD_FECHA_FIN_CONVOCATORIAS])}</td>
+                                    <td className="p-4 align-middle font-semibold text-slate-800 dark:text-slate-100">{String(convocatoria[FIELD_NOMBRE_PPS_CONVOCATORIAS])}</td>
+                                    <td className="p-4 align-middle text-center text-slate-600 dark:text-slate-300 font-medium">{convocatoria[FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]?.length || 0}</td>
+                                    <td className="p-4 align-middle text-center text-slate-600 dark:text-slate-300">{formatDate(String(convocatoria[FIELD_FECHA_INICIO_CONVOCATORIAS] ?? ''))} - {formatDate(String(convocatoria[FIELD_FECHA_FIN_CONVOCATORIAS] ?? ''))}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -495,10 +498,10 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
           <>
               <div className="flex justify-between items-start mb-6">
                   <div>
-                      <h3 className="text-xl font-bold text-slate-800">Paso 2: Generar Documentación</h3>
-                      <p className="text-slate-600 max-w-2xl mt-1">Para cada grupo, descargue la plantilla del seguro y copie los datos de los alumnos para pegarlos en el archivo.</p>
+                      <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Paso 2: Generar Documentación</h3>
+                      <p className="text-slate-600 dark:text-slate-400 max-w-2xl mt-1">Para cada grupo, descargue la plantilla del seguro y copie los datos de los alumnos para pegarlos en el archivo.</p>
                   </div>
-                  <button onClick={() => setStep('selection')} className="bg-white hover:bg-slate-100 text-slate-700 font-bold py-2 px-4 rounded-lg text-sm border border-slate-300 transition-colors flex items-center gap-2">
+                  <button onClick={() => setStep('selection')} className="bg-white dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold py-2 px-4 rounded-lg text-sm border border-slate-300 dark:border-slate-600 transition-colors flex items-center gap-2">
                       <span className="material-icons !text-base">arrow_back</span>
                       <span>Volver</span>
                   </button>
@@ -508,13 +511,13 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                    <EmptyState icon="group_off" title="Sin Estudiantes para Revisar" message="No se encontraron estudiantes en las convocatorias seleccionadas." />
               ) : (
                 <div className="space-y-8">
-                  {Object.values(groupedStudents).map((group, index) => (
+                  {Object.values(groupedStudents).map((group: { institucion: string; tutor: string; orientacion: string; students: StudentForReview[] }, index) => (
                       <Card key={index} className="animate-fade-in-up" style={{animationDelay: `${index * 100}ms`}}>
                           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-5">
                               <div className="space-y-1">
-                                <p className="text-sm font-semibold text-slate-500">Institución: <span className="font-bold text-slate-800">{group.institucion}</span></p>
-                                <p className="text-sm font-semibold text-slate-500">Tutor/a: <span className="font-bold text-slate-800">{group.tutor}</span></p>
-                                <p className="text-sm font-semibold text-slate-500">Orientación: <span className="font-bold text-slate-800">{group.orientacion}</span></p>
+                                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Institución: <span className="font-bold text-slate-800 dark:text-slate-100">{group.institucion}</span></p>
+                                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Tutor/a: <span className="font-bold text-slate-800 dark:text-slate-100">{group.tutor}</span></p>
+                                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Orientación: <span className="font-bold text-slate-800 dark:text-slate-100">{group.orientacion}</span></p>
                               </div>
                               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 self-start sm:self-center">
                                   <button onClick={() => handleDownloadBlankInsurance(group.institucion)} disabled={!blankTemplateUrl} className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-md hover:bg-green-700 flex items-center gap-2 justify-center disabled:bg-green-300 disabled:cursor-not-allowed">
@@ -532,10 +535,10 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                               </div>
                           </div>
                           
-                          <div className="overflow-x-auto border-t border-slate-200 pt-4">
+                          <div className="overflow-x-auto border-t border-slate-200 dark:border-slate-700 pt-4">
                               <table className="w-full min-w-[1200px] text-sm text-left border-collapse">
-                                  <thead className="text-xs text-slate-500 uppercase">
-                                      <tr className="border-b-2 border-slate-200">
+                                  <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase">
+                                      <tr className="border-b-2 border-slate-200 dark:border-slate-700">
                                           <th className="p-3">Apellido</th>
                                           <th className="p-3">Nombre</th>
                                           <th className="p-3">DNI</th>
@@ -545,9 +548,9 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                                           <th className="p-3">Duración (Período, Días y Horario)</th>
                                       </tr>
                                   </thead>
-                                  <tbody className="text-slate-800">
+                                  <tbody className="text-slate-800 dark:text-slate-200">
                                       {group.students.map(student => (
-                                          <tr key={student.studentId} className="border-b border-slate-200/60 hover:bg-slate-50/50 last:border-b-0">
+                                          <tr key={student.studentId} className="border-b border-slate-200/60 dark:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 last:border-b-0">
                                               <td className="p-3 font-medium">{student.apellido}</td>
                                               <td className="p-3 font-medium">{student.nombre}</td>
                                               <td className="p-3">{student.dni}</td>
@@ -565,7 +568,7 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                 </div>
               )}
               
-              <div className="mt-8 pt-6 border-t border-slate-200 flex flex-col sm:flex-row justify-end items-center gap-4">
+              <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-end items-center gap-4">
                   <button 
                       onClick={handleGenerateSelectionExcel} 
                       disabled={isLoading || studentsForReview.length === 0} 

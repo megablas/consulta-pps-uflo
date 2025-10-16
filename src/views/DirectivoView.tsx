@@ -5,11 +5,9 @@ import CorreccionPanel from '../components/CorreccionPanel';
 import { useAuth, type AuthUser } from '../contexts/AuthContext';
 import StudentDashboard from './StudentDashboard';
 import Tabs from '../components/Tabs';
-// FIX: Changed to a default import as MetricsDashboard is a default export.
 import { MetricsDashboard } from '../components/MetricsDashboard';
 import TimelineView from '../components/TimelineView';
 import SubTabs from '../components/SubTabs';
-// FIX: Import AirtableRecord and EstudianteFields for correct type usage
 import type { AirtableRecord, EstudianteFields } from '../types';
 
 interface StudentTabInfo {
@@ -53,7 +51,6 @@ const DirectivoView: React.FC = () => {
     const [activeTabId, setActiveTabId] = useState(initialTabId);
     const [activeMetricsTabId, setActiveMetricsTabId] = useState('dashboard');
 
-    // FIX: Updated the function signature to correctly handle the AirtableRecord type passed by AdminSearch.
     const openStudentPanel = useCallback((student: AirtableRecord<EstudianteFields>) => {
         const legajo = student.fields.Legajo;
         const nombre = student.fields.Nombre;
@@ -99,7 +96,6 @@ const DirectivoView: React.FC = () => {
                     <>
                         <SubTabs tabs={metricsSubTabs} activeTabId={activeMetricsTabId} onTabChange={setActiveMetricsTabId} />
                         <div className="mt-6">
-                            {/* FIX: Adapted the call to wrap the simpler student object from MetricsDashboard into an AirtableRecord-like structure. */}
                             {activeMetricsTabId === 'dashboard' && <MetricsDashboard onStudentSelect={(student) => openStudentPanel({ id: '', createdTime: '', fields: { Legajo: student.legajo, Nombre: student.nombre }})} />}
                             {activeMetricsTabId === 'timeline' && <TimelineView />}
                         </div>
@@ -153,5 +149,4 @@ const DirectivoView: React.FC = () => {
     );
 };
 
-// FIX: Corrected export to 'DirectivoView' to match the component defined in this file.
 export default DirectivoView;

@@ -63,7 +63,8 @@ const TimelineView: React.FC = () => {
             const date = parseToUTCDate(launch[FIELD_FECHA_INICIO_LANZAMIENTOS]);
             return date ? date.getUTCFullYear() : null;
         }).filter((y): y is number => y !== null));
-        return Array.from(years).sort((a, b) => b - a);
+        // FIX: The sort callback parameters can be of a type other than 'number' if the array contains mixed types. Explicitly cast to Number to ensure a numeric sort.
+        return Array.from(years).sort((a, b) => Number(b) - Number(a));
     }, [launches]);
 
     const { totalLaunchesForYear, totalCuposForYear, launchesByMonth } = useMemo(() => {
@@ -76,9 +77,8 @@ const TimelineView: React.FC = () => {
             return date && date.getUTCFullYear() === targetYear;
         });
         
-        // FIX: Replaced the reduce function with a more robust version to ensure both sides of the arithmetic operation are numbers.
         const totalCupos = launchesForYear.reduce((sum, launch) => {
-            return sum + (Number(launch[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS]) || 0);
+            return sum + Number(launch[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0);
         }, 0);
         
         const monthlyData: { [key: number]: {

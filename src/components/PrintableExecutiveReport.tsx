@@ -191,7 +191,6 @@ const ComparativeReport: React.FC<{ data: ComparativeExecutiveReportData }> = ({
     );
 }
 
-// FIX: Added missing interface for component props.
 interface PrintableExecutiveReportProps {
     data: AnyReportData;
 }

@@ -61,7 +61,6 @@ const CorreccionRapidaView: React.FC<CorreccionRapidaViewProps> = ({ students, o
   const [justUpdatedPracticaId, setJustUpdatedPracticaId] = useState<string | null>(null);
 
   const handleNotaChange = async (student: FlatCorreccionStudent, newNota: string) => {
-    // FIX: Pass the full student object to the onNotaChange prop to match the expected signature from the parent component.
     await onNotaChange(student, newNota);
     setJustUpdatedPracticaId(student.practicaId || null);
     setTimeout(() => setJustUpdatedPracticaId(null), 1500); 

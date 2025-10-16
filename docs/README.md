@@ -61,23 +61,23 @@ Sigue estos pasos para configurar y ejecutar el proyecto en tu máquina local.
 
 La aplicación necesita credenciales para conectarse a Airtable.
 
-1.  **Crea el archivo de constantes:**
-    Si no existe, crea un archivo `src/constants.ts`.
+1.  **Crea un archivo `.env`:**
+    En la raíz del proyecto, crea un archivo llamado `.env`.
 
 2.  **Añade tus credenciales:**
-    Abre `src/constants.ts` y reemplaza los valores de las constantes con tus propias credenciales.
+    Abre `.env` y añade las siguientes variables, reemplazando los valores con tus propias credenciales.
 
-    ```typescript
-    // src/constants.ts
+    ```bash
+    # Archivo .env en la raíz del proyecto
 
-    // --- Airtable Configuration ---
-    // Token de Acceso Personal (PAT) de Airtable
-    export const AIRTABLE_PAT = 'pat...'; // Reemplazar con tu token
+    # Token de Acceso Personal (PAT) de Airtable
+    VITE_AIRTABLE_PAT="pat..."
 
-    // ID de tu Base de Airtable
-    export const AIRTABLE_BASE_ID = 'app...'; // Reemplazar con el ID de tu base
+    # ID de tu Base de Airtable
+    VITE_AIRTABLE_BASE_ID="app..."
     ```
 
+    -   **Importante:** El prefijo `VITE_` es necesario para que Vite exponga estas variables a la aplicación en el navegador durante el desarrollo.
     -   Puedes encontrar el **Base ID** de Airtable en la [documentación de la API de Airtable](https://airtable.com/developers/web/api/introduction) al seleccionar tu base.
     -   Puedes generar un **Personal Access Token (PAT)** en la sección de [Cuenta de Desarrollador de Airtable](https://airtable.com/create/tokens). Asegúrate de que el token tenga los permisos (`scopes`) necesarios para leer y escribir en tu base (`data.records:read` y `data.records:write`).
 

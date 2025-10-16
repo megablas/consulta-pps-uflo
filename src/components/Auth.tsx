@@ -241,7 +241,7 @@ const Auth: React.FC = () => {
                   legajo: legajoTrimmed, 
                   nombre: user[FIELD_NOMBRE_AUTH]!,
                   role: processedRole,
-                  orientaciones: user[FIELD_ORIENTACIONES_AUTH]?.split(',').map(o => o.trim())
+                  orientaciones: user[FIELD_ORIENTACIONES_AUTH]?.split(',').map((o: string) => o.trim())
                 }, rememberMe);
             } else {
                 throw new Error('Legajo o contraseña incorrectos.');

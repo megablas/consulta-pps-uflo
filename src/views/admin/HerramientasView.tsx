@@ -1,18 +1,14 @@
 import React, { useState } from 'react';
 import SubTabs from '../../components/SubTabs';
 import AdminSearch from '../../components/AdminSearch';
-// FIX: Corrected import to resolve module not found error.
 import SeguroGenerator from '../../components/SeguroGenerator';
 import { NuevosConvenios } from '../../components/NuevosConvenios';
 import RepitentesPanel from '../../components/RepitentesPanel';
 import ExecutiveReportGenerator from '../../components/ExecutiveReportGenerator';
 import PenalizationManager from '../../components/PenalizationManager';
 import { useModal } from '../../contexts/ModalContext';
-// FIX: Imported types to correctly define the props interface.
 import type { AirtableRecord, EstudianteFields } from '../../types';
 
-
-// FIX: Corrected the prop type for onStudentSelect to match what AdminSearch provides.
 interface HerramientasViewProps {
   onStudentSelect: (student: AirtableRecord<EstudianteFields>) => void;
 }
@@ -27,7 +23,6 @@ const HerramientasView: React.FC<HerramientasViewProps> = ({ onStudentSelect }) 
     { id: 'search', label: 'Buscar Alumno', icon: 'person_search' },
     { id: 'insurance', label: 'Seguros', icon: 'shield' },
     { id: 'convenios', label: 'Convenios Nuevos', icon: 'handshake' },
-    // FIX: Completed the object definition for the 'executive-report' tab.
     { id: 'executive-report', label: 'Reporte Ejecutivo', icon: 'summarize' },
   ];
 

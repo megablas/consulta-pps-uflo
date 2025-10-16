@@ -1,4 +1,3 @@
-// FIX: Replaced Jest types reference with an explicit import to resolve TypeScript errors.
 import { describe, it, expect } from '@jest/globals';
 import { calculateCriterios } from '../criteriaCalculations';
 import { Practica, Orientacion } from '../../types';

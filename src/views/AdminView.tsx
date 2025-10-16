@@ -3,14 +3,12 @@ import type { AuthUser } from '../contexts/AuthContext';
 import StudentDashboard from './StudentDashboard';
 import Tabs from '../components/Tabs';
 import SubTabs from '../components/SubTabs';
-// FIX: Changed back to a default import as MetricsDashboard is a default export.
 import { MetricsDashboard } from '../components/MetricsDashboard';
 import TimelineView from '../components/TimelineView';
 import CorreccionPanel from '../components/CorreccionPanel';
 import ConvocatoriaManager from '../components/ConvocatoriaManager';
 import ConvocatoriaStatusManager from '../components/ConvocatoriaStatusManager';
 import AdminSearch from '../components/AdminSearch';
-// FIX: Corrected import to resolve module not found error.
 import SeguroGenerator from '../components/SeguroGenerator';
 import { NuevosConvenios } from '../components/NuevosConvenios';
 import RepitentesPanel from '../components/RepitentesPanel';
@@ -159,7 +157,9 @@ const AdminView: React.FC = () => {
             isClosable: true,
         }));
 
-        return [...mainTabs, ...dynamicStudentTabs];
+        const finalTabs = isAdminTesterMode ? mainTabs.filter(tab => tab.id === 'herramientas') : mainTabs;
+
+        return [...finalTabs, ...dynamicStudentTabs];
 
     }, [
         studentTabs, 

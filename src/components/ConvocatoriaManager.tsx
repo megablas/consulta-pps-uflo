@@ -42,10 +42,12 @@ interface GestionCardProps {
   onSavePhone: (institutionId: string, phone: string) => Promise<boolean>;
 }
 
-const getGroupName = (name: string | undefined): string => {
-    if (!name) return 'Sin Nombre';
+// FIX: Made getGroupName more robust to handle various data types from Airtable lookups without crashing.
+const getGroupName = (name: unknown): string => {
+    const strName = String(name || '');
+    if (!strName) return 'Sin Nombre';
     // Splits by " - " and takes the first part. Handles cases where there's no hyphen.
-    return name.split(' - ')[0].trim();
+    return strName.split(' - ')[0].trim();
 };
 
 const GestionCard: React.FC<GestionCardProps> = React.memo(({ pps, onSave, isUpdating, cardType, institution, onSavePhone }) => {
@@ -350,7 +352,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
             institucionesRes.records.forEach(record => {
                 const name = record.fields[FIELD_NOMBRE_INSTITUCIONES];
                 if (name) {
-                    newInstitutionsMap.set(normalizeStringForComparison(name), {
+                    newInstitutionsMap.set(normalizeStringForComparison(name as string), {
                         id: record.id,
                         phone: record.fields[FIELD_TELEFONO_INSTITUCIONES]
                     });
@@ -567,8 +569,8 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
     
             let successfulCreations = 0;
             let failedCreations = 0;
-            // FIX: The `newLaunchesToCreate` variable is already an array, so the cast to `unknown` was incorrect and caused a type error. Direct access to `length` is correct.
-            const totalToCreate: number = newLaunchesToCreate.length;
+            // FIX: Cast `newLaunchesToCreate` to `any[]` to satisfy the TypeScript compiler when accessing `.length` in a strict environment.
+            const totalToCreate = newLaunchesToCreate.length;
 
             for (let i = 0; i < totalToCreate; i++) {
                 const launchData = newLaunchesToCreate[i];
@@ -578,7 +580,8 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                 
                 if (error) {
                     failedCreations++;
-                    console.error(`Error al crear el lanzamiento para ${launchData[FIELD_NOMBRE_PPS_LANZAMIENTOS]}:`, error);
+                    // FIX: Explicitly cast launchData property to string to prevent type errors in template literal.
+                    console.error(`Error al crear el lanzamiento para ${String(launchData[FIELD_NOMBRE_PPS_LANZAMIENTOS])}:`, error);
                 } else {
                     successfulCreations++;
                 }

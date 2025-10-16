@@ -301,10 +301,8 @@ const CorreccionPanel: React.FC = () => {
   const handleSelectionChange = useCallback((lanzamientoId: string, practicaId: string) => {
       setSelectedStudents(prev => {
           const newSelection = new Map(prev);
-          // FIX: Explicitly handle the case where the Set for the key doesn't exist to avoid passing `undefined` to the `Set` constructor.
-          // FIX: Use `instanceof Set` as a type guard to ensure `currentSet` is iterable, resolving the "Argument of type 'unknown' is not assignable..." error.
           const currentSet = newSelection.get(lanzamientoId);
-          const groupSelection = currentSet instanceof Set ? new Set(currentSet) : new Set<string>();
+          const groupSelection = currentSet ? new Set(currentSet) : new Set<string>();
           if (groupSelection.has(practicaId)) {
               groupSelection.delete(practicaId);
           } else {
@@ -318,10 +316,8 @@ const CorreccionPanel: React.FC = () => {
   const handleSelectAll = useCallback((lanzamientoId: string, practicaIds: string[], select: boolean) => {
       setSelectedStudents(prev => {
           const newSelection = new Map(prev);
-          // FIX: Explicitly handle the case where the Set for the key doesn't exist to avoid passing `undefined` to the `Set` constructor.
-          // FIX: Use `instanceof Set` as a type guard to ensure `currentSet` is iterable, resolving the "Argument of type 'unknown' is not assignable..." error.
           const currentSet = newSelection.get(lanzamientoId);
-          const groupSelection = currentSet instanceof Set ? new Set(currentSet) : new Set<string>();
+          const groupSelection = currentSet ? new Set(currentSet) : new Set<string>();
           if (select) {
               practicaIds.forEach(id => groupSelection.add(id));
           } else {
@@ -373,12 +369,14 @@ const CorreccionPanel: React.FC = () => {
   }, [selectedStudents]);
 
   const managerData = useMemo(() => {
+    // FIX: Add Array.isArray check to safely handle `authenticatedUser.orientaciones` before passing to `new Set`.
+    const jefeOrientations = authenticatedUser?.orientaciones;
     const managerOrientations = isJefeMode
-      ? new Set((authenticatedUser?.orientaciones || []).map(normalizeStringForComparison))
+      ? new Set((Array.isArray(jefeOrientations) ? jefeOrientations : []).map(normalizeStringForComparison))
       : new Set(managerConfig[activeManager].orientations.map(normalizeStringForComparison));
 
     const filteredGroups: InformeCorreccionPPS[] = [...allPpsGroups.values()].filter((group: InformeCorreccionPPS) => {
-        const groupOrientations = (group.orientacion || '').split(',').map(o => normalizeStringForComparison(o.trim()));
+        const groupOrientations = (String(group.orientacion) || '').split(',').map(o => normalizeStringForComparison(o.trim()));
         return groupOrientations.some(o => managerOrientations.has(o));
     });
 

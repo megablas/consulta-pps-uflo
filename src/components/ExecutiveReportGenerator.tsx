@@ -9,7 +9,6 @@ const ExecutiveReportGenerator: React.FC = () => {
     const [reportType, setReportType] = useState<ReportType | null>(null);
     const [isReportGenerated, setIsReportGenerated] = useState(false);
 
-    // FIX: The hook signature was updated to accept an object, resolving the argument count mismatch.
     const { data: reportData, isLoading, error } = useExecutiveReportData({ reportType, enabled: isReportGenerated });
 
     const handleGenerateReport = (type: ReportType) => {
@@ -46,7 +45,6 @@ const ExecutiveReportGenerator: React.FC = () => {
 
             {error && <EmptyState icon="error" title="Error al Generar Reporte" message={error.message} />}
 
-            {/* FIX: The conditional rendering ensures that 'reportData' is not undefined when passed to the child component, resolving type errors. */}
             {reportData && !isLoading && (
                 <>
                     <div className="no-print flex justify-end">
@@ -59,7 +57,6 @@ const ExecutiveReportGenerator: React.FC = () => {
                         </button>
                     </div>
                     <div className="print-only">
-                        {/* FIX: The conditional rendering ensures that 'reportData' is not undefined when passed to the child component, resolving type errors. */}
                         <PrintableExecutiveReport data={reportData} />
                     </div>
                     <div className="no-print mt-4 border border-slate-200/60 rounded-xl shadow-lg p-1">

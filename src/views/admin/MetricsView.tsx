@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import SubTabs from '../../components/SubTabs';
-// FIX: Changed to a default import as MetricsDashboard is a default export.
 import { MetricsDashboard } from '../../components/MetricsDashboard';
 import TimelineView from '../../components/TimelineView';
 

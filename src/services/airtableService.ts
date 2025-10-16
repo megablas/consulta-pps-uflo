@@ -1,32 +1,48 @@
 import { AIRTABLE_PAT, AIRTABLE_BASE_ID } from '../constants';
 import type { AirtableResponse, AirtableErrorResponse, AirtableRecord } from '../types';
 
-// Detect development environment by checking the hostname. This forces API requests
-// to go through the Vite proxy on localhost, resolving CORS issues.
 const isDevelopment = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
 
-const API_BASE = isDevelopment
-    ? `/airtable-api/v0/${AIRTABLE_BASE_ID}` // Use the proxy in development
-    : `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}`; // Direct call in production (requires a proper backend/proxy for CORS)
+// Función centralizada para construir la URL correcta según el entorno
+function constructUrl(tableName: string, recordId?: string, queryParams?: URLSearchParams): string {
+    const pathSegments = [AIRTABLE_BASE_ID, encodeURIComponent(tableName)];
+    if (recordId) {
+        pathSegments.push(recordId);
+    }
+    const path = pathSegments.join('/');
+    
+    if (isDevelopment) {
+        // En desarrollo, usamos el proxy de Vite
+        const viteProxyUrl = `/airtable-api/v0/${path}`;
+        return queryParams ? `${viteProxyUrl}?${queryParams.toString()}` : viteProxyUrl;
+    } else {
+        // En producción, usamos la función serverless de Vercel
+        const prodParams = new URLSearchParams(queryParams);
+        prodParams.set('airtablePath', path);
+        return `/api/airtable-proxy?${prodParams.toString()}`;
+    }
+}
 
 const fetchDataGeneric = async <T>(url: string): Promise<{ data: AirtableResponse<T> | null, error: AirtableErrorResponse | null }> => {
     try {
-        const response = await fetch(url, {
-            headers: { 'Authorization': `Bearer ${AIRTABLE_PAT}` }
-        });
+        const fetchOptions: RequestInit = {};
+        // En desarrollo, el proxy de Vite no añade la autorización, así que la añadimos aquí.
+        // En producción, la función serverless de Vercel añade la autorización, así que no la necesitamos en el cliente.
+        if (isDevelopment) {
+            fetchOptions.headers = { 'Authorization': `Bearer ${AIRTABLE_PAT}` };
+        }
+        
+        const response = await fetch(url, fetchOptions);
 
         if (!response.ok) {
             let errorData: AirtableErrorResponse;
             try {
-                // Try to parse as JSON first
                 const jsonError = await response.json();
                 errorData = jsonError as AirtableErrorResponse; 
                 if (typeof errorData.error !== 'object' && typeof errorData.error !== 'string') {
-                    // If errorData.error is not in expected format, construct one
                      errorData = { error: { type: `HTTP_ERROR_${response.status}`, message: `Error ${response.status}: ${response.statusText}. Response not a valid error JSON.` }};
                 }
             } catch (e) {
-                // If JSON parsing fails, use text
                 const textError = await response.text().catch(() => "Could not read error response body.");
                 errorData = { error: { type: `HTTP_ERROR_${response.status}`, message: `Error ${response.status}: ${textError}` } };
             }
@@ -53,49 +69,59 @@ const fetchDataGeneric = async <T>(url: string): Promise<{ data: AirtableRespons
     }
 }
 
+const postDataGeneric = async <TFields>(url: string, method: 'POST' | 'PATCH' | 'DELETE', body?: any): Promise<{ data: any | null, error: AirtableErrorResponse | null }> => {
+    try {
+        const fetchOptions: RequestInit = {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: body ? JSON.stringify(body) : null
+        };
+
+        if (isDevelopment) {
+            fetchOptions.headers = {
+                ...fetchOptions.headers,
+                'Authorization': `Bearer ${AIRTABLE_PAT}`
+            };
+        }
+
+        const response = await fetch(url, fetchOptions);
+
+        if (!response.ok) {
+            let errorData: AirtableErrorResponse;
+            try {
+                const jsonError = await response.json();
+                errorData = jsonError as AirtableErrorResponse;
+            } catch (e) {
+                const textError = await response.text().catch(() => "Could not read error response body.");
+                errorData = { error: { type: `HTTP_ERROR_${response.status}`, message: `Error ${response.status}: ${textError}` } };
+            }
+            console.error(`[postDataGeneric - ${method}] Airtable API Error:`, response.status, JSON.stringify(errorData));
+            return { data: null, error: errorData };
+        }
+
+        const responseData = await response.json();
+        return { data: responseData, error: null };
+
+    } catch (networkError) {
+        console.error(`[postDataGeneric - ${method}] Network or Fetch Error:`, networkError);
+        return { data: null, error: { error: { type: 'NETWORK_ERROR', message: 'No se pudo conectar con el servidor. Revisa tu conexión a internet.' } } };
+    }
+};
+
+
 const createAirtableRecord = async <TFields>(
   tableName: string,
   fields: TFields
 ): Promise<{ record: AirtableRecord<TFields> | null, error: AirtableErrorResponse | null }> => {
-  
-  const url = `${API_BASE}/${encodeURIComponent(tableName)}`;
-  
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${AIRTABLE_PAT}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        records: [{ fields }]
-      })
-    });
-
-    if (!response.ok) {
-       let errorData: AirtableErrorResponse;
-       try {
-           const jsonError = await response.json();
-           errorData = jsonError as AirtableErrorResponse;
-       } catch (e) {
-           const textError = await response.text().catch(() => "Could not read error response body.");
-           errorData = { error: { type: `HTTP_ERROR_${response.status}`, message: `Error ${response.status}: ${textError}` } };
-       }
-       console.error('[createAirtableRecord] Airtable API Error:', response.status, JSON.stringify(errorData));
-       return { record: null, error: errorData };
-    }
-
-    const data = await response.json() as AirtableResponse<TFields>;
-    if (data.records && data.records.length > 0) {
-      return { record: data.records[0], error: null };
-    } else {
-      return { record: null, error: { error: { type: 'CREATE_FAILED', message: 'La creación del registro no devolvió el registro esperado.' } } };
-    }
-
-  } catch (networkError) {
-    console.error('[createAirtableRecord] Network or Fetch Error:', networkError);
-    return { record: null, error: { error: { type: 'NETWORK_ERROR', message: 'No se pudo conectar con el servidor. Revisa tu conexión a internet.' } } };
+  const url = constructUrl(tableName);
+  const body = { records: [{ fields }] };
+  const { data, error } = await postDataGeneric<TFields>(url, 'POST', body);
+  if (error || !data || !data.records || data.records.length === 0) {
+      return { record: null, error: error || { error: { type: 'CREATE_FAILED', message: 'La creación del registro no devolvió el registro esperado.' } } };
   }
+  return { record: data.records[0], error: null };
 }
 
 const updateAirtableRecord = async <TFields>(
@@ -103,39 +129,13 @@ const updateAirtableRecord = async <TFields>(
   recordId: string,
   fields: Partial<TFields>
 ): Promise<{ record: AirtableRecord<TFields> | null, error: AirtableErrorResponse | null }> => {
-  
-  const url = `${API_BASE}/${encodeURIComponent(tableName)}/${recordId}`;
-  
-  try {
-    const response = await fetch(url, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `Bearer ${AIRTABLE_PAT}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ fields })
-    });
-
-    if (!response.ok) {
-       let errorData: AirtableErrorResponse;
-       try {
-           const jsonError = await response.json();
-           errorData = jsonError as AirtableErrorResponse;
-       } catch (e) {
-           const textError = await response.text().catch(() => "Could not read error response body.");
-           errorData = { error: { type: `HTTP_ERROR_${response.status}`, message: `Error ${response.status}: ${textError}` } };
-       }
-       console.error('[updateAirtableRecord] Airtable API Error:', response.status, JSON.stringify(errorData));
-       return { record: null, error: errorData };
+    const url = constructUrl(tableName, recordId);
+    const body = { fields };
+    const { data, error } = await postDataGeneric<TFields>(url, 'PATCH', body);
+    if (error || !data) {
+        return { record: null, error: error || { error: { type: 'UPDATE_FAILED', message: 'La actualización falló.'}}};
     }
-
-    const record = await response.json() as AirtableRecord<TFields>;
-    return { record, error: null };
-
-  } catch (networkError) {
-    console.error('[updateAirtableRecord] Network or Fetch Error:', networkError);
-    return { record: null, error: { error: { type: 'NETWORK_ERROR', message: 'No se pudo conectar con el servidor. Revisa tu conexión a internet.' } } };
-  }
+    return { record: data as AirtableRecord<TFields>, error: null };
 }
 
 
@@ -143,46 +143,19 @@ const updateAirtableRecords = async <TFields>(
   tableName: string,
   records: { id: string; fields: Partial<TFields> }[]
 ): Promise<{ records: AirtableRecord<TFields>[] | null, error: AirtableErrorResponse | null }> => {
-  
   const CHUNK_SIZE = 10;
   let allUpdatedRecords: AirtableRecord<TFields>[] = [];
-  const url = `${API_BASE}/${encodeURIComponent(tableName)}`;
+  const url = constructUrl(tableName);
 
   for (let i = 0; i < records.length; i += CHUNK_SIZE) {
     const chunk = records.slice(i, i + CHUNK_SIZE);
-    
-    try {
-      const response = await fetch(url, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${AIRTABLE_PAT}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ records: chunk })
-      });
-
-      if (!response.ok) {
-         let errorData: AirtableErrorResponse;
-         try {
-             const jsonError = await response.json();
-             errorData = jsonError as AirtableErrorResponse;
-         } catch (e) {
-             const textError = await response.text().catch(() => "Could not read error response body.");
-             errorData = { error: { type: `HTTP_ERROR_${response.status}`, message: `Error ${response.status}: ${textError}` } };
-         }
-         console.error('[updateAirtableRecords] Airtable API Error:', response.status, JSON.stringify(errorData));
-         // Return on first error. The caller can decide what to do with partial success.
-         return { records: allUpdatedRecords.length > 0 ? allUpdatedRecords : null, error: errorData };
-      }
-
-      const data = await response.json() as AirtableResponse<TFields>;
-      if (data.records) {
-          allUpdatedRecords.push(...data.records);
-      }
-
-    } catch (networkError) {
-      console.error('[updateAirtableRecords] Network or Fetch Error:', networkError);
-      return { records: allUpdatedRecords.length > 0 ? allUpdatedRecords : null, error: { error: { type: 'NETWORK_ERROR', message: 'No se pudo conectar con el servidor. Revisa tu conexión a internet.' } } };
+    const body = { records: chunk };
+    const { data, error } = await postDataGeneric<TFields>(url, 'PATCH', body);
+    if (error) {
+         return { records: allUpdatedRecords.length > 0 ? allUpdatedRecords : null, error };
+    }
+    if (data && data.records) {
+        allUpdatedRecords.push(...data.records);
     }
   }
 
@@ -205,7 +178,6 @@ const fetchAllAirtableData = async <TFields>(
             if (filterByFormula) params.set('filterByFormula', filterByFormula);
             if (offset) {
                 params.set('offset', offset);
-                // Wait for 250ms ONLY between paginated requests to avoid rate limiting.
                 await new Promise(resolve => setTimeout(resolve, 250));
             }
             if (sort && sort.length > 0) {
@@ -215,8 +187,7 @@ const fetchAllAirtableData = async <TFields>(
                 });
             }
 
-            const url = `${API_BASE}/${encodeURIComponent(tableName)}?${params.toString()}`;
-            
+            const url = constructUrl(tableName, undefined, params);
             const { data: pageData, error: pageError } = await fetchDataGeneric<TFields>(url);
 
             if (pageError || !pageData) {
@@ -246,7 +217,6 @@ const fetchAirtableData = async <TFields>(
     sort?: { field: string; direction: 'asc' | 'desc' }[]
 ): Promise<{ records: AirtableRecord<TFields>[], error: AirtableErrorResponse | null }> => {
     
-    let url = `${API_BASE}/${encodeURIComponent(tableName)}`;
     const params = new URLSearchParams();
 
     fields.forEach(field => params.append('fields[]', field));
@@ -263,10 +233,7 @@ const fetchAirtableData = async <TFields>(
         });
     }
     
-    const queryString = params.toString();
-    if (queryString) {
-        url += `?${queryString}`;
-    }
+    const url = constructUrl(tableName, undefined, params);
 
     const { data, error } = await fetchDataGeneric<TFields>(url);
     if (error || !data) {
@@ -279,37 +246,12 @@ const deleteAirtableRecord = async (
   tableName: string,
   recordId: string
 ): Promise<{ success: boolean, error: AirtableErrorResponse | null }> => {
-  
-  const url = `${API_BASE}/${encodeURIComponent(tableName)}/${recordId}`;
-  
-  try {
-    const response = await fetch(url, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${AIRTABLE_PAT}`,
-      }
-    });
-
-    if (!response.ok) {
-       let errorData: AirtableErrorResponse;
-       try {
-           const jsonError = await response.json();
-           errorData = jsonError as AirtableErrorResponse;
-       } catch (e) {
-           const textError = await response.text().catch(() => "Could not read error response body.");
-           errorData = { error: { type: `HTTP_ERROR_${response.status}`, message: `Error ${response.status}: ${textError}` } };
-       }
-       console.error('[deleteAirtableRecord] Airtable API Error:', response.status, JSON.stringify(errorData));
-       return { success: false, error: errorData };
+    const url = constructUrl(tableName, recordId);
+    const { data, error } = await postDataGeneric(url, 'DELETE');
+    if (error || !data) {
+        return { success: false, error: error || { error: { type: 'DELETE_FAILED', message: 'La eliminación falló.' }}};
     }
-
-    const data = await response.json() as { deleted: boolean; id: string };
-    return { success: data.deleted, error: null };
-
-  } catch (networkError) {
-    console.error('[deleteAirtableRecord] Network or Fetch Error:', networkError);
-    return { success: false, error: { error: { type: 'NETWORK_ERROR', message: 'No se pudo conectar con el servidor. Revisa tu conexión a internet.' } } };
-  }
+    return { success: (data as { deleted: boolean }).deleted, error: null };
 }
 
 export {

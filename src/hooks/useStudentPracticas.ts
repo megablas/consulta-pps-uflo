@@ -19,7 +19,6 @@ export const useStudentPracticas = (legajo: string) => {
     });
 
     const updateNota = useMutation<
-        // FIX: Removed incorrect `| boolean` from the mutation's return type.
         (AirtableRecord<any> | null)[],
         Error,
         { practicaId: string; nota: string; convocatoriaId?: string }

@@ -26,7 +26,7 @@ class ErrorBoundary extends React.Component<Props, State> {
     console.error("Error no capturado:", error, errorInfo);
   }
 
-  render(): ReactNode {
+  render() {
     if (this.state.hasError) {
       // Puedes renderizar cualquier UI de fallback personalizada
       return (
@@ -53,7 +53,7 @@ class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // FIX: The `this.props` object was not being correctly identified by TypeScript. Returning `this.props.children` directly can resolve this type inference issue.
+    // FIX: Directly return this.props.children to avoid potential destructuring issues.
     return this.props.children;
   }
 }
