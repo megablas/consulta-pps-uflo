@@ -4,6 +4,7 @@ import App from './src/App';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import './src/index.css';
 
 const queryClient = new QueryClient();
 
@@ -23,3 +24,19 @@ root.render(
     </QueryClientProvider>
   </React.StrictMode>
 );
+
+// Service Worker Registration
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    // Vite provides BASE_URL, which corresponds to the `base` option in vite.config.js
+    // FIX: Cast `import.meta` to `any` to bypass TypeScript errors about the `env` property.
+    const swUrl = `${(import.meta as any).env.BASE_URL}sw.js`;
+    navigator.serviceWorker.register(swUrl)
+      .then(registration => {
+        console.log('Service Worker registered with scope:', registration.scope);
+      })
+      .catch(error => {
+        console.log('Service Worker registration failed:', error);
+      });
+  });
+}

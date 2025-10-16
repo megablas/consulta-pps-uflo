@@ -17,10 +17,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     clientParams.delete('airtablePath');
     const finalQuery = clientParams.toString() ? `?${clientParams.toString()}` : '';
 
-    const AIRTABLE_PAT = process.env.AIRTABLE_PAT;
+    const AIRTABLE_PAT = process.env.AIRTABLE_PAT; // Reads the server-side variable
     
     if (!AIRTABLE_PAT) {
-        return res.status(500).json({ error: { message: 'Airtable API token is not configured.' }});
+        return res.status(500).json({ error: { message: 'Airtable API token is not configured on the server.' }});
     }
 
     const airtableApiUrl = `https://api.airtable.com/v0/${path}${finalQuery}`;
