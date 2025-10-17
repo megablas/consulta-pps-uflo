@@ -1,38 +1,27 @@
 import { AIRTABLE_PAT, AIRTABLE_BASE_ID } from '../constants';
 import type { AirtableResponse, AirtableErrorResponse, AirtableRecord } from '../types';
 
-const isDevelopment = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-
-// Función centralizada para construir la URL correcta según el entorno
-function constructUrl(tableName: string, recordId?: string, queryParams?: URLSearchParams): string {
+// Función centralizada para construir la URL de Airtable
+function constructUrl(tableName: string, recordId?: string): string {
     const pathSegments = [AIRTABLE_BASE_ID, encodeURIComponent(tableName)];
     if (recordId) {
         pathSegments.push(recordId);
     }
     const path = pathSegments.join('/');
-    
-    if (isDevelopment) {
-        // En desarrollo, usamos el proxy de Vite
-        const viteProxyUrl = `/airtable-api/v0/${path}`;
-        return queryParams ? `${viteProxyUrl}?${queryParams.toString()}` : viteProxyUrl;
-    } else {
-        // En producción, usamos la función serverless de Vercel
-        const prodParams = new URLSearchParams(queryParams);
-        prodParams.set('airtablePath', path);
-        return `/api/airtable-proxy?${prodParams.toString()}`;
-    }
+    return `https://api.airtable.com/v0/${path}`;
 }
 
-const fetchDataGeneric = async <T>(url: string): Promise<{ data: AirtableResponse<T> | null, error: AirtableErrorResponse | null }> => {
+const fetchDataGeneric = async <T>(url: string, queryParams?: URLSearchParams): Promise<{ data: AirtableResponse<T> | null, error: AirtableErrorResponse | null }> => {
+    const finalUrl = queryParams ? `${url}?${queryParams.toString()}` : url;
+
     try {
-        const fetchOptions: RequestInit = {};
-        // En desarrollo, el proxy de Vite no añade la autorización, así que la añadimos aquí.
-        // En producción, la función serverless de Vercel añade la autorización, así que no la necesitamos en el cliente.
-        if (isDevelopment) {
-            fetchOptions.headers = { 'Authorization': `Bearer ${AIRTABLE_PAT}` };
+        if (!AIRTABLE_PAT) {
+            return { data: null, error: { error: { type: 'CLIENT_CONFIG_ERROR', message: 'La clave de API de Airtable (VITE_AIRTABLE_PAT) no está configurada.' }}};
         }
         
-        const response = await fetch(url, fetchOptions);
+        const response = await fetch(finalUrl, {
+            headers: { 'Authorization': `Bearer ${AIRTABLE_PAT}` }
+        });
 
         if (!response.ok) {
             let errorData: AirtableErrorResponse;
@@ -44,9 +33,9 @@ const fetchDataGeneric = async <T>(url: string): Promise<{ data: AirtableRespons
                 }
             } catch (e) {
                 const textError = await response.text().catch(() => "Could not read error response body.");
-                errorData = { error: { type: `HTTP_ERROR_${response.status}`, message: `Error ${response.status}: ${textError}` } };
+                errorData = { error: { type: `HTTP_ERROR_${response.status}`, message: `Error ${response.status}: ${textError || response.statusText}` } };
             }
-            console.error('[fetchDataGeneric] Airtable API Error:', response.status, JSON.stringify(errorData), "URL:", url);
+            console.error('[fetchDataGeneric] Airtable API Error:', response.status, JSON.stringify(errorData), "URL:", finalUrl);
             return { data: null, error: errorData };
         }
         
@@ -64,27 +53,25 @@ const fetchDataGeneric = async <T>(url: string): Promise<{ data: AirtableRespons
         }
 
     } catch (networkError) {
-        console.error('[fetchDataGeneric] Network or Fetch Error:', networkError, "URL:", url);
-        return { data: null, error: { error: { type: 'NETWORK_ERROR', message: 'No se pudo conectar con el servidor. Revisa tu conexión a internet. Si el problema persiste, intenta desactivar extensiones del navegador (ej: bloqueadores de anuncios).' } } };
+        console.error('[fetchDataGeneric] Network or Fetch Error:', networkError, "URL:", finalUrl);
+        return { data: null, error: { error: { type: 'NETWORK_ERROR', message: 'No se pudo conectar con el servidor. Revisa tu conexión a internet. Este error también puede ser causado por restricciones de CORS del navegador.' } } };
     }
 }
 
 const postDataGeneric = async <TFields>(url: string, method: 'POST' | 'PATCH' | 'DELETE', body?: any): Promise<{ data: any | null, error: AirtableErrorResponse | null }> => {
     try {
+        if (!AIRTABLE_PAT) {
+            return { data: null, error: { error: { type: 'CLIENT_CONFIG_ERROR', message: 'La clave de API de Airtable (VITE_AIRTABLE_PAT) no está configurada.' }}};
+        }
+
         const fetchOptions: RequestInit = {
             method: method,
             headers: {
+                'Authorization': `Bearer ${AIRTABLE_PAT}`,
                 'Content-Type': 'application/json'
             },
             body: body ? JSON.stringify(body) : null
         };
-
-        if (isDevelopment) {
-            fetchOptions.headers = {
-                ...fetchOptions.headers,
-                'Authorization': `Bearer ${AIRTABLE_PAT}`
-            };
-        }
 
         const response = await fetch(url, fetchOptions);
 
@@ -99,6 +86,15 @@ const postDataGeneric = async <TFields>(url: string, method: 'POST' | 'PATCH' | 
             }
             console.error(`[postDataGeneric - ${method}] Airtable API Error:`, response.status, JSON.stringify(errorData));
             return { data: null, error: errorData };
+        }
+        
+        if (method === 'DELETE') {
+            const textResponse = await response.text();
+            try {
+                return { data: JSON.parse(textResponse), error: null };
+            } catch (e) {
+                return { data: { deleted: true }, error: null };
+            }
         }
 
         const responseData = await response.json();
@@ -145,11 +141,11 @@ const updateAirtableRecords = async <TFields>(
 ): Promise<{ records: AirtableRecord<TFields>[] | null, error: AirtableErrorResponse | null }> => {
   const CHUNK_SIZE = 10;
   let allUpdatedRecords: AirtableRecord<TFields>[] = [];
-  const url = constructUrl(tableName);
-
+  
   for (let i = 0; i < records.length; i += CHUNK_SIZE) {
     const chunk = records.slice(i, i + CHUNK_SIZE);
     const body = { records: chunk };
+    const url = constructUrl(tableName);
     const { data, error } = await postDataGeneric<TFields>(url, 'PATCH', body);
     if (error) {
          return { records: allUpdatedRecords.length > 0 ? allUpdatedRecords : null, error };
@@ -187,8 +183,8 @@ const fetchAllAirtableData = async <TFields>(
                 });
             }
 
-            const url = constructUrl(tableName, undefined, params);
-            const { data: pageData, error: pageError } = await fetchDataGeneric<TFields>(url);
+            const url = constructUrl(tableName);
+            const { data: pageData, error: pageError } = await fetchDataGeneric<TFields>(url, params);
 
             if (pageError || !pageData) {
                 const errorToThrow = pageError || { error: { type: 'UNKNOWN_ERROR', message: 'An unknown error occurred during pagination.' } };
@@ -233,9 +229,9 @@ const fetchAirtableData = async <TFields>(
         });
     }
     
-    const url = constructUrl(tableName, undefined, params);
+    const url = constructUrl(tableName);
 
-    const { data, error } = await fetchDataGeneric<TFields>(url);
+    const { data, error } = await fetchDataGeneric<TFields>(url, params);
     if (error || !data) {
         return { records: [], error: error || { error: { type: 'UNKNOWN_ERROR', message: 'An unknown error occurred.'}} };
     }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { fetchAirtableData } from '../services/airtableService';
-import { formatDate, normalizeStringForComparison } from '../utils/formatters';
+import { formatDate, normalizeStringForComparison, simpleNameSplit } from '../utils/formatters';
 import type { Convocatoria, ConvocatoriaFields, EstudianteFields, LanzamientoPPSFields } from '../types';
 import {
     AIRTABLE_TABLE_NAME_CONVOCATORIAS, FIELD_NOMBRE_PPS_CONVOCATORIAS,
@@ -52,33 +52,27 @@ interface StudentForReview {
     orientacion: string;
 };
 
+// Helper function to safely extract string values from potentially complex Airtable fields (e.g., lookups returning arrays).
+function getText(value: unknown): string {
+    if (value == null) return '';
+    if (Array.isArray(value)) {
+        const first = value[0];
+        if (first == null) return '';
+        if (typeof first === 'object') {
+            const maybeName = (first as any)?.name ?? (first as any)?.text ?? '';
+            return typeof maybeName === 'string' ? maybeName : String(maybeName ?? '');
+        }
+        return typeof first === 'string' ? first : String(first);
+    }
+    return typeof value === 'string' ? value : String(value);
+}
+
 // Function moved here to resolve a build error
 function formatPhoneNumber(phone?: string): string {
   if (!phone) return '';
   // Removes '+54', an optional space, an optional '9', and another optional space from the start.
   return phone.replace(/^\+54\s?9?\s?/, '').trim();
 }
-
-const simpleNameSplit = (fullName: string): { nombre: string; apellido: string } => {
-    if (!fullName) return { nombre: '', apellido: '' };
-    let nombre = '';
-    let apellido = '';
-    if (fullName.includes(',')) {
-        const parts = fullName.split(',').map(p => p.trim());
-        apellido = parts[0] || '';
-        nombre = parts[1] || '';
-    } else {
-        const nameParts = fullName.trim().split(' ').filter(Boolean);
-        if (nameParts.length > 1) {
-            apellido = nameParts.pop()!;
-            nombre = nameParts.join(' ');
-        } else {
-            nombre = fullName;
-        }
-    }
-    return { nombre, apellido };
-};
-
 
 const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
     const [step, setStep] = useState<'selection' | 'review'>('selection');
@@ -236,15 +230,14 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
                 const lanzamientoId = (individualConv[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])[0];
                 const ppsData = lanzamientoId ? lanzamientoMap.get(lanzamientoId) : null;
                 
-                // FIX: Ensure values from Airtable are consistently treated as strings to avoid type errors.
-                const institucion = String(ppsData?.[FIELD_NOMBRE_PPS_LANZAMIENTOS] || individualConv[FIELD_NOMBRE_PPS_CONVOCATORIAS] || 'N/A');
-                const direccion = String(ppsData?.[FIELD_DIRECCION_LANZAMIENTOS] || individualConv[FIELD_DIRECCION_CONVOCATORIAS] || 'N/A');
-                // FIX: Explicitly cast Airtable field values to string to prevent type errors.
-                const fechaInicio = String(ppsData?.[FIELD_FECHA_INICIO_LANZAMIENTOS] || individualConv[FIELD_FECHA_INICIO_CONVOCATORIAS] || '');
-                // FIX: Explicitly cast Airtable field values to string to prevent type errors.
-                const fechaFin = String(ppsData?.[FIELD_FECHA_FIN_LANZAMIENTOS] || individualConv[FIELD_FECHA_FIN_CONVOCATORIAS] || '');
-                const horario = String(individualConv[FIELD_HORARIO_FORMULA_CONVOCATORIAS] || ppsData?.[FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS] || 'N/A');
-                const orientacion = String(ppsData?.[FIELD_ORIENTACION_LANZAMIENTOS] || (individualConv[FIELD_ORIENTACION_CONVOCATORIAS] as string) || '');
+                const institucion = getText(ppsData?.[FIELD_NOMBRE_PPS_LANZAMIENTOS] || individualConv[FIELD_NOMBRE_PPS_CONVOCATORIAS]) || 'N/A';
+                const direccion = getText(ppsData?.[FIELD_DIRECCION_LANZAMIENTOS] || individualConv[FIELD_DIRECCION_CONVOCATORIAS]) || 'N/A';
+// FIX: Use getText to safely handle potentially non-string values from Airtable fields.
+                const fechaInicio = getText(ppsData?.[FIELD_FECHA_INICIO_LANZAMIENTOS] || individualConv[FIELD_FECHA_INICIO_CONVOCATORIAS]);
+// FIX: Use getText to safely handle potentially non-string values from Airtable fields.
+                const fechaFin = getText(ppsData?.[FIELD_FECHA_FIN_LANZAMIENTOS] || individualConv[FIELD_FECHA_FIN_CONVOCATORIAS]);
+                const horario = getText(individualConv[FIELD_HORARIO_FORMULA_CONVOCATORIAS] || ppsData?.[FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS]) || 'N/A';
+                const orientacion = getText(ppsData?.[FIELD_ORIENTACION_LANZAMIENTOS] || (individualConv[FIELD_ORIENTACION_CONVOCATORIAS] as string)) || '';
 
                 const fullName = student?.[FIELD_NOMBRE_ESTUDIANTES] || '';
                 let nombre = student[FIELD_NOMBRE_SEPARADO_ESTUDIANTES] || '';
@@ -512,83 +505,43 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal }) => {
               ) : (
                 <div className="space-y-8">
                   {Object.values(groupedStudents).map((group: { institucion: string; tutor: string; orientacion: string; students: StudentForReview[] }, index) => (
-                      <Card key={index} className="animate-fade-in-up" style={{animationDelay: `${index * 100}ms`}}>
-                          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-5">
-                              <div className="space-y-1">
-                                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Institución: <span className="font-bold text-slate-800 dark:text-slate-100">{group.institucion}</span></p>
-                                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Tutor/a: <span className="font-bold text-slate-800 dark:text-slate-100">{group.tutor}</span></p>
-                                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Orientación: <span className="font-bold text-slate-800 dark:text-slate-100">{group.orientacion}</span></p>
-                              </div>
-                              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 self-start sm:self-center">
-                                  <button onClick={() => handleDownloadBlankInsurance(group.institucion)} disabled={!blankTemplateUrl} className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-md hover:bg-green-700 flex items-center gap-2 justify-center disabled:bg-green-300 disabled:cursor-not-allowed">
+                      <Card key={index} className="animate-fade-in-up" style={{animationDelay: `${index * 100}ms`}} title={group.institucion} description={`Tutor: ${group.tutor} - Orientación: ${group.orientacion}`}>
+                          <div className="mt-4 pt-4 border-t border-slate-200/60 dark:border-slate-700/60">
+                              <div className="flex flex-col sm:flex-row gap-3">
+                                  <button onClick={() => handleDownloadBlankInsurance(group.institucion)} className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-md hover:bg-emerald-700">
                                       <span className="material-icons !text-base">download</span>
-                                      <span>Descargar Seguro</span>
+                                      <span>Descargar Plantilla</span>
                                   </button>
-                                  <button onClick={() => handleCopyToClipboard(group.students)} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-md hover:bg-blue-700 flex items-center gap-2 justify-center">
+                                  <button onClick={() => handleCopyToClipboard(group.students)} className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold py-2 px-4 rounded-lg text-sm border border-slate-300 dark:border-slate-600 transition-colors shadow-sm hover:bg-slate-100 dark:hover:bg-slate-600">
                                       <span className="material-icons !text-base">content_copy</span>
-                                      <span>Copiar Datos</span>
+                                      <span>Copiar Datos ({group.students.length})</span>
                                   </button>
-                                  <button onClick={() => handleSendEmail(group)} className="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors shadow-md hover:bg-purple-700 flex items-center gap-2 justify-center">
-                                      <span className="material-icons !text-base">email</span>
-                                      <span>Enviar Mail</span>
+                                   <button onClick={() => handleSendEmail(group)} className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold py-2 px-4 rounded-lg text-sm border border-slate-300 dark:border-slate-600 transition-colors shadow-sm hover:bg-slate-100 dark:hover:bg-slate-600">
+                                      <span className="material-icons !text-base">send</span>
+                                      <span>Enviar por Correo</span>
                                   </button>
                               </div>
-                          </div>
-                          
-                          <div className="overflow-x-auto border-t border-slate-200 dark:border-slate-700 pt-4">
-                              <table className="w-full min-w-[1200px] text-sm text-left border-collapse">
-                                  <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase">
-                                      <tr className="border-b-2 border-slate-200 dark:border-slate-700">
-                                          <th className="p-3">Apellido</th>
-                                          <th className="p-3">Nombre</th>
-                                          <th className="p-3">DNI</th>
-                                          <th className="p-3">Legajo</th>
-                                          <th className="p-3">Cargo</th>
-                                          <th className="p-3">Lugar (Nombre-Dirección)</th>
-                                          <th className="p-3">Duración (Período, Días y Horario)</th>
-                                      </tr>
-                                  </thead>
-                                  <tbody className="text-slate-800 dark:text-slate-200">
-                                      {group.students.map(student => (
-                                          <tr key={student.studentId} className="border-b border-slate-200/60 dark:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 last:border-b-0">
-                                              <td className="p-3 font-medium">{student.apellido}</td>
-                                              <td className="p-3 font-medium">{student.nombre}</td>
-                                              <td className="p-3">{student.dni}</td>
-                                              <td className="p-3">{student.legajo}</td>
-                                              <td className="p-3">Estudiante</td>
-                                              <td className="p-3">{student.lugar}</td>
-                                              <td className="p-3">{student.duracion}</td>
-                                          </tr>
-                                      ))}
-                                  </tbody>
-                              </table>
                           </div>
                       </Card>
                   ))}
+                  <div className="flex justify-end pt-4">
+                      <button onClick={handleGenerateSelectionExcel} className="inline-flex items-center justify-center gap-2 bg-indigo-600 text-white font-bold py-2.5 px-6 rounded-lg text-sm transition-colors shadow-md hover:bg-indigo-700">
+                          <span className="material-icons !text-base">download_for_offline</span>
+                          <span>Generar Excel de Selección</span>
+                      </button>
+                  </div>
                 </div>
               )}
-              
-              <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-end items-center gap-4">
-                  <button 
-                      onClick={handleGenerateSelectionExcel} 
-                      disabled={isLoading || studentsForReview.length === 0} 
-                      className="w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg text-sm transition-colors shadow-md disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-slate-800">
-                       <span className="material-icons !text-base">list_alt</span>
-                       <span>Generar Lista de Alumnos</span>
-                  </button>
-              </div>
           </>
       );
-    }
+    };
 
     return (
-        <Card 
-            icon="shield" 
-            title="Generador de Seguros y Reportes" 
-            description="Genera los reportes necesarios para dar de alta los seguros de los alumnos y para notificar a las instituciones."
-        >
+        <Card title="Generador de Seguros" icon="shield">
             {toastInfo && <Toast message={toastInfo.message} type={toastInfo.type} onClose={() => setToastInfo(null)} />}
-            {step === 'selection' ? renderSelectionStep() : renderReviewStep()}
+            <div className="mt-6 pt-6 border-t border-slate-200/60 dark:border-slate-700/60">
+                {step === 'selection' ? renderSelectionStep() : renderReviewStep()}
+            </div>
         </Card>
     );
 };

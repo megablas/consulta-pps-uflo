@@ -19,6 +19,7 @@ import type { AirtableRecord, EstudianteFields } from '../types';
 import AcreditacionJornada from '../components/AcreditacionJornada';
 import JornadaDashboard from '../components/JornadaDashboard';
 import { useAuth } from '../contexts/AuthContext';
+import WelcomeBannerAdmin from '../components/WelcomeBannerAdmin';
 
 
 interface StudentTabInfo {
@@ -28,7 +29,7 @@ interface StudentTabInfo {
 }
 
 const AdminView: React.FC = () => {
-    const { isAdminTesterMode } = useAuth();
+    const { authenticatedUser, isAdminTesterMode } = useAuth();
     const [studentTabs, setStudentTabs] = useState<StudentTabInfo[]>([]);
     const [activeTabId, setActiveTabId] = useState(isAdminTesterMode ? 'herramientas' : 'metrics');
     
@@ -173,6 +174,7 @@ const AdminView: React.FC = () => {
 
     return (
         <div className="bg-white dark:bg-slate-900/70 p-6 sm:p-8 rounded-2xl shadow-lg border border-slate-200/60 dark:border-slate-700/80 animate-fade-in-up">
+            <WelcomeBannerAdmin name={authenticatedUser?.nombre || 'Admin'} />
             <Tabs
                 tabs={allTabs}
                 activeTabId={activeTabId}

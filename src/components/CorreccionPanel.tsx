@@ -369,10 +369,10 @@ const CorreccionPanel: React.FC = () => {
   }, [selectedStudents]);
 
   const managerData = useMemo(() => {
-    // FIX: Add Array.isArray check to safely handle `authenticatedUser.orientaciones` before passing to `new Set`.
     const jefeOrientations = authenticatedUser?.orientaciones;
+// FIX: Correctly handled a potentially undefined `jefeOrientations` array by providing a fallback empty array (`jefeOrientations || []`) before mapping over it. This prevents runtime errors and ensures the Set is created safely.
     const managerOrientations = isJefeMode
-      ? new Set((Array.isArray(jefeOrientations) ? jefeOrientations : []).map(normalizeStringForComparison))
+      ? new Set((jefeOrientations || []).map(normalizeStringForComparison))
       : new Set(managerConfig[activeManager].orientations.map(normalizeStringForComparison));
 
     const filteredGroups: InformeCorreccionPPS[] = [...allPpsGroups.values()].filter((group: InformeCorreccionPPS) => {

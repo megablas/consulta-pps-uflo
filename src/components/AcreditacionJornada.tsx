@@ -11,13 +11,12 @@ import {
     FIELD_LEGAJO_ESTUDIANTES, 
     FIELD_NOMBRE_ESTUDIANTES,
     FIELD_ASISTENCIA_ESTUDIANTE,
+    FIELD_ASISTENCIA_MODULO_ID,
     FIELD_ASISTENCIA_MODULO_NOMBRE,
     FIELD_ASISTENCIA_FECHA,
     FIELD_ASISTENCIA_CONFIRMADA_JORNADA,
     CONFERENCE_SHIFTS_BY_DAY,
-    Orientacion,
     JORNADA_BLOCK_MAPPING,
-    FIELD_ASISTENCIA_MODULO_ID,
     FIELD_LANZAMIENTO_VINCULADO_PRACTICAS,
     FIELD_ESTUDIANTE_LINK_PRACTICAS,
     FIELD_HORAS_PRACTICAS,
@@ -29,6 +28,8 @@ import {
 } from '../constants';
 import { formatDate } from '../utils/formatters';
 import type { PracticaFields, EstudianteFields, AsistenciaJornadaFields, AsistenciaJornada, AirtableRecord } from '../types';
+// FIX: Import Orientacion enum from types.ts as it is used as a value, not just a type.
+import { Orientacion } from '../types';
 
 interface StudentToAccredit {
     studentId: string;
@@ -479,7 +480,11 @@ const AcreditacionJornada: React.FC = () => {
                 filterByFormula: studentFormula,
                 fields: [FIELD_LEGAJO_ESTUDIANTES, FIELD_NOMBRE_ESTUDIANTES],
              });
-             const studentsMap = new Map(studentsRes.map(r => [r.id, r.fields]));
+             // FIX: Correctly map students to ensure `studentInfo` has the required shape.
+             const studentsMap = new Map(studentsRes.map(r => [r.id, {
+                legajo: r.fields[FIELD_LEGAJO_ESTUDIANTES] || 'N/A',
+                nombre: r.fields[FIELD_NOMBRE_ESTUDIANTES] || 'Sin Nombre'
+             }]));
 
              const asistenciasFormula = `OR(${studentIds.map(id => `FIND('${id}', ARRAYJOIN({${FIELD_ASISTENCIA_ESTUDIANTE}}))`).join(',')})`;
              const asistenciasRes = await db.asistenciasJornada.getAll({
@@ -498,7 +503,7 @@ const AcreditacionJornada: React.FC = () => {
                 return {
                     practicaId: practice.id,
                     studentId: studentId,
-                    studentInfo: studentInfo as { legajo: string, nombre: string },
+                    studentInfo: studentInfo,
                     accreditedHours: practice.fields.horasRealizadas || 0,
                     asistenciaIds: studentAsistenciaIds,
                 };

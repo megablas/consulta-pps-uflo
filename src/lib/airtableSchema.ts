@@ -6,7 +6,8 @@ import {
     AIRTABLE_TABLE_NAME_AUTH_USERS,
     FIELD_LEGAJO_AUTH, FIELD_NOMBRE_AUTH, FIELD_PASSWORD_HASH_AUTH, FIELD_SALT_AUTH,
     AIRTABLE_TABLE_NAME_CONVOCATORIAS,
-    FIELD_INFORME_SUBIDO_CONVOCATORIAS, FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS, FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS, FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS, FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, FIELD_NOMBRE_PPS_CONVOCATORIAS, FIELD_FECHA_INICIO_CONVOCATORIAS, FIELD_FECHA_FIN_CONVOCATORIAS, FIELD_DIRECCION_CONVOCATORIAS, FIELD_HORARIO_FORMULA_CONVOCATORIAS, FIELD_ORIENTACION_CONVOCATORIAS, FIELD_HORAS_ACREDITADAS_CONVOCATORIAS, FIELD_CUPOS_DISPONIBLES_CONVOCATORIAS, FIELD_LEGAJO_CONVOCATORIAS, FIELD_DNI_CONVOCATORIAS, FIELD_CORREO_CONVOCATORIAS, FIELD_FECHA_NACIMIENTO_CONVOCATORIAS, FIELD_TELEFONO_CONVOCATORIAS, FIELD_TERMINO_CURSAR_CONVOCATORIAS, FIELD_CURSANDO_ELECTIVAS_CONVOCATORIAS, FIELD_FINALES_ADEUDA_CONVOCATORIAS, FIELD_OTRA_SITUACION_CONVOCATORIAS,
+    FIELD_INFORME_SUBIDO_CONVOCATORIAS, FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS, FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS, FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, FIELD_NOMBRE_PPS_CONVOCATORIAS, FIELD_FECHA_INICIO_CONVOCATORIAS, FIELD_FECHA_FIN_CONVOCATORIAS, FIELD_DIRECCION_CONVOCATORIAS, FIELD_HORARIO_FORMULA_CONVOCATORIAS, FIELD_ORIENTACION_CONVOCATORIAS, FIELD_HORAS_ACREDITADAS_CONVOCATORIAS, FIELD_CUPOS_DISPONIBLES_CONVOCATORIAS, FIELD_LEGAJO_CONVOCATORIAS, FIELD_DNI_CONVOCATORIAS, FIELD_CORREO_CONVOCATORIAS, FIELD_FECHA_NACIMIENTO_CONVOCATORIAS, FIELD_TELEFONO_CONVOCATORIAS, FIELD_TERMINO_CURSAR_CONVOCATORIAS, FIELD_CURSANDO_ELECTIVAS_CONVOCATORIAS, FIELD_FINALES_ADEUDA_CONVOCATORIAS, FIELD_OTRA_SITUACION_CONVOCATORIAS,
+    FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
     AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
     FIELD_ESTADO_GESTION_LANZAMIENTOS, FIELD_NOTAS_GESTION_LANZAMIENTOS, FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS, FIELD_NOMBRE_PPS_LANZAMIENTOS, FIELD_FECHA_INICIO_LANZAMIENTOS, FIELD_FECHA_FIN_LANZAMIENTOS, FIELD_ORIENTACION_LANZAMIENTOS, FIELD_HORAS_ACREDITADAS_LANZAMIENTOS, FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS,
     AIRTABLE_TABLE_NAME_INSTITUCIONES,
@@ -15,7 +16,6 @@ import {
     FIELD_PENALIZACION_ESTUDIANTE_LINK, FIELD_PENALIZACION_TIPO, FIELD_PENALIZACION_FECHA, FIELD_PENALIZACION_NOTAS, FIELD_PENALIZACION_CONVOCATORIA_LINK,
     AIRTABLE_TABLE_NAME_PPS,
     AIRTABLE_TABLE_NAME_FINALIZACION,
-    // FIX: Imported missing constants to define the schema correctly.
     FIELD_HORAS_PRACTICAS,
     FIELD_ESTADO_PRACTICA,
     FIELD_INSTITUCION_LINK_PRACTICAS,
@@ -66,7 +66,6 @@ export const schema = {
         informeSubido: FIELD_INFORME_SUBIDO_CONVOCATORIAS,
         fechaEntregaInforme: FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS,
         estadoInscripcion: FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS,
-        // FIX: Corrected typo in constant name.
         lanzamientoVinculado: FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
         estudianteInscripto: FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS,
         nombrePPS: FIELD_NOMBRE_PPS_CONVOCATORIAS,
@@ -130,57 +129,3 @@ export const schema = {
         _tableName: AIRTABLE_TABLE_NAME_FINALIZACION,
     }
 } as const;
-
-// FIX: Added missing exports for Supabase synchronization.
-function toSnakeCase(str: string) {
-    if (!str) return '';
-    return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`).replace(/^_/, '');
-}
-
-export const airtableToSupabaseMapping: Record<string, { supabaseTable: string; fieldMapping: Record<string, string> }> = {};
-
-const schemaWithAny = schema as any;
-
-for (const schemaKey in schemaWithAny) {
-    if (Object.prototype.hasOwnProperty.call(schemaWithAny, schemaKey)) {
-        const tableSchema = schemaWithAny[schemaKey];
-        const airtableTableName = tableSchema._tableName;
-        if (!airtableTableName) continue;
-
-        const supabaseTable = airtableTableName.toLowerCase().replace(/[\s-]+/g, '_');
-        const fieldMapping: Record<string, string> = {};
-        
-        for (const devFieldKey in tableSchema) {
-            if (devFieldKey !== '_tableName' && Object.prototype.hasOwnProperty.call(tableSchema, devFieldKey)) {
-                const airtableFieldName = tableSchema[devFieldKey];
-                const supabaseFieldName = toSnakeCase(devFieldKey);
-                fieldMapping[airtableFieldName] = supabaseFieldName;
-            }
-        }
-
-        airtableToSupabaseMapping[airtableTableName] = { supabaseTable, fieldMapping };
-    }
-}
-
-export const mapAirtableToSupabase = (airtableTableName: string, airtableFields: any, airtableRecordId: string) => {
-    const mapping = airtableToSupabaseMapping[airtableTableName];
-    if (!mapping) {
-        throw new Error(`No Supabase mapping found for Airtable table: ${airtableTableName}`);
-    }
-
-    const supabaseData: Record<string, any> = {
-        airtable_record_id: airtableRecordId,
-    };
-
-    for (const airtableField in mapping.fieldMapping) {
-        if (Object.prototype.hasOwnProperty.call(airtableFields, airtableField)) {
-            const supabaseField = mapping.fieldMapping[airtableField];
-            supabaseData[supabaseField] = airtableFields[airtableField];
-        }
-    }
-
-    return {
-        supabaseTable: mapping.supabaseTable,
-        supabaseData,
-    };
-};

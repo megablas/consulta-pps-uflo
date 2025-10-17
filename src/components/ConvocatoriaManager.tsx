@@ -42,7 +42,7 @@ interface GestionCardProps {
   onSavePhone: (institutionId: string, phone: string) => Promise<boolean>;
 }
 
-// FIX: Made getGroupName more robust to handle various data types from Airtable lookups without crashing.
+// Made getGroupName more robust to handle various data types from Airtable lookups without crashing.
 const getGroupName = (name: unknown): string => {
     const strName = String(name || '');
     if (!strName) return 'Sin Nombre';
@@ -569,19 +569,19 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
     
             let successfulCreations = 0;
             let failedCreations = 0;
-            // FIX: Cast `newLaunchesToCreate` to `any[]` to satisfy the TypeScript compiler when accessing `.length` in a strict environment.
             const totalToCreate = newLaunchesToCreate.length;
 
             for (let i = 0; i < totalToCreate; i++) {
                 const launchData = newLaunchesToCreate[i];
+// FIX: The `totalToCreate` variable is a number and does not have a `length` property. Use it directly.
                 setToastInfo({ message: `Sincronizando ${i + 1} de ${totalToCreate}...`, type: 'success' });
 
                 const { error } = await createAirtableRecord(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, launchData);
                 
                 if (error) {
                     failedCreations++;
-                    // FIX: Explicitly cast launchData property to string to prevent type errors in template literal.
-                    console.error(`Error al crear el lanzamiento para ${String(launchData[FIELD_NOMBRE_PPS_LANZAMIENTOS])}:`, error);
+// FIX: Ensure the property value is safely converted to a string for logging.
+                    console.error(`Error al crear el lanzamiento para ${String(launchData[FIELD_NOMBRE_PPS_LANZAMIENTOS] ?? '')}:`, error);
                 } else {
                     successfulCreations++;
                 }

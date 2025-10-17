@@ -9,38 +9,13 @@ import { MetricsDashboard } from '../components/MetricsDashboard';
 import TimelineView from '../components/TimelineView';
 import SubTabs from '../components/SubTabs';
 import type { AirtableRecord, EstudianteFields } from '../types';
+import WelcomeBannerAdmin from '../components/WelcomeBannerAdmin';
 
 interface StudentTabInfo {
     id: string; // legajo
     legajo: string;
     nombre: string;
 }
-
-const JefeWelcomeBanner: React.FC<{ name: string }> = ({ name }) => {
-  const [greeting, setGreeting] = useState('');
-
-  React.useEffect(() => {
-    const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) {
-      setGreeting('Buenos días');
-    } else if (hour >= 12 && hour < 20) {
-      setGreeting('Buenas tardes');
-    } else {
-      setGreeting('Buenas noches');
-    }
-  }, []);
-
-  return (
-    <div className="mb-8">
-      <h1 className="text-4xl font-black text-slate-800 tracking-tighter">
-        {greeting}, <span className="text-blue-600">{name.split(' ')[0]}</span>.
-      </h1>
-      <p className="mt-2 text-md text-slate-600">
-        Bienvenido a tu panel de gestión de Prácticas Profesionales Supervisadas.
-      </p>
-    </div>
-  );
-};
 
 const JefeView: React.FC = () => {
     const { authenticatedUser } = useAuth();
@@ -136,7 +111,7 @@ const JefeView: React.FC = () => {
 
     return (
         <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg border border-slate-200/60 animate-fade-in-up">
-            <JefeWelcomeBanner name={authenticatedUser?.nombre || 'Jefe de Cátedra'} />
+            <WelcomeBannerAdmin name={authenticatedUser?.nombre || 'Jefe de Cátedra'} />
             <div>
                 <Tabs
                     tabs={allTabs}

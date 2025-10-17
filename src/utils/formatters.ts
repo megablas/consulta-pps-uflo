@@ -221,3 +221,23 @@ export function parseToUTCDate(dateString?: string): Date | null {
     console.warn(`[parseToUTCDate] Could not parse date string with known formats: "${dateString}"`);
     return null;
 }
+
+export const simpleNameSplit = (fullName: string): { nombre: string; apellido: string } => {
+    if (!fullName) return { nombre: '', apellido: '' };
+    let nombre = '';
+    let apellido = '';
+    if (fullName.includes(',')) {
+        const parts = fullName.split(',').map(p => p.trim());
+        apellido = parts[0] || '';
+        nombre = parts[1] || '';
+    } else {
+        const nameParts = fullName.trim().split(' ').filter(Boolean);
+        if (nameParts.length > 1) {
+            apellido = nameParts.pop()!;
+            nombre = nameParts.join(' ');
+        } else {
+            nombre = fullName;
+        }
+    }
+    return { nombre, apellido };
+};

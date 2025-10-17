@@ -45,7 +45,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
     enrollStudent, confirmInforme, refetchConvocatorias, institutionAddressMap,
     enrollInJornada,
     asistencias,
-// FIX: Destructure jornadaBlockCounts from the useConvocatorias hook.
+    // FIX: Destructure jornadaBlockCounts from the useConvocatorias hook.
     jornadaBlockCounts, // Get the new block counts
   } = useConvocatorias(user.legajo, studentAirtableId, isSuperUserMode);
 
@@ -85,7 +85,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   }, [updateNota]);
   
   // --- MEMOIZED TAB CONTENT ---
-// FIX: Pass the required `jornadaBlockCounts` prop to the ConvocatoriasList component.
+  // FIX: Pass the required `jornadaBlockCounts` prop to the ConvocatoriasList component.
   const convocatoriasContent = useMemo(() => <ConvocatoriasList lanzamientos={lanzamientos} myEnrollments={myEnrollments} practicas={practicas} student={studentDetails} onInscribir={enrollStudent.mutate} onInscribirJornada={enrollInJornada.mutate} institutionAddressMap={institutionAddressMap} asistencias={asistencias} jornadaBlockCounts={jornadaBlockCounts} />, [lanzamientos, myEnrollments, practicas, studentDetails, enrollStudent.mutate, enrollInJornada.mutate, institutionAddressMap, asistencias, jornadaBlockCounts]);
   const calendarContent = useMemo(() => <CalendarView myEnrollments={myEnrollments} allLanzamientos={allLanzamientos} />, [myEnrollments, allLanzamientos]);
   const informesContent = useMemo(() => <InformesList tasks={informeTasks} onConfirmar={confirmInforme.mutate} />, [informeTasks, confirmInforme]);

@@ -223,31 +223,31 @@ const Auth: React.FC = () => {
     if (mode === 'login') {
         try {
             if (!legajoTrimmed || !passwordTrimmed) throw new Error('Por favor, completa todos los campos.');
-            const records = await db.authUsers.get({
+
+            const userRecords = await db.authUsers.get({
                 filterByFormula: `{${FIELD_LEGAJO_AUTH}} = '${legajoTrimmed}'`,
                 maxRecords: 1
             });
+            if (userRecords.length === 0) throw new Error('Legajo o contraseña incorrectos.');
+
+            const user = userRecords[0].fields;
+            const salt = user[FIELD_SALT_AUTH];
+            const storedHash = user[FIELD_PASSWORD_HASH_AUTH];
+            if (!salt || !storedHash) throw new Error('Esta cuenta no tiene una contraseña configurada. Por favor, regístrate para crear una.');
             
-            if (records.length === 0) throw new Error('Legajo o contraseña incorrectos.');
-            
-            const user = records[0].fields;
-            if (!user[FIELD_SALT_AUTH] || !user[FIELD_PASSWORD_HASH_AUTH]) {
-                throw new Error('Esta cuenta no tiene una contraseña configurada. Por favor, regístrate para crear una.');
-            }
-            const isValid = await verifyPassword(passwordTrimmed, user[FIELD_SALT_AUTH]!, user[FIELD_PASSWORD_HASH_AUTH]!);
-            if (isValid) {
-                const processedRole = getProcessedRole(user[FIELD_ROLE_AUTH]);
-                login({ 
-                  legajo: legajoTrimmed, 
-                  nombre: user[FIELD_NOMBRE_AUTH]!,
-                  role: processedRole,
-                  orientaciones: user[FIELD_ORIENTACIONES_AUTH]?.split(',').map((o: string) => o.trim())
-                }, rememberMe);
-            } else {
-                throw new Error('Legajo o contraseña incorrectos.');
-            }
+            const isValid = await verifyPassword(passwordTrimmed, salt, storedHash);
+            if (!isValid) throw new Error('Legajo o contraseña incorrectos.');
+
+            const processedRole = getProcessedRole(user[FIELD_ROLE_AUTH]);
+            login({
+                legajo: legajoTrimmed,
+                nombre: user[FIELD_NOMBRE_AUTH]!,
+                role: processedRole,
+                orientaciones: user[FIELD_ORIENTACIONES_AUTH]?.split(',').map((o: string) => o.trim())
+            }, rememberMe);
+
         } catch (err: any) {
-            setError(err.message || 'Ocurrió un error inesperado.');
+            setError(err.message || 'Ocurrió un error inesperado al iniciar sesión.');
         } finally {
             setIsLoading(false);
         }
@@ -532,21 +532,21 @@ const Auth: React.FC = () => {
 
   return (
     <div className="w-full bg-white dark:bg-slate-800 md:grid md:grid-cols-2 min-h-[85vh] rounded-2xl shadow-2xl shadow-slate-200/40 dark:shadow-black/20 overflow-hidden border border-slate-200/60 dark:border-slate-700/80">
-      <div className="hidden md:flex flex-col justify-between p-8 lg:p-12 bg-black text-white relative overflow-hidden">
-        <div className="absolute -top-1/4 -right-1/4 w-3/4 h-3/4 bg-blue-600/30 rounded-full filter blur-3xl animate-pulse" style={{animationDuration: '8s'}} />
-        <div className="absolute -bottom-1/4 -left-1/4 w-3/4 h-3/4 bg-indigo-600/30 rounded-full filter blur-3xl animate-pulse" style={{animationDuration: '10s', animationDelay: '2s'}} />
+      <div className="hidden md:flex flex-col justify-between p-8 lg:p-12 bg-gradient-to-br from-slate-50 to-slate-200 dark:bg-gradient-to-br dark:from-slate-900 dark:to-slate-800 text-slate-800 dark:text-white relative overflow-hidden">
+        <div className="absolute -top-1/4 -right-1/4 w-3/4 h-3/4 bg-blue-600/30 dark:bg-blue-500/40 rounded-full filter blur-3xl animate-pulse" style={{animationDuration: '8s'}} />
+        <div className="absolute -bottom-1/4 -left-1/4 w-3/4 h-3/4 bg-indigo-600/30 dark:bg-indigo-500/40 rounded-full filter blur-3xl animate-pulse" style={{animationDuration: '10s', animationDelay: '2s'}} />
         <div className="relative z-10">
-          <div className="flex-shrink-0 animate-fade-in-up" style={{ animationDelay: '0ms' }}><MiPanelLogo className="h-16 w-auto" variant="dark" /></div>
+          <div className="flex-shrink-0 animate-fade-in-up" style={{ animationDelay: '0ms' }}><MiPanelLogo className="h-16 w-auto" variant={resolvedTheme} /></div>
           <div className="flex-grow flex flex-col justify-center mt-20">
             <h1 className="text-5xl lg:text-6xl font-black tracking-tighter leading-tight animate-fade-in-up" style={{ animationDelay: '100ms' }}>
               Tu Panel<br/>Académico.
             </h1>
-            <p className="mt-4 text-slate-300 text-lg lg:text-xl max-w-sm animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+            <p className="mt-4 text-slate-600 dark:text-slate-300 text-lg lg:text-xl max-w-sm animate-fade-in-up" style={{ animationDelay: '200ms' }}>
               El portal centralizado para el seguimiento de tus Prácticas Profesionales Supervisadas.
             </p>
           </div>
         </div>
-        <div className="relative z-10 flex-shrink-0 animate-fade-in-up" style={{ animationDelay: '300ms' }}><UfloLogo className="h-16 w-auto" variant="dark" /></div>
+        <div className="relative z-10 flex-shrink-0 animate-fade-in-up" style={{ animationDelay: '300ms' }}><UfloLogo className="h-16 w-auto" variant={resolvedTheme} /></div>
       </div>
 
       <div className="flex flex-col items-center justify-center p-6 sm:p-10 min-h-full">

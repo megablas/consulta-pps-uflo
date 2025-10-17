@@ -4,21 +4,12 @@ import { fileURLToPath, URL } from 'node:url'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/',
+  base: '/consulta-pps-uflo/',
   plugins: [react()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
-  },
-  server: {
-    proxy: {
-      '/airtable-api': {
-        target: 'https://api.airtable.com',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/airtable-api/, ''),
-      },
-    },
   },
   build: {
     rollupOptions: {
