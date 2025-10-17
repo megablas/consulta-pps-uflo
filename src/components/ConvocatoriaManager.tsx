@@ -573,14 +573,12 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
 
             for (let i = 0; i < totalToCreate; i++) {
                 const launchData = newLaunchesToCreate[i];
-// FIX: The `totalToCreate` variable is a number and does not have a `length` property. Use it directly.
                 setToastInfo({ message: `Sincronizando ${i + 1} de ${totalToCreate}...`, type: 'success' });
 
                 const { error } = await createAirtableRecord(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, launchData);
                 
                 if (error) {
                     failedCreations++;
-// FIX: Ensure the property value is safely converted to a string for logging.
                     console.error(`Error al crear el lanzamiento para ${String(launchData[FIELD_NOMBRE_PPS_LANZAMIENTOS] ?? '')}:`, error);
                 } else {
                     successfulCreations++;

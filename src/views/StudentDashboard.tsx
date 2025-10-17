@@ -36,7 +36,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
 
   // --- CUSTOM HOOKS FOR DATA FETCHING AND MUTATIONS ---
-  // FIX: Destructure `updateInternalNotes` from the hook to pass it down to ProfileView.
   const { studentDetails, studentAirtableId, isStudentLoading, studentError, updateOrientation, updateInternalNotes, refetchStudent } = useStudentData(user.legajo);
   const { practicas, isPracticasLoading, practicasError, updateNota, refetchPracticas } = useStudentPracticas(user.legajo);
   const { solicitudes, isSolicitudesLoading, solicitudesError, refetchSolicitudes } = useStudentSolicitudes(user.legajo, studentAirtableId);
@@ -45,8 +44,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
     enrollStudent, confirmInforme, refetchConvocatorias, institutionAddressMap,
     enrollInJornada,
     asistencias,
-    // FIX: Destructure jornadaBlockCounts from the useConvocatorias hook.
-    jornadaBlockCounts, // Get the new block counts
+    jornadaBlockCounts, 
   } = useConvocatorias(user.legajo, studentAirtableId, isSuperUserMode);
 
   // --- DERIVED STATE & MEMOIZATION ---
@@ -85,7 +83,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   }, [updateNota]);
   
   // --- MEMOIZED TAB CONTENT ---
-  // FIX: Pass the required `jornadaBlockCounts` prop to the ConvocatoriasList component.
   const convocatoriasContent = useMemo(() => <ConvocatoriasList lanzamientos={lanzamientos} myEnrollments={myEnrollments} practicas={practicas} student={studentDetails} onInscribir={enrollStudent.mutate} onInscribirJornada={enrollInJornada.mutate} institutionAddressMap={institutionAddressMap} asistencias={asistencias} jornadaBlockCounts={jornadaBlockCounts} />, [lanzamientos, myEnrollments, practicas, studentDetails, enrollStudent.mutate, enrollInJornada.mutate, institutionAddressMap, asistencias, jornadaBlockCounts]);
   const calendarContent = useMemo(() => <CalendarView myEnrollments={myEnrollments} allLanzamientos={allLanzamientos} />, [myEnrollments, allLanzamientos]);
   const informesContent = useMemo(() => <InformesList tasks={informeTasks} onConfirmar={confirmInforme.mutate} />, [informeTasks, confirmInforme]);
@@ -131,8 +128,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   const showEmptyState = useMemo(() => !isLoading && !hasData && isSuperUserMode, [isLoading, hasData, isSuperUserMode]);
 
   if (isLoading) return <DashboardLoadingSkeleton />;
-  // FIX: The onRetry prop for ErrorState is called from an onClick handler, which passes a MouseEvent.
-  // The refetchAll function does not expect any arguments, so it is wrapped in an arrow function to prevent passing the event.
   if (error) return <ErrorState error={error.message} onRetry={() => refetchAll()} />;
 
   if (showEmptyState) {

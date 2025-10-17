@@ -313,7 +313,6 @@ export const useConvocatorias = (legajo: string, studentAirtableId: string | nul
         allLanzamientos,
         institutionAddressMap,
         asistencias,
-        // FIX: The `isConvocatoriasLoading` flag now correctly combines the loading states from all relevant queries to prevent race conditions and ensure all data is available before rendering.
         isConvocatoriasLoading: isConvocatoriasLoading || isLoadingAsistencias || isLoadingAllAsistencias,
         convocatoriasError,
         refetchConvocatorias,

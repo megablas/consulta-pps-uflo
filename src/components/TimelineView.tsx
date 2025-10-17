@@ -63,7 +63,6 @@ const TimelineView: React.FC = () => {
             const date = parseToUTCDate(launch[FIELD_FECHA_INICIO_LANZAMIENTOS]);
             return date ? date.getUTCFullYear() : null;
         }));
-        // FIX: Ensure sort callback handles potential null/undefined values safely by filtering them out first.
         return Array.from(years).filter((y): y is number => y !== null).sort((a, b) => b - a);
     }, [launches]);
 
