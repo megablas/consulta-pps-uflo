@@ -62,9 +62,9 @@ const TimelineView: React.FC = () => {
         const years = new Set(launches.map(launch => {
             const date = parseToUTCDate(launch[FIELD_FECHA_INICIO_LANZAMIENTOS]);
             return date ? date.getUTCFullYear() : null;
-        }).filter((y): y is number => y !== null));
-// FIX: Ensure sort callback handles potential null/undefined values safely by providing a fallback to 0. This prevents runtime errors when sorting an array of years that might contain nulls.
-        return Array.from(years).sort((a, b) => (b || 0) - (a || 0));
+        }));
+        // FIX: Ensure sort callback handles potential null/undefined values safely by filtering them out first.
+        return Array.from(years).filter((y): y is number => y !== null).sort((a, b) => b - a);
     }, [launches]);
 
     const { totalLaunchesForYear, totalCuposForYear, launchesByMonth } = useMemo(() => {
