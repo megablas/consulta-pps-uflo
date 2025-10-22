@@ -2,8 +2,8 @@
 // The Airtable credentials are now loaded from environment variables.
 // Using process.env makes this file compatible with both Vite (with configuration in vite.config.ts) 
 // and Node.js environments (like Jest).
-export const AIRTABLE_PAT = import.meta.env.VITE_AIRTABLE_PAT!;
-export const AIRTABLE_BASE_ID = import.meta.env.VITE_AIRTABLE_BASE_ID!;
+export const AIRTABLE_PAT = process.env.VITE_AIRTABLE_PAT;
+export const AIRTABLE_BASE_ID = process.env.VITE_AIRTABLE_BASE_ID;
 
 // Table Names
 export const AIRTABLE_TABLE_NAME_PPS = 'Solicitud de PPS';
