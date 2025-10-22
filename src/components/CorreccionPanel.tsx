@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { db } from '../lib/db';
 import type { InformeCorreccionPPS, InformeCorreccionStudent, ConvocatoriaFields, PracticaFields, EstudianteFields, LanzamientoPPSFields, FlatCorreccionStudent, AirtableRecord } from '../types';
 import {
-  // FIX: Corrected typo in constant name.
-  FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS as FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS,
+  // FIX: Corrected duplicate identifier by removing incorrect alias. FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS is for status, FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS is for the student link.
+  FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS,
   FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
   FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS,
   FIELD_INFORME_SUBIDO_CONVOCATORIAS,
@@ -156,7 +156,8 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
 
       const ppsGroups = new Map<string, InformeCorreccionPPS>();
       const validConvocatorias = convocatoriasRes.filter(conv => {
-        const estado = normalizeStringForComparison(conv.fields[FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS]);
+        // FIX: Corrected typo from FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS to FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS
+        const estado = normalizeStringForComparison(conv.fields[FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS]);
         return estado !== 'inscripto' && estado !== 'no seleccionado';
       });
 
@@ -189,10 +190,14 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
         const practica = practicasMap.get(`${studentId}-${lanzamiento.id}`);
 
         if (!ppsGroups.has(lanzamiento.id)) {
+          // FIX: Handle 'orientacion' potentially being an array from Airtable.
+          const orientacionRaw = lanzamiento.fields[FIELD_ORIENTACION_LANZAMIENTOS];
+          const orientacionString = Array.isArray(orientacionRaw) ? orientacionRaw.join(', ') : (orientacionRaw || 'N/A');
+
           ppsGroups.set(lanzamiento.id, {
             lanzamientoId: lanzamiento.id,
             ppsName: lanzamiento.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'N/A',
-            orientacion: lanzamiento.fields[FIELD_ORIENTACION_LANZAMIENTOS] || 'N/A',
+            orientacion: orientacionString,
             informeLink: lanzamiento.fields[FIELD_INFORME_LANZAMIENTOS],
             fechaFinalizacion: lanzamiento.fields[FIELD_FECHA_FIN_LANZAMIENTOS],
             students: []
@@ -201,6 +206,9 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
 
         const informeSubido = !!convRecord.fields[FIELD_INFORME_SUBIDO_CONVOCATORIAS];
         const notaActual = practica?.fields?.[FIELD_NOTA_PRACTICAS];
+        // FIX: Handle 'orientacion' potentially being an array from Airtable, take first for student.
+        const studentOrientacionRaw = lanzamiento.fields[FIELD_ORIENTACION_LANZAMIENTOS];
+        const studentOrientacion = Array.isArray(studentOrientacionRaw) ? studentOrientacionRaw[0] : studentOrientacionRaw;
         ppsGroups.get(lanzamiento.id)!.students.push({
           studentId: studentId,
           studentName: student[FIELD_NOMBRE_ESTUDIANTES] || 'N/A',
@@ -209,7 +217,7 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
           informeSubido: informeSubido,
           nota: notaActual || (informeSubido ? 'Entregado (sin corregir)' : 'Sin calificar'),
           lanzamientoId: lanzamiento.id,
-          orientacion: lanzamiento.fields[FIELD_ORIENTACION_LANZAMIENTOS],
+          orientacion: studentOrientacion,
           fechaInicio: convRecord.fields[FIELD_FECHA_INICIO_CONVOCATORIAS],
           fechaFinalizacionPPS: convRecord.fields[FIELD_FECHA_FIN_CONVOCATORIAS],
           fechaEntregaInforme: convRecord.fields[FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS],
@@ -248,9 +256,7 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
             const newPracticaRecord = await db.practicas.create({
                 estudianteLink: [student.studentId],
                 lanzamientoVinculado: [student.lanzamientoId],
-                // FIX: The compiler error "Conversion of type 'string' to type 'string[]'" suggests that 'especialidad' expects an array.
-                // We trust the compiler over the potentially outdated schema/comment and wrap the string in an array.
-                especialidad: firstOrientation ? [firstOrientation] : [],
+                especialidad: firstOrientation,
                 fechaInicio: student.fechaInicio,
                 fechaFin: student.fechaFinalizacionPPS,
             });

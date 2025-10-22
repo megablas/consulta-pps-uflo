@@ -1,7 +1,6 @@
 // --- Airtable Configuration ---
-// The Airtable credentials are now loaded from environment variables.
-// Using process.env makes this file compatible with both Vite (with configuration in vite.config.ts) 
-// and Node.js environments (like Jest).
+// Las claves están directamente en el código para simplificar el desarrollo local.
+// El workflow de GitHub (`deploy.yml`) se encarga de usar los "Secrets" para producción.
 export const AIRTABLE_PAT = import.meta.env.VITE_AIRTABLE_PAT!;
 export const AIRTABLE_BASE_ID = import.meta.env.VITE_AIRTABLE_BASE_ID!;
 
