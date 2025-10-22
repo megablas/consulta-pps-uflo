@@ -4,6 +4,9 @@ const config: Config = {
   // Indica que el entorno de prueba es un entorno similar al de un navegador
   testEnvironment: 'jsdom',
 
+  // Carga las variables de entorno desde .env antes de ejecutar las pruebas
+  setupFiles: ['dotenv/config'],
+
   // Una lista de rutas a módulos que ejecutan código para configurar el framework de pruebas antes de cada prueba
   setupFilesAfterEnv: ['<rootDir>/jest-setup.ts'],
 

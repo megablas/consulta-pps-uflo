@@ -1,8 +1,7 @@
 // --- Airtable Configuration ---
 // The Airtable credentials are now loaded from environment variables.
-// For local development, create a .env file in the root directory with:
-// VITE_AIRTABLE_PAT="your_personal_access_token"
-// VITE_AIRTABLE_BASE_ID="your_base_id"
+// Using process.env makes this file compatible with both Vite (with configuration in vite.config.ts) 
+// and Node.js environments (like Jest).
 export const AIRTABLE_PAT = import.meta.env.VITE_AIRTABLE_PAT!;
 export const AIRTABLE_BASE_ID = import.meta.env.VITE_AIRTABLE_BASE_ID!;
 

@@ -241,15 +241,14 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
     if (!currentPracticaId) {
         setUpdatingNotaId(`creating-${student.studentId}`);
         
-        // FIX: Handle student.orientacion being a string by simplifying logic.
         const firstOrientation = student.orientacion || '';
 
         try {
             const newPracticaRecord = await db.practicas.create({
                 estudianteLink: [student.studentId],
                 lanzamientoVinculado: [student.lanzamientoId],
-                // FIX: 'especialidad' expects a string array for creation, even if it's a single item. This resolves the type error where a string was being assigned to a string array.
-                especialidad: [firstOrientation],
+                // FIX: The 'especialidad' field expects a string according to the schema, not an array. Correcting the type mismatch.
+                especialidad: firstOrientation,
                 fechaInicio: student.fechaInicio,
                 fechaFin: student.fechaFinalizacionPPS,
             });
