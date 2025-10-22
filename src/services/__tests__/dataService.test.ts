@@ -38,9 +38,9 @@ describe('fetchSeleccionados', () => {
             if (tableName === AIRTABLE_TABLE_NAME_CONVOCATORIAS) {
                 return {
                     records: [
-                        { id: 'recConv1', fields: { [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: ['recStudent1'], [FIELD_HORARIO_FORMULA_CONVOCATORIAS]: 'Turno Mañana' } },
-                        { id: 'recConv2', fields: { [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: ['recStudent2'], [FIELD_HORARIO_FORMULA_CONVOCATORIAS]: 'Turno Tarde' } },
-                        { id: 'recConv3', fields: { [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: ['recStudent3'], [FIELD_HORARIO_FORMULA_CONVOCATORIAS]: 'Turno Mañana' } },
+                        { id: 'recConv1', createdTime: '', fields: { [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: ['recStudent1'], [FIELD_HORARIO_FORMULA_CONVOCATORIAS]: 'Turno Mañana' } },
+                        { id: 'recConv2', createdTime: '', fields: { [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: ['recStudent2'], [FIELD_HORARIO_FORMULA_CONVOCATORIAS]: 'Turno Tarde' } },
+                        { id: 'recConv3', createdTime: '', fields: { [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: ['recStudent3'], [FIELD_HORARIO_FORMULA_CONVOCATORIAS]: 'Turno Mañana' } },
                     ],
                     error: null
                 };
@@ -48,9 +48,9 @@ describe('fetchSeleccionados', () => {
             if (tableName === AIRTABLE_TABLE_NAME_ESTUDIANTES) {
                 return {
                     records: [
-                        { id: 'recStudent1', fields: { [FIELD_NOMBRE_ESTUDIANTES]: 'Ana Perez', [FIELD_LEGAJO_ESTUDIANTES]: '11111' } },
-                        { id: 'recStudent2', fields: { [FIELD_NOMBRE_ESTUDIANTES]: 'Juan Garcia', [FIELD_LEGAJO_ESTUDIANTES]: '22222' } },
-                        { id: 'recStudent3', fields: { [FIELD_NOMBRE_ESTUDIANTES]: 'Carla Rossi', [FIELD_LEGAJO_ESTUDIANTES]: '33333' } },
+                        { id: 'recStudent1', createdTime: '', fields: { [FIELD_NOMBRE_ESTUDIANTES]: 'Ana Perez', [FIELD_LEGAJO_ESTUDIANTES]: '11111' } },
+                        { id: 'recStudent2', createdTime: '', fields: { [FIELD_NOMBRE_ESTUDIANTES]: 'Juan Garcia', [FIELD_LEGAJO_ESTUDIANTES]: '22222' } },
+                        { id: 'recStudent3', createdTime: '', fields: { [FIELD_NOMBRE_ESTUDIANTES]: 'Carla Rossi', [FIELD_LEGAJO_ESTUDIANTES]: '33333' } },
                     ],
                     error: null
                 };
@@ -83,7 +83,7 @@ describe('fetchSeleccionados', () => {
             if (tableName === AIRTABLE_TABLE_NAME_CONVOCATORIAS) {
                 return {
                     records: [
-                        { id: 'recConv1', fields: { [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: ['recStudent1'] } }
+                        { id: 'recConv1', createdTime: '', fields: { [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: ['recStudent1'] } }
                     ],
                     error: null
                 };
@@ -103,7 +103,7 @@ describe('fetchSeleccionados', () => {
             if (tableName === AIRTABLE_TABLE_NAME_CONVOCATORIAS) {
                 return {
                     records: [
-                        { id: 'recConv1', fields: { [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: ['recStudent1'] } }, // No horario field
+                        { id: 'recConv1', createdTime: '', fields: { [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: ['recStudent1'] } }, // No horario field
                     ],
                     error: null
                 };
@@ -111,7 +111,7 @@ describe('fetchSeleccionados', () => {
             if (tableName === AIRTABLE_TABLE_NAME_ESTUDIANTES) {
                 return {
                     records: [
-                        { id: 'recStudent1', fields: { [FIELD_NOMBRE_ESTUDIANTES]: 'Ana Perez', [FIELD_LEGAJO_ESTUDIANTES]: '11111' } },
+                        { id: 'recStudent1', createdTime: '', fields: { [FIELD_NOMBRE_ESTUDIANTES]: 'Ana Perez', [FIELD_LEGAJO_ESTUDIANTES]: '11111' } },
                     ],
                     error: null
                 };

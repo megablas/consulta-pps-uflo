@@ -2,9 +2,10 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { db } from '../lib/db';
 import type { InformeCorreccionPPS, InformeCorreccionStudent, ConvocatoriaFields, PracticaFields, EstudianteFields, LanzamientoPPSFields, FlatCorreccionStudent, AirtableRecord } from '../types';
 import {
+  // FIX: Corrected typo in constant name.
   FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS as FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS,
   FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
-  FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORias,
+  FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS,
   FIELD_INFORME_SUBIDO_CONVOCATORIAS,
   FIELD_NOMBRE_BUSQUEDA_PRACTICAS,
   FIELD_NOTA_PRACTICAS,
@@ -247,8 +248,9 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
             const newPracticaRecord = await db.practicas.create({
                 estudianteLink: [student.studentId],
                 lanzamientoVinculado: [student.lanzamientoId],
-                // FIX: The 'especialidad' field expects a string according to the schema, not an array. Correcting the type mismatch.
-                especialidad: firstOrientation,
+                // FIX: The compiler error "Conversion of type 'string' to type 'string[]'" suggests that 'especialidad' expects an array.
+                // We trust the compiler over the potentially outdated schema/comment and wrap the string in an array.
+                especialidad: firstOrientation ? [firstOrientation] : [],
                 fechaInicio: student.fechaInicio,
                 fechaFin: student.fechaFinalizacionPPS,
             });
