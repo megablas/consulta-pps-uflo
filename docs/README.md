@@ -105,4 +105,9 @@ Para facilitar las pruebas en entornos donde el backend no está disponible (com
     -   **Contraseña:** `12345`
     -   Este usuario te permitirá iniciar sesión como un estudiante de prueba y ver un panel con datos simulados.
 
+-   **Usuario Reportero de Demostración:**
+    -   **Legajo:** `reportero`
+    -   **Contraseña:** `reportero`
+    -   Este usuario otorga acceso de solo lectura al panel de métricas y reportes.
+
 Estos inicios de sesión no realizan llamadas a la API y funcionan de manera local en el navegador.

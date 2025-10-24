@@ -24,7 +24,6 @@ import {
   FIELD_ESTUDIANTE_LINK_PRACTICAS,
   FIELD_FECHA_FIN_CONVOCATORIAS,
   FIELD_FECHA_FIN_PRACTICAS,
-  // FIX: Corrected typo in constant name from ACCREDITADAS to ACREDITADAS
   FIELD_HORAS_ACREDITADAS_LANZAMIENTOS,
   FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS,
 } from '../constants';
@@ -276,10 +275,10 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
             }
         }
         
-        // FIX: Use .entries() for explicit iteration over Map, and remove redundant type assertion to fix 'unknown' type error.
-        // FIX: Changed `for...of allPpsGroups` to `for...of allPpsGroups.entries()` to ensure `ppsGroup` is correctly typed and its properties can be accessed.
+        // FIX: Explicitly annotating `ppsGroup` type to ensure `students` property is accessible.
         for (const [lanzamientoId, ppsGroup] of allPpsGroups.entries()) {
-            if (ppsGroup.students.some(s => s.practicaId === practicaId)) {
+            // FIX: Explicitly cast `ppsGroup` to `InformeCorreccionPPS` to resolve `unknown` type issue.
+            if ((ppsGroup as InformeCorreccionPPS).students.some(s => s.practicaId === practicaId)) {
                 if (!newSelection.has(lanzamientoId)) {
                     newSelection.set(lanzamientoId, new Set());
                 }
@@ -295,10 +294,10 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
     if (practicaIds.length === 0) return;
     const firstPracticaId = practicaIds[0];
     let lanzamientoIdForGroup: string | null = null;
-    // FIX: Use .entries() for explicit iteration over Map, and remove redundant type assertion to fix 'unknown' type error.
-    // FIX: Changed `for...of allPpsGroups` to `for...of allPpsGroups.entries()` to ensure `ppsGroup` is correctly typed and its properties can be accessed.
+    // FIX: Explicitly annotating `ppsGroup` type to ensure `students` property is accessible.
     for (const [lanzamientoId, ppsGroup] of allPpsGroups.entries()) {
-        if (ppsGroup.students.some(s => s.practicaId === firstPracticaId)) {
+        // FIX: Explicitly cast `ppsGroup` to `InformeCorreccionPPS` to resolve `unknown` type issue.
+        if ((ppsGroup as InformeCorreccionPPS).students.some(s => s.practicaId === firstPracticaId)) {
             lanzamientoIdForGroup = lanzamientoId;
             break;
         }
@@ -339,12 +338,11 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
             await db.practicas.updateMany(updates as any);
         }
 
-        setAllPpsGroups(prev => {
+        setAllPpsGroups((prev: Map<string, InformeCorreccionPPS>) => {
             const newGroups = new Map(prev);
             const group = newGroups.get(lanzamientoId);
             if (group) {
-                // FIX: Cast `group` to `InformeCorreccionPPS` because TypeScript incorrectly infers it as `unknown` within the state updater, likely due to a complex environment-specific issue.
-                (group as InformeCorreccionPPS).students.forEach(s => {
+                group.students.forEach(s => {
                     if (s.practicaId && practicaIdSet.has(s.practicaId)) {
                         s.nota = newNota;
                     }
@@ -394,9 +392,10 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
   const flatStudentList = useMemo(() => {
     if (viewMode === 'byPps') return [];
     
-    return filteredAndSortedGroups.flatMap(group =>
-      // FIX: Cast `group` to `InformeCorreccionPPS` to resolve incorrect `unknown` type inference within the `flatMap` callback.
-      (group as InformeCorreccionPPS).students
+    // FIX: Added explicit type annotation for `group` to resolve 'unknown' type error.
+    // FIX: Explicitly typed `group` as `InformeCorreccionPPS` to resolve `flatMap` iteration error where `filteredAndSortedGroups` was being treated as `unknown[]`.
+    return (filteredAndSortedGroups as InformeCorreccionPPS[]).flatMap((group: InformeCorreccionPPS) =>
+      group.students
         .filter(s => s.informeSubido && (s.nota === 'Sin calificar' || s.nota === 'Entregado (sin corregir)'))
         .map((student): FlatCorreccionStudent => {
             let deadline: string | undefined;

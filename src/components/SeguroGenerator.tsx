@@ -18,7 +18,6 @@ import {
     FIELD_FECHA_FIN_LANZAMIENTOS,
     FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS,
     FIELD_ORIENTACION_LANZAMIENTOS,
-    // FIX: Corrected typo in constant name from ACCREDITADAS to ACREDITADAS
     FIELD_HORAS_ACREDITADAS_LANZAMIENTOS,
     FIELD_PLANTILLA_SEGURO_LANZAMIENTOS,
     TEMPLATE_PPS_NAME,
@@ -65,9 +64,9 @@ const mockStudentsForReview: StudentForReview[] = [
     { studentId: 'recStudTest2', nombre: 'Maria', apellido: 'Debug', dni: '44555666', legajo: 'T9002', correo: 'maria@test.com', telefono: '1177889900', institucion: 'Hospital de Simulación', direccion: 'Calle Falsa 123', periodo: 'Del 15/08/2024 al 15/12/2024', horario: 'Lunes y Miércoles 9 a 13hs', lugar: 'Hospital de Simulación - Calle Falsa 123', duracion: 'Período: Del 15/08/2024 al 15/12/2024. Horario: Lunes y Miércoles 9 a 13hs', tutor: 'Selva Estrella', orientacion: 'Clinica' },
 ];
 
-// FIX: Renamed function from 'getText' to 'getTextField' to avoid potential naming collisions causing type errors.
 // Helper function to safely extract string values from potentially complex Airtable fields (e.g., lookups returning arrays).
-function getTextField(value: any): string {
+// FIX: Changed parameter type from 'any' to 'unknown' for better type safety.
+function getTextField(value: unknown): string {
     if (value == null) return '';
     if (Array.isArray(value)) {
         const first = value[0];
@@ -267,9 +266,10 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal, isTestingM
                 
                 const institucion = getTextField(ppsData?.[FIELD_NOMBRE_PPS_LANZAMIENTOS] || individualConv[FIELD_NOMBRE_PPS_CONVOCATORIAS]) || 'N/A';
                 const direccion = getTextField(ppsData?.[FIELD_DIRECCION_LANZAMIENTOS] || individualConv[FIELD_DIRECCION_CONVOCATORIAS]) || 'N/A';
-                // FIX: Cast arguments to `any` to resolve incorrect `unknown` type error from indexed access.
-                const fechaInicio = getTextField((ppsData?.[FIELD_FECHA_INICIO_LANZAMIENTOS] || individualConv[FIELD_FECHA_INICIO_CONVOCATORIAS]) as any);
-                const fechaFin = getTextField((ppsData?.[FIELD_FECHA_FIN_LANZAMIENTOS] || individualConv[FIELD_FECHA_FIN_CONVOCATORIAS]) as any);
+                // FIX: Explicitly cast lookup values to string to resolve 'unknown' type error.
+                const fechaInicio = getTextField(ppsData?.[FIELD_FECHA_INICIO_LANZAMIENTOS] || individualConv[FIELD_FECHA_INICIO_CONVOCATORIAS]);
+                // FIX: Explicitly cast lookup values to string to resolve 'unknown' type error.
+                const fechaFin = getTextField(ppsData?.[FIELD_FECHA_FIN_LANZAMIENTOS] || individualConv[FIELD_FECHA_FIN_CONVOCATORIAS]);
                 const horario = getTextField(individualConv[FIELD_HORARIO_FORMULA_CONVOCATORIAS] || ppsData?.[FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS]) || 'N/A';
                 const orientacion = getTextField(ppsData?.[FIELD_ORIENTACION_LANZAMIENTOS] || (individualConv[FIELD_ORIENTACION_CONVOCATORIAS] as string)) || '';
 

@@ -431,6 +431,22 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSel
                   onClick={() => openModal({ title: 'Alumnos con PPS Activa', students: metrics.alumnosEnPPS.list, headers: [{ key: 'nombre', label: 'Nombre' }, { key: 'legajo', label: 'Legajo' }, { key: 'institucion', label: 'Institución' }, { key: 'fechaFin', label: 'Finaliza' }] })}
               />
               <MetricCard
+                title="Estudiantes con PPS este año"
+                value={metrics.alumnosConPpsEsteAno.value}
+                icon="transfer_within_a_station"
+                description={`Alumnos que realizaron al menos una práctica durante el ciclo ${targetYear}.`}
+                isLoading={isLoading}
+                onClick={() => openModal({ title: `Estudiantes con PPS en ${targetYear}`, students: metrics.alumnosConPpsEsteAno.list })}
+              />
+              <MetricCard
+                title="Activos sin PPS este año"
+                value={metrics.alumnosActivosSinPpsEsteAno.value}
+                icon="person_off"
+                description={`Estudiantes activos que no realizaron prácticas en ${targetYear}.`}
+                isLoading={isLoading}
+                onClick={() => openModal({ title: `Activos sin PPS en ${targetYear}`, students: metrics.alumnosActivosSinPpsEsteAno.list })}
+              />
+              <MetricCard
                   title="Próximos a Finalizar"
                   value={metrics.alumnosProximosAFinalizar.value}
                   icon="flag"
@@ -446,7 +462,7 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSel
                   isLoading={isLoading}
                   onClick={() => openModal({ title: 'Activos sin NINGUNA PPS', students: metrics.alumnosSinNingunaPPS.list })}
               />
-              <MetricCard
+               <MetricCard
                   title="Listos para Acreditar"
                   value={metrics.alumnosParaAcreditar.value}
                   icon="military_tech"
@@ -488,7 +504,7 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSel
                   icon="apartment"
                   description={`Instituciones con al menos un lanzamiento en ${targetYear}.`}
                   isLoading={isLoading}
-                  onClick={() => openModal({ title: `Instituciones Activas (${targetYear})`, students: metrics.activeInstitutions.list, headers: [{ key: 'nombre', label: 'Institución' }, { key: 'legajo', label: 'Orientaciones' }] })}
+                  onClick={() => openModal({ title: `Instituciones Activas (${targetYear})`, students: metrics.activeInstitutions.list, headers: [{ key: 'nombre', label: 'Institución' }, { key: 'legajo', label: 'Orientaciones' }, {key: 'cupos', label: 'Cupos Totales'}] })}
               />
             </div>
           )}

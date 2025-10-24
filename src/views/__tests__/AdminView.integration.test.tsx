@@ -140,9 +140,7 @@ describe('Flujo de Integración del Administrador', () => {
         // 1. Navegar a la herramienta de búsqueda
         const herramientasTab = await screen.findByRole('tab', { name: /Herramientas/i }, { timeout: 10000 });
         await user.click(herramientasTab);
-        const searchSubTab = await screen.findByRole('tab', { name: /Buscar Alumno/i });
-        await user.click(searchSubTab);
-
+        
         // 2. Buscar al alumno
         const searchInput = await screen.findByPlaceholderText(/Buscar por Legajo o Nombre.../i);
         await user.type(searchInput, 'Juana Molina');

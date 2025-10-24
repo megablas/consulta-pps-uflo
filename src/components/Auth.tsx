@@ -16,7 +16,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import Input from './Input';
 
 // Helper function to process the role from Airtable
-const getProcessedRole = (roleValue: any): 'Jefe' | 'SuperUser' | 'Directivo' | 'AdminTester' | undefined => {
+const getProcessedRole = (roleValue: any): 'Jefe' | 'SuperUser' | 'Directivo' | 'AdminTester' | 'Reportero' | undefined => {
     if (!roleValue) {
         return undefined;
     }
@@ -36,8 +36,9 @@ const getProcessedRole = (roleValue: any): 'Jefe' | 'SuperUser' | 'Directivo' | 
     const trimmedRole = roleValue.trim();
 
     // Check against valid roles
-    if (trimmedRole === 'Jefe' || trimmedRole === 'SuperUser' || trimmedRole === 'Directivo' || trimmedRole === 'AdminTester') {
-        return trimmedRole;
+    const validRoles = ['Jefe', 'SuperUser', 'Directivo', 'AdminTester', 'Reportero'];
+    if (validRoles.includes(trimmedRole)) {
+        return trimmedRole as 'Jefe' | 'SuperUser' | 'Directivo' | 'AdminTester' | 'Reportero';
     }
 
     return undefined;
@@ -185,6 +186,11 @@ const Auth: React.FC = () => {
       login({ legajo: '99999', nombre: 'Usuario de Prueba', role: 'AdminTester' }, rememberMe);
       return;
     }
+    
+    if (legajoTrimmed === 'reportero' && passwordTrimmed === 'reportero') {
+      login({ legajo: 'reportero', nombre: 'Usuario Reportero', role: 'Reportero' }, rememberMe);
+      return;
+    }
 
     if (legajoTrimmed === 'admin' && passwordTrimmed === 'superadmin' && mode === 'login') {
       login({ legajo: 'admin', nombre: 'Super Usuario', role: 'SuperUser' }, rememberMe);
@@ -290,7 +296,7 @@ const Auth: React.FC = () => {
             const storedDNI = foundStudent.fields[FIELD_DNI_ESTUDIANTES];
             const storedCorreo = (foundStudent.fields[FIELD_CORREO_ESTUDIANTES] || '').trim().toLowerCase();
             const normalizePhone = (phone?: string) => (phone || '').replace(/\D/g, '');
-            const storedTelefono = normalizePhone(foundStudent.fields[FIELD_TELEFONO_ESTUDIANTES]);
+            const storedTelefono = normalizePhone(foundStudent.fields[FIELD_TELEFONO_ESTUDIANTES] as string | undefined);
 
             const inputDNI = parseInt(verificationData.dni.replace(/\D/g, ''), 10);
             const inputCorreo = verificationData.correo.trim().toLowerCase();

@@ -132,9 +132,11 @@ export const useMetricsData = ({ targetYear, isTestingMode = false }: { targetYe
                     alumnosEnPPS: { value: 85, list: mockList },
                     alumnosProximosAFinalizar: { value: 20, list: mockList },
                     alumnosSinNingunaPPS: { value: 10, list: mockList },
+                    alumnosConPpsEsteAno: { value: 22, list: mockList },
+                    alumnosActivosSinPpsEsteAno: { value: 128, list: mockList },
                     alumnosParaAcreditar: { value: 5, list: mockList },
                     alumnosFinalizados: { value: 15, list: mockList },
-                    ppsLanzadas: { value: 40, list: mockList },
+                    ppsLanzadas: { value: 40, list: [] },
                     nuevosConvenios: { value: 5, list: mockList },
                     activeInstitutions: { value: 25, list: mockList },
                     cuposOfrecidos: { value: 120, list: [] },
@@ -145,20 +147,14 @@ export const useMetricsData = ({ targetYear, isTestingMode = false }: { targetYe
             const { estudiantes, practicas, lanzamientos, instituciones } = await fetchAllDataForReport();
             
             // --- Calculos ---
-            const yearStartDate = new Date(Date.UTC(targetYear, 0, 1));
             const today = new Date();
             
             // FILTROS
             const activeStudentRecords = estudiantes.filter(student => {
-                const creationDate = parseToUTCDate(student.fields['Creada']);
-                if (!creationDate) return false;
-                const finalizationDate = parseToUTCDate(student.fields['Fecha de Finalización']);
-                return !finalizationDate || !student.fields['Finalizaron'] || finalizationDate >= yearStartDate;
-            });
-            const activeStudentIds = new Set(activeStudentRecords.map(s => s.id));
-            const practicasThisYear = practicas.filter(p => {
-                const startDate = parseToUTCDate(p.fields[FIELD_FECHA_INICIO_PRACTICAS]);
-                return startDate && startDate.getUTCFullYear() === targetYear;
+                // Un estudiante está activo si NO ha finalizado.
+                const haFinalizado = student.fields['Finalizaron'];
+                // Corregimos la lógica: cualquier estudiante con "Finalizaron" marcado como true, está inactivo.
+                return !haFinalizado;
             });
             
             // METRICAS
@@ -179,6 +175,43 @@ export const useMetricsData = ({ targetYear, isTestingMode = false }: { targetYe
             const alumnosSinNingunaPPS = {
                 value: alumnosSinNingunaPPSList.length,
                 list: alumnosSinNingunaPPSList
+            };
+
+            const practicasDelAno = practicas.filter(p => {
+                const startDate = parseToUTCDate(p.fields[FIELD_FECHA_INICIO_PRACTICAS]);
+                return startDate && startDate.getUTCFullYear() === targetYear;
+            });
+            
+            const studentIdsConPpsEsteAno = new Set<string>();
+            practicasDelAno.forEach(p => {
+                ((p.fields as any)[FIELD_ESTUDIANTE_LINK_PRACTICAS] || []).forEach((studentId: string) => {
+                    studentIdsConPpsEsteAno.add(studentId);
+                });
+            });
+
+            const estudiantesMap = new Map(estudiantes.map(e => [e.id, e.fields]));
+            const alumnosConPpsEsteAnoList = Array.from(studentIdsConPpsEsteAno).map(id => {
+                const student = estudiantesMap.get(id);
+                return {
+                    legajo: student?.[FIELD_LEGAJO_ESTUDIANTES] || 'N/A',
+                    nombre: student?.[FIELD_NOMBRE_ESTUDIANTES] || 'N/A'
+                };
+            }).sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+            const alumnosConPpsEsteAno = {
+                value: alumnosConPpsEsteAnoList.length,
+                list: alumnosConPpsEsteAnoList
+            };
+
+            const studentLegajosConPpsEsteAno = new Set(alumnosConPpsEsteAnoList.map(s => s.legajo));
+
+            const alumnosActivosSinPpsEsteAnoList = alumnosActivos.list.filter(
+                student => !studentLegajosConPpsEsteAno.has(student.legajo)
+            );
+
+            const alumnosActivosSinPpsEsteAno = {
+                value: alumnosActivosSinPpsEsteAnoList.length,
+                list: alumnosActivosSinPpsEsteAnoList,
             };
 
             const alumnosFinalizadosList = estudiantes.filter(s => {
@@ -237,8 +270,30 @@ export const useMetricsData = ({ targetYear, isTestingMode = false }: { targetYe
                 }
             });
 
-            const ppsLanzadas = processLaunchesForYear(targetYear, lanzamientos);
-            const cuposOfrecidos = { value: ppsLanzadas.totalCuposForYear, list: [] };
+            const ppsLanzadasData = processLaunchesForYear(targetYear, lanzamientos);
+            const ppsLanzadasListRaw = ppsLanzadasData.launchesByMonth.flatMap(month => 
+                month.institutions.map(inst => ({
+                    nombre: inst.name,
+                    info: `${month.monthName} (${inst.cupos} cupos)`,
+                    cupos: inst.cupos
+                }))
+            );
+            const uniquePpsLanzadasMap = new Map<string, any>();
+            ppsLanzadasListRaw.forEach(item => {
+                const existing = uniquePpsLanzadasMap.get(item.nombre);
+                if (existing) {
+                    existing.cupos += item.cupos;
+                    existing.info += `; ${item.info}`;
+                } else {
+                    uniquePpsLanzadasMap.set(item.nombre, { ...item, legajo: '' });
+                }
+            });
+            const ppsLanzadas = {
+                value: ppsLanzadasData.totalLaunchesForYear,
+                list: Array.from(uniquePpsLanzadasMap.values()).sort((a, b) => a.nombre.localeCompare(b.nombre))
+            };
+
+            const cuposOfrecidos = { value: ppsLanzadasData.totalCuposForYear, list: [] };
 
             const cuposTotalesConRelevamiento = {
                 value: lanzamientos.filter(l => {
@@ -249,21 +304,61 @@ export const useMetricsData = ({ targetYear, isTestingMode = false }: { targetYe
                 list: []
             };
 
-            const nuevosConveniosList = instituciones.filter(i => i.fields[FIELD_CONVENIO_NUEVO_INSTITUCIONES]).map(i => ({ legajo: '', nombre: i.fields[FIELD_NOMBRE_INSTITUCIONES] || 'N/A' }));
+            const nuevosConveniosList = instituciones.filter(i => {
+                if (!i.fields[FIELD_CONVENIO_NUEVO_INSTITUCIONES]) return false;
+                const institutionName = i.fields[FIELD_NOMBRE_INSTITUCIONES];
+                if (!institutionName) return false;
+                const normalizedInstName = normalizeStringForComparison(institutionName);
+                return lanzamientos.some(l => {
+                    const launchDate = parseToUTCDate(l.fields[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+                    return launchDate && launchDate.getUTCFullYear() === targetYear && 
+                           normalizeStringForComparison(l.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS] || '').startsWith(normalizedInstName);
+                });
+            }).map(i => {
+                const institutionName = i.fields[FIELD_NOMBRE_INSTITUCIONES] || 'N/A';
+                const normalizedInstName = normalizeStringForComparison(institutionName);
+                const cupos = lanzamientos
+                    .filter(l => {
+                        const launchDate = parseToUTCDate(l.fields[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+                        return launchDate && launchDate.getUTCFullYear() === targetYear && 
+                               normalizeStringForComparison(l.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS] || '').startsWith(normalizedInstName);
+                    })
+                    .reduce((sum, l) => sum + (l.fields[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0), 0);
+                
+                return { nombre: institutionName, cupos };
+            });
             const nuevosConvenios = {
                 value: nuevosConveniosList.length,
                 list: nuevosConveniosList
             };
             
-            const activeInstitutionsList = Array.from(new Set(lanzamientos.map(l => getGroupName(l.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS]))))
-                    .map(name => ({ legajo: '', nombre: name }));
+            const launchesThisYear = lanzamientos.filter(l => {
+                const date = parseToUTCDate(l.fields[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+                return date && date.getUTCFullYear() === targetYear;
+            });
+            const institutionsData = new Map<string, { cupos: number, orientaciones: Set<string> }>();
+            launchesThisYear.forEach(launch => {
+                const groupName = getGroupName(launch.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS]);
+                const data = institutionsData.get(groupName) || { cupos: 0, orientaciones: new Set() };
+                data.cupos += launch.fields[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0;
+                const orientacion = launch.fields[FIELD_ORIENTACION_LANZAMIENTOS];
+                if (orientacion) {
+                    data.orientaciones.add(orientacion);
+                }
+                institutionsData.set(groupName, data);
+            });
+            const activeInstitutionsList = Array.from(institutionsData.entries()).map(([name, data]) => ({
+                nombre: name,
+                legajo: Array.from(data.orientaciones).join(', ') || 'N/A',
+                cupos: data.cupos,
+            }));
             const activeInstitutions = {
                 value: activeInstitutionsList.length,
                 list: activeInstitutionsList
             };
 
             const currentMonth = new Date().getMonth();
-            const lanzamientosMesActual = ppsLanzadas.launchesByMonth.find(m => MONTH_NAMES.indexOf(m.monthName) === currentMonth)?.institutions.map(i => ({
+            const lanzamientosMesActual = ppsLanzadasData.launchesByMonth.find(m => MONTH_NAMES.indexOf(m.monthName) === currentMonth)?.institutions.map(i => ({
                 groupName: i.name,
                 totalCupos: i.cupos,
                 variants: i.variants.map((v, idx) => ({ id: `${i.name}-${idx}`, name: v, cupos: 0 }))
@@ -274,9 +369,11 @@ export const useMetricsData = ({ targetYear, isTestingMode = false }: { targetYe
                 alumnosEnPPS,
                 alumnosProximosAFinalizar: { value: alumnosProximosAFinalizarList.length, list: alumnosProximosAFinalizarList },
                 alumnosSinNingunaPPS,
+                alumnosConPpsEsteAno,
+                alumnosActivosSinPpsEsteAno,
                 alumnosParaAcreditar: { value: alumnosParaAcreditarList.length, list: alumnosParaAcreditarList },
                 alumnosFinalizados,
-                ppsLanzadas: { value: ppsLanzadas.totalLaunchesForYear, list: [] },
+                ppsLanzadas,
                 nuevosConvenios,
                 activeInstitutions,
                 cuposOfrecidos,

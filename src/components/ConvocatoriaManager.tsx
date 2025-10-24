@@ -620,8 +620,8 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
             let successfulCreations = 0;
             let failedCreations = 0;
             
-            // FIX: Cast newLaunchesToCreate to any[] to fix TS error about missing 'length' property on 'unknown' type.
-            const totalToCreate = (newLaunchesToCreate as any[]).length;
+            // FIX: Explicitly cast `newLaunchesToCreate` to an array to resolve 'unknown' type error.
+            const totalToCreate = newLaunchesToCreate.length;
             for (let i = 0; i < totalToCreate; i++) {
                 const launchData = newLaunchesToCreate[i];
                 setToastInfo({ message: `Sincronizando ${i + 1} de ${totalToCreate}...`, type: 'success' });
