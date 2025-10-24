@@ -1,7 +1,9 @@
 import { describe, it, expect } from '@jest/globals';
 import { calculateCriterios } from '../criteriaCalculations';
+// FIX: Corrected relative import path
 import { Practica, Orientacion } from '../../types';
-import { FIELD_HORAS_PRACTICAS, FIELD_ESPECIALIDAD_PRACTICAS } from '@/constants';
+// FIX: Corrected relative import path
+import { FIELD_HORAS_PRACTICAS, FIELD_ESPECIALIDAD_PRACTICAS } from '../../constants';
 
 // Mock data
 const mockPracticas: Practica[] = [

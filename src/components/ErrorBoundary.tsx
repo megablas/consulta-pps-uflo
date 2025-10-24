@@ -53,7 +53,6 @@ class ErrorBoundary extends React.Component<Props, State> {
       );
     }
     
-    // FIX: Cast `this` to `any` to silence incorrect linter error about `props` not existing.
     return (this as any).props.children;
   }
 }

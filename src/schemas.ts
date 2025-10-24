@@ -152,7 +152,6 @@ export const lanzamientoPPSSchema = airtableRecord(lanzamientoPPSFieldsSchema);
 export const convocatoriaSchema = airtableRecord(convocatoriaFieldsSchema);
 export const institucionSchema = airtableRecord(institucionFieldsSchema);
 export const penalizacionSchema = airtableRecord(penalizacionFieldsSchema);
-// FIX: Corrected a circular reference where finalizacionPPSSchema was being defined with itself.
 export const finalizacionPPSSchema = airtableRecord(finalizacionPPSFieldsSchema);
 
 // --- Schemas for arrays of records ---

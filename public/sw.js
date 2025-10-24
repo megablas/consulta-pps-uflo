@@ -1,6 +1,6 @@
 // sw.js para /consulta-pps-uflo/
 
-const CACHE_NAME = 'mi-panel-academico-cache-v6';
+const CACHE_NAME = 'mi-panel-academico-cache-v11';
 const FILES_TO_CACHE = [
   '/consulta-pps-uflo/index.html',
   '/consulta-pps-uflo/manifest.json',

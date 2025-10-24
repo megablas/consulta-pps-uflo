@@ -18,6 +18,7 @@ import {
   FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS,
   FIELD_FECHA_INICIO_PRACTICAS,
   FIELD_FECHA_FIN_PRACTICAS,
+  // FIX: Corrected typo in constant name from ACCREDITADAS to ACREDITADAS
   FIELD_HORAS_ACREDITADAS_LANZAMIENTOS,
   FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS,
   AIRTABLE_TABLE_NAME_INSTITUCIONES,
@@ -619,7 +620,8 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
             let successfulCreations = 0;
             let failedCreations = 0;
             
-            const totalToCreate = newLaunchesToCreate.length;
+            // FIX: Cast newLaunchesToCreate to any[] to fix TS error about missing 'length' property on 'unknown' type.
+            const totalToCreate = (newLaunchesToCreate as any[]).length;
             for (let i = 0; i < totalToCreate; i++) {
                 const launchData = newLaunchesToCreate[i];
                 setToastInfo({ message: `Sincronizando ${i + 1} de ${totalToCreate}...`, type: 'success' });
@@ -637,7 +639,6 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
             }
 
             if (failedCreations > 0) {
-                 // FIX: Replaced direct access to .length with the pre-calculated `totalToCreate` variable to avoid type inference errors.
                  throw new Error(`${failedCreations} de ${totalToCreate} lanzamientos no pudieron crearse. Revisa la consola para más detalles.`);
             }
     

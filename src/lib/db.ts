@@ -1,5 +1,4 @@
 import * as airtable from '../services/airtableService';
-// FIX: The `schema` object is exported from `airtableSchema.ts`, not `schemas.ts`. Corrected the import path.
 import { schema } from './airtableSchema';
 import type { 
     EstudianteFields, PracticaFields, AuthUserFields, ConvocatoriaFields, 

@@ -13,39 +13,6 @@ interface EnrollmentFormProps {
   permiteCertificado?: boolean;
 }
 
-// Zod Schema for validation
-const enrollmentFormSchema = z.object({
-  terminoDeCursar: z.boolean().nullable().refine(val => val !== null, {
-    message: 'Por favor, indica si terminaste de cursar.',
-  }),
-  cursandoElectivas: z.boolean().nullable(),
-  finalesAdeudados: z.string(),
-  otraSituacionAcademica: z.string().min(10, { message: 'Las aclaraciones deben tener al menos 10 caracteres.' }),
-  horarios: z.array(z.string()),
-  certificadoLink: z.string().url({ message: "Por favor, ingresa una URL válida." }).optional().or(z.literal('')),
-}).superRefine((data, ctx) => {
-  if (data.terminoDeCursar === true) {
-    if (data.finalesAdeudados === '') {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['finalesAdeudados'],
-        message: 'Por favor, indica cuántos finales adeudas.',
-      });
-    }
-  } else if (data.terminoDeCursar === false) {
-    if (data.cursandoElectivas === null) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['cursandoElectivas'],
-        message: 'Por favor, indica si estás cursando materias electivas.',
-      });
-    }
-  }
-});
-
-type FormData = z.infer<typeof enrollmentFormSchema>;
-
-
 const finalesOptions = [
   "Solo me queda las PPS para finalizar la carrera.",
   "1 Final",
@@ -142,12 +109,15 @@ const ErrorMessage = ({ message, onDismiss }: { message: string; onDismiss?: () 
   </div>
 );
 
-const SuccessMessage = ({ message }: { message: string }) => (
-  <div className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-200 p-4 rounded-lg animate-fade-in-up">
-    <span className="material-icons text-emerald-600 !text-base">check_circle</span>
-    <p className="text-sm font-medium">{message}</p>
-  </div>
-);
+type FormData = {
+    terminoDeCursar: boolean | null;
+    cursandoElectivas: boolean | null;
+    finalesAdeudados: string;
+    otraSituacionAcademica: string;
+    horarios: string[];
+    certificadoLink?: string;
+};
+
 
 const initialFormData: FormData = {
     terminoDeCursar: null,
@@ -177,12 +147,37 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
   const hasMultipleHorarios = Array.isArray(horariosDisponibles) && horariosDisponibles.length > 1;
   
   const finalSchema = useMemo(() => {
-    if (showHorariosSection && hasMultipleHorarios) {
-      return enrollmentFormSchema.safeExtend({
-        horarios: z.array(z.string()).min(1, { message: 'Por favor, selecciona al menos una opción de horario.' })
-      });
-    }
-    return enrollmentFormSchema;
+    return z.object({
+        terminoDeCursar: z.boolean().nullable(),
+        cursandoElectivas: z.boolean().nullable(),
+        finalesAdeudados: z.string(),
+        otraSituacionAcademica: z.string(),
+        horarios: z.array(z.string()),
+        certificadoLink: z.string().url({ message: "Por favor, ingresa una URL válida." }).optional().or(z.literal('')),
+    }).superRefine((data, ctx) => {
+        // Validation for terminoDeCursar
+        if (data.terminoDeCursar === null) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['terminoDeCursar'], message: 'Por favor, indica si terminaste de cursar.' });
+        } else if (data.terminoDeCursar === true) {
+            if (data.finalesAdeudados === '') {
+                ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['finalesAdeudados'], message: 'Por favor, indica cuántos finales adeudas.' });
+            }
+        } else if (data.terminoDeCursar === false) {
+            if (data.cursandoElectivas === null) {
+                ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['cursandoElectivas'], message: 'Por favor, indica si estás cursando materias electivas.' });
+            }
+        }
+
+        // Validation for otraSituacionAcademica
+        if (data.otraSituacionAcademica.trim().length < 10) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['otraSituacionAcademica'], message: 'Las aclaraciones deben tener al menos 10 caracteres.' });
+        }
+
+        // Conditional validation for horarios
+        if (showHorariosSection && hasMultipleHorarios && data.horarios.length === 0) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['horarios'], message: 'Por favor, selecciona al menos una opción de horario.' });
+        }
+    });
   }, [showHorariosSection, hasMultipleHorarios]);
 
   const getProgress = useCallback(() => {

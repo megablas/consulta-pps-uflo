@@ -18,6 +18,7 @@ import {
     FIELD_FECHA_FIN_LANZAMIENTOS,
     FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS,
     FIELD_ORIENTACION_LANZAMIENTOS,
+    // FIX: Corrected typo in constant name from ACCREDITADAS to ACREDITADAS
     FIELD_HORAS_ACREDITADAS_LANZAMIENTOS,
     FIELD_PLANTILLA_SEGURO_LANZAMIENTOS,
     TEMPLATE_PPS_NAME,
@@ -64,8 +65,9 @@ const mockStudentsForReview: StudentForReview[] = [
     { studentId: 'recStudTest2', nombre: 'Maria', apellido: 'Debug', dni: '44555666', legajo: 'T9002', correo: 'maria@test.com', telefono: '1177889900', institucion: 'Hospital de Simulación', direccion: 'Calle Falsa 123', periodo: 'Del 15/08/2024 al 15/12/2024', horario: 'Lunes y Miércoles 9 a 13hs', lugar: 'Hospital de Simulación - Calle Falsa 123', duracion: 'Período: Del 15/08/2024 al 15/12/2024. Horario: Lunes y Miércoles 9 a 13hs', tutor: 'Selva Estrella', orientacion: 'Clinica' },
 ];
 
+// FIX: Renamed function from 'getText' to 'getTextField' to avoid potential naming collisions causing type errors.
 // Helper function to safely extract string values from potentially complex Airtable fields (e.g., lookups returning arrays).
-function getText(value: unknown): string {
+function getTextField(value: any): string {
     if (value == null) return '';
     if (Array.isArray(value)) {
         const first = value[0];
@@ -263,17 +265,17 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal, isTestingM
                 const lanzamientoId = (individualConv[FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS] || [])[0];
                 const ppsData = lanzamientoId ? lanzamientoMap.get(lanzamientoId) : null;
                 
-                const institucion = getText(ppsData?.[FIELD_NOMBRE_PPS_LANZAMIENTOS] || individualConv[FIELD_NOMBRE_PPS_CONVOCATORIAS]) || 'N/A';
-                const direccion = getText(ppsData?.[FIELD_DIRECCION_LANZAMIENTOS] || individualConv[FIELD_DIRECCION_CONVOCATORIAS]) || 'N/A';
-                const fechaInicio = getText(ppsData?.[FIELD_FECHA_INICIO_LANZAMIENTOS] || individualConv[FIELD_FECHA_INICIO_CONVOCATORIAS]);
-                const fechaFin = getText(ppsData?.[FIELD_FECHA_FIN_LANZAMIENTOS] || individualConv[FIELD_FECHA_FIN_CONVOCATORIAS]);
-                const horario = getText(individualConv[FIELD_HORARIO_FORMULA_CONVOCATORIAS] || ppsData?.[FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS]) || 'N/A';
-                const orientacion = getText(ppsData?.[FIELD_ORIENTACION_LANZAMIENTOS] || (individualConv[FIELD_ORIENTACION_CONVOCATORIAS] as string)) || '';
+                const institucion = getTextField(ppsData?.[FIELD_NOMBRE_PPS_LANZAMIENTOS] || individualConv[FIELD_NOMBRE_PPS_CONVOCATORIAS]) || 'N/A';
+                const direccion = getTextField(ppsData?.[FIELD_DIRECCION_LANZAMIENTOS] || individualConv[FIELD_DIRECCION_CONVOCATORIAS]) || 'N/A';
+                // FIX: Cast arguments to `any` to resolve incorrect `unknown` type error from indexed access.
+                const fechaInicio = getTextField((ppsData?.[FIELD_FECHA_INICIO_LANZAMIENTOS] || individualConv[FIELD_FECHA_INICIO_CONVOCATORIAS]) as any);
+                const fechaFin = getTextField((ppsData?.[FIELD_FECHA_FIN_LANZAMIENTOS] || individualConv[FIELD_FECHA_FIN_CONVOCATORIAS]) as any);
+                const horario = getTextField(individualConv[FIELD_HORARIO_FORMULA_CONVOCATORIAS] || ppsData?.[FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS]) || 'N/A';
+                const orientacion = getTextField(ppsData?.[FIELD_ORIENTACION_LANZAMIENTOS] || (individualConv[FIELD_ORIENTACION_CONVOCATORIAS] as string)) || '';
 
-                const fullName = student?.[FIELD_NOMBRE_ESTUDIANTES] || '';
-                // FIX: Removed optional chaining `?.` as `student` is guaranteed to be defined here.
-                let nombre = getText(student[FIELD_NOMBRE_SEPARADO_ESTUDIANTES]);
-                let apellido = getText(student[FIELD_APELLIDO_SEPARADO_ESTUDIANTES]);
+                const fullName = student[FIELD_NOMBRE_ESTUDIANTES] || '';
+                let nombre = getTextField((student as any)[FIELD_NOMBRE_SEPARADO_ESTUDIANTES]);
+                let apellido = getTextField((student as any)[FIELD_APELLIDO_SEPARADO_ESTUDIANTES]);
                 
                 if (!nombre || !apellido) {
                     const split = simpleNameSplit(fullName);
@@ -459,9 +461,7 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal, isTestingM
     );
 
     const renderReviewStep = () => {
-        // FIX: Explicitly type the accumulator `acc` to prevent it from being inferred
-        // as an empty object `{}`, which causes type errors on property access.
-        const groupedStudents = studentsForReview.reduce((acc: Record<string, { institucion: string; tutor: string; orientacion: string; students: StudentForReview[] }>, student) => {
+        const groupedStudents = studentsForReview.reduce((acc, student) => {
             const key = student.institucion;
             if (!acc[key]) {
                 acc[key] = {
@@ -546,7 +546,6 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal, isTestingM
                    <EmptyState icon="group_off" title="Sin Estudiantes para Revisar" message="No se encontraron estudiantes en las convocatorias seleccionadas." />
               ) : (
                 <div className="space-y-8">
-                  {/* FIX: Type `group` as `any` to resolve properties not existing on `unknown` type error from Object.values. */}
                   {Object.values(groupedStudents).map((group: any, index) => (
                       <Card key={index} className="animate-fade-in-up" style={{animationDelay: `${index * 100}ms`}} title={group.institucion} description={`Tutor: ${group.tutor} - Orientación: ${group.orientacion}`}>
                           <div className="mt-4 pt-4 border-t border-slate-200/60 dark:border-slate-700/60">
