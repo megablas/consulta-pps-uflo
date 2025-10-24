@@ -15,6 +15,8 @@ import {
     FIELD_NOMBRE_INSTITUCIONES,
     // FIX: Add missing import for FIELD_ORIENTACION_LANZAMIENTOS
     FIELD_ORIENTACION_LANZAMIENTOS,
+    // FIX: Add missing import for FIELD_FECHA_INICIO_PRACTICAS
+    FIELD_FECHA_INICIO_PRACTICAS,
 } from '../constants';
 import { fetchAllAirtableData } from '../services/airtableService';
 import { parseToUTCDate, formatDate, normalizeStringForComparison } from '../utils/formatters';
@@ -25,52 +27,75 @@ const getGroupName = (name: string | undefined): string => {
     return name.split(' - ')[0].trim();
 };
 
-const MOCK_REPORT_DATA: ExecutiveReportData = {
-    reportType: 'singleYear',
-    year: new Date().getFullYear(),
-    period: { current: { start: '01/01/2024', end: '31/12/2024' }, previous: { start: '', end: '31/12/2023' } },
-    summary: '<h3>Resumen de Prueba</h3><p>Este es un reporte generado con datos simulados para el entorno de pruebas. Las métricas reflejan una actividad ficticia para el año en curso.</p>',
-    kpis: {
-        activeStudents: { current: 150, previous: 140 },
-        studentsWithoutAnyPps: { current: 10, previous: 20 },
-        newStudents: { current: 25, previous: 0 },
-        finishedStudents: { current: 15, previous: 0 },
-        newPpsLaunches: { current: 40, previous: 0 },
-        totalOfferedSpots: { current: 120, previous: 0 },
-        newAgreements: { current: 5, previous: 0 },
-    },
-    launchesByMonth: [
-        { monthName: 'Marzo', ppsCount: 2, cuposTotal: 10, institutions: [{ name: 'Inst. A', cupos: 10, variants: [] }] },
-        { monthName: 'Abril', ppsCount: 1, cuposTotal: 5, institutions: [{ name: 'Inst. B', cupos: 5, variants: [] }] },
-    ],
-    newAgreementsList: ['Convenio Test 1', 'Convenio Test 2'],
-};
+const MONTH_NAMES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
-const MOCK_COMPARATIVE_REPORT_DATA: ComparativeExecutiveReportData = {
-    reportType: 'comparative',
-    summary: '<h3>Resumen Comparativo de Prueba</h3><p>Este es un reporte comparativo simulado entre 2024 y 2025. Los datos son ficticios y solo para fines de demostración en el entorno de pruebas.</p>',
-    kpis: {
-        activeStudents: { year2024: 140, year2025: 150 },
-        finishedStudents: { year2024: 10, year2025: 15 },
-        newPpsLaunches: { year2024: 35, year2025: 40 },
-        totalOfferedSpots: { year2024: 100, year2025: 120 },
-        newAgreements: { year2024: 3, year2025: 5 },
-        studentsWithoutAnyPps: { year2024: 20, year2025: 10 },
-        newStudents: { year2024: 20, year2025: 25 },
-    },
-    launchesByMonth: {
-        year2024: [
-             { monthName: 'Marzo', ppsCount: 1, cuposTotal: 5, institutions: [{ name: 'Inst. A (2024)', cupos: 5, variants: [] }] },
-        ],
-        year2025: [
-             { monthName: 'Marzo', ppsCount: 2, cuposTotal: 10, institutions: [{ name: 'Inst. A (2025)', cupos: 10, variants: [] }] },
-             { monthName: 'Abril', ppsCount: 1, cuposTotal: 5, institutions: [{ name: 'Inst. B (2025)', cupos: 5, variants: [] }] },
-        ],
-    },
-    newAgreements: {
-        year2024: ['Convenio Test 2024'],
-        year2025: ['Convenio Test 2025 A', 'Convenio Test 2025 B'],
-    },
+const processLaunchesForYear = (
+    year: number,
+    allLanzamientos: AirtableRecord<LanzamientoPPSFields>[]
+): { totalCuposForYear: number; totalLaunchesForYear: number; launchesByMonth: TimelineMonthData[] } => {
+    const launchesForYear = allLanzamientos.filter(launch => {
+        const date = parseToUTCDate(launch.fields[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+        return date && date.getUTCFullYear() === year;
+    });
+
+    const totalCuposForYear = launchesForYear.reduce((sum, launch) => sum + (launch.fields[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0), 0);
+
+    const totalLaunchesForYearSet = new Set<string>();
+    launchesForYear.forEach(launch => {
+        const ppsName = launch.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS];
+        if (ppsName) {
+            const groupName = getGroupName(ppsName);
+            const date = parseToUTCDate(launch.fields[FIELD_FECHA_INICIO_LANZAMIENTOS]);
+            if (date) {
+                const monthIndex = date.getUTCMonth();
+                totalLaunchesForYearSet.add(`${groupName}::${monthIndex}`);
+            }
+        }
+    });
+    const totalLaunchesForYear = totalLaunchesForYearSet.size;
+
+    const monthlyData: { [key: number]: {
+        cuposTotal: number;
+        institutions: Map<string, { cupos: number; variants: string[] }>;
+    } } = {};
+
+    launchesForYear.forEach(launch => {
+        const date = parseToUTCDate(launch.fields[FIELD_FECHA_INICIO_LANZAMIENTOS])!;
+        const monthIndex = date.getUTCMonth();
+        
+        if (!monthlyData[monthIndex]) {
+            monthlyData[monthIndex] = { cuposTotal: 0, institutions: new Map() };
+        }
+        
+        const cupos = launch.fields[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0;
+        monthlyData[monthIndex].cuposTotal += cupos;
+        
+        const ppsName = launch.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS];
+        if (ppsName) {
+            const groupName = getGroupName(ppsName);
+            const institutionData = monthlyData[monthIndex].institutions.get(groupName) || { cupos: 0, variants: [] };
+            institutionData.cupos += cupos;
+            institutionData.variants.push(ppsName);
+            monthlyData[monthIndex].institutions.set(groupName, institutionData);
+        }
+    });
+
+    const launchesByMonth = MONTH_NAMES.map((monthName, index) => {
+        const data = monthlyData[index];
+        if (!data) return null;
+        return {
+            monthName,
+            ppsCount: data.institutions.size,
+            cuposTotal: data.cuposTotal,
+            institutions: Array.from(data.institutions.entries()).map(([name, details]) => ({
+                name,
+                cupos: details.cupos,
+                variants: details.variants.sort(),
+            })).sort((a, b) => a.name.localeCompare(b.name)),
+        };
+    }).filter((item): item is TimelineMonthData => item !== null);
+
+    return { totalCuposForYear, totalLaunchesForYear, launchesByMonth };
 };
 
 
@@ -122,8 +147,9 @@ const getMetricsSnapshot = (
 
     const studentPracticeTypes = new Map<string, { hasRelevamiento: boolean; hasOther: boolean }>();
     allPracticas.forEach(p => {
-        const studentIds = p.fields[FIELD_ESTUDIANTE_LINK_PRACTICAS] || [];
-        const institucionRaw = p.fields[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
+        // FIX: Cast fields to any to prevent 'unknown' type errors on property access.
+        const studentIds = (p.fields as any)[FIELD_ESTUDIANTE_LINK_PRACTICAS] || [];
+        const institucionRaw = (p.fields as any)[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
         const institucion = String((Array.isArray(institucionRaw) ? institucionRaw[0] : institucionRaw) || '');
         const isRelevamiento = normalizeStringForComparison(institucion).includes('relevamiento');
 
@@ -190,77 +216,49 @@ const calculateFlowMetrics = (
     };
 };
 
-const processLaunchesForYear = (
-    year: number,
-    allLanzamientos: AirtableRecord<LanzamientoPPSFields>[]
-): { totalCuposForYear: number; totalLaunchesForYear: number; launchesByMonth: TimelineMonthData[] } => {
-    const MONTH_NAMES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-
-    const launchesForYear = allLanzamientos.filter(launch => {
-        const date = parseToUTCDate(launch.fields[FIELD_FECHA_INICIO_LANZAMIENTOS]);
-        return date && date.getUTCFullYear() === year;
-    });
-
-    const totalCuposForYear = launchesForYear.reduce((sum, launch) => sum + (launch.fields[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0), 0);
-
-    const totalLaunchesForYearSet = new Set<string>();
-    launchesForYear.forEach(launch => {
-        const ppsName = launch.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS];
-        if (ppsName) {
-            const groupName = getGroupName(ppsName);
-            const date = parseToUTCDate(launch.fields[FIELD_FECHA_INICIO_LANZAMIENTOS]);
-            if (date) {
-                const monthIndex = date.getUTCMonth();
-                totalLaunchesForYearSet.add(`${groupName}::${monthIndex}`);
-            }
-        }
-    });
-    const totalLaunchesForYear = totalLaunchesForYearSet.size;
-
-    const monthlyData: { [key: number]: {
-        cuposTotal: number;
-        institutions: Map<string, { cupos: number; variants: string[] }>;
-    } } = {};
-
-    launchesForYear.forEach(launch => {
-        const date = parseToUTCDate(launch.fields[FIELD_FECHA_INICIO_LANZAMIENTOS])!;
-        const monthIndex = date.getUTCMonth();
-        
-        if (!monthlyData[monthIndex]) {
-            monthlyData[monthIndex] = { cuposTotal: 0, institutions: new Map() };
-        }
-        
-        const cupos = launch.fields[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0;
-        monthlyData[monthIndex].cuposTotal += cupos;
-        
-        const ppsName = launch.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS];
-        if (ppsName) {
-            const groupName = getGroupName(ppsName);
-            const institutionData = monthlyData[monthIndex].institutions.get(groupName) || { cupos: 0, variants: [] };
-            institutionData.cupos += cupos;
-            institutionData.variants.push(ppsName);
-            monthlyData[monthIndex].institutions.set(groupName, institutionData);
-        }
-    });
-
-    const launchesByMonth = MONTH_NAMES.map((monthName, index) => {
-        const data = monthlyData[index];
-        if (!data) return null;
-        return {
-            monthName,
-            ppsCount: data.institutions.size,
-            cuposTotal: data.cuposTotal,
-            institutions: Array.from(data.institutions.entries()).map(([name, details]) => ({
-                name,
-                cupos: details.cupos,
-                variants: details.variants.sort(),
-            })).sort((a, b) => a.name.localeCompare(b.name)),
-        };
-    }).filter((item): item is TimelineMonthData => item !== null);
-
-    return { totalCuposForYear, totalLaunchesForYear, launchesByMonth };
+// FIX: Defined missing mock data objects to resolve 'Cannot find name' errors.
+const MOCK_REPORT_DATA: ExecutiveReportData = {
+    reportType: 'singleYear',
+    year: new Date().getFullYear(),
+    period: {
+        current: { start: '01/01/2024', end: '31/12/2024' },
+        previous: { start: '', end: '31/12/2023' },
+    },
+    summary: '<p>This is a mock summary for the test environment.</p>',
+    kpis: {
+        activeStudents: { current: 150, previous: 140 },
+        studentsWithoutAnyPps: { current: 10, previous: 15 },
+        newStudents: { current: 30, previous: 0 },
+        finishedStudents: { current: 25, previous: 0 },
+        newPpsLaunches: { current: 40, previous: 0 },
+        totalOfferedSpots: { current: 120, previous: 0 },
+        newAgreements: { current: 5, previous: 0 },
+    },
+    launchesByMonth: [],
+    newAgreementsList: ['Mock Institution A', 'Mock Institution B'],
 };
 
+const MOCK_COMPARATIVE_REPORT_DATA: ComparativeExecutiveReportData = {
+    reportType: 'comparative',
+    summary: '<p>This is a mock comparative summary for the test environment.</p>',
+    kpis: {
+        activeStudents: { year2024: 140, year2025: 150 },
+        studentsWithoutAnyPps: { year2024: 15, year2025: 10 },
+        finishedStudents: { year2024: 20, year2025: 25 },
+        newStudents: { year2024: 28, year2025: 30 },
+        newPpsLaunches: { year2024: 35, year2025: 40 },
+        totalOfferedSpots: { year2024: 110, year2025: 120 },
+        newAgreements: { year2024: 4, year2025: 5 },
+    },
+    launchesByMonth: {
+        year2024: [],
+        year2025: [],
+    },
+    newAgreements: {
+        year2024: ['Mock Old Agreement'],
+        year2025: ['Mock New Agreement'],
+    },
+};
 
 const useExecutiveReportData = ({ reportType, enabled = false, isTestingMode = false }: { reportType: ReportType | null; enabled?: boolean; isTestingMode?: boolean; }) => {
     return useQuery<AnyReportData, Error>({

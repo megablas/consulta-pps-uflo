@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import SubTabs from '../../components/SubTabs';
 import AdminSearch from '../../components/AdminSearch';
 import SeguroGenerator from '../../components/SeguroGenerator';
-// FIX: Changed to a default import because NuevosConvenios.tsx has a default export.
 import NuevosConvenios from '../../components/NuevosConvenios';
 import ExecutiveReportGenerator from '../../components/ExecutiveReportGenerator';
 import PenalizationManager from '../../components/PenalizationManager';

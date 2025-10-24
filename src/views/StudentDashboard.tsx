@@ -35,7 +35,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
     practicas,
     solicitudes,
     lanzamientos,
-    // FIX: Destructure allLanzamientos from the context provider.
     allLanzamientos,
     institutionAddressMap,
     isLoading,
@@ -87,6 +86,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
       enrollmentMap={enrollmentMap}
       completedLanzamientoIds={completedLanzamientoIds}
   />, [enrollmentMap, allLanzamientos, informeTasks, lanzamientos, setCurrentActiveTab, studentDetails, enrollStudent.mutate, institutionAddressMap, completedLanzamientoIds]);
+  
   const informesContent = useMemo(() => <InformesList tasks={informeTasks} onConfirmar={confirmInforme.mutate} />, [informeTasks, confirmInforme]);
   const solicitudesContent = useMemo(() => <SolicitudesList solicitudes={solicitudes} />, [solicitudes]);
   const practicasContent = useMemo(() => <PracticasTable practicas={practicas} handleNotaChange={handleNotaChange} />, [practicas, handleNotaChange]);

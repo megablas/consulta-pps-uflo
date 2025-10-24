@@ -1,5 +1,6 @@
 import * as airtable from '../services/airtableService';
-import { schema } from './airtableSchema';
+// FIX: Changed import path to point to the correct file exporting the schema.
+import { schema } from '../lib/airtableSchema';
 import type { 
     EstudianteFields, PracticaFields, AuthUserFields, ConvocatoriaFields, 
     LanzamientoPPSFields, InstitucionFields, PenalizacionFields, SolicitudPPSFields, FinalizacionPPSFields,

@@ -113,7 +113,6 @@ export interface InformeCorreccionStudent {
   informeSubido: boolean | null;
   nota: string;
   lanzamientoId: string;
-  // FIX: Standardize orientacion to be a single string or null, consistent with schema updates.
   orientacion?: string | null;
   fechaInicio?: string | null;
   fechaFinalizacionPPS?: string | null;
@@ -123,7 +122,6 @@ export interface InformeCorreccionStudent {
 export interface InformeCorreccionPPS {
   lanzamientoId: string;
   ppsName: string | null;
-  // FIX: Standardize orientacion to be a single string or null.
   orientacion: string | null;
   informeLink?: string | null;
   fechaFinalizacion?: string | null;
@@ -213,7 +211,6 @@ export interface ComparativeExecutiveReportData {
 
 export type AnyReportData = ExecutiveReportData | ComparativeExecutiveReportData;
 
-// FIX: Add the StudentInfo interface, which was missing and causing a module resolution error.
 export interface StudentInfo {
   legajo: string;
   nombre: string;

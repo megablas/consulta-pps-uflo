@@ -1,7 +1,5 @@
 # Mi Panel Académico
 
-![Mi Panel Académico](./assets/app_screenshot.png) <!-- Opcional: Añadir una captura de pantalla -->
-
 **Mi Panel Académico** es una aplicación web diseñada para que los estudiantes de la UFLO puedan consultar y gestionar de forma centralizada y segura el estado de sus Prácticas Profesionales Supervisadas (PPS).
 
 ---
@@ -59,7 +57,7 @@ Sigue estos pasos para configurar y ejecutar el proyecto en tu máquina local.
 
 ### Configuración del Entorno
 
-La aplicación necesita credenciales para conectarse a Airtable.
+La aplicación necesita credenciales para conectarse a Airtable. Todas las llamadas a la API se realizan directamente desde el cliente.
 
 1.  **Crea un archivo `.env`:**
     En la raíz del proyecto, crea un archivo llamado `.env`.
@@ -89,6 +87,22 @@ Una vez instaladas las dependencias y configuradas las credenciales, inicia el s
 npm run dev
 ```
 
-La aplicación estará disponible en `http://localhost:5173` (o el puerto que Vite asigne).
+La aplicación estará disponible en `http://localhost:5173` (o el puerto que Vite asigne). Toda la lógica de autenticación y datos se maneja en el lado del cliente, por lo que no es necesario un backend adicional.
 
-**Nota sobre el Proxy:** El archivo `vite.config.ts` está configurado con un proxy que redirige las llamadas de `/airtable-api` a `https://api.airtable.com`. Esto evita problemas de CORS durante el desarrollo local y no requiere configuración adicional.
+---
+
+### 🧪 Testing y Entorno de Vista Previa (Preview)
+
+Para facilitar las pruebas en entornos donde el backend no está disponible (como la vista previa de AI Studio o un despliegue estático), se han habilitado usuarios de demostración:
+
+-   **Usuario Administrador de Pruebas:**
+    -   **Legajo:** `testing`
+    -   **Contraseña:** `testing`
+    -   Este usuario te dará acceso a un panel de administrador con datos simulados.
+
+-   **Usuario Estudiante de Demostración:**
+    -   **Legajo:** `12345`
+    -   **Contraseña:** `12345`
+    -   Este usuario te permitirá iniciar sesión como un estudiante de prueba y ver un panel con datos simulados.
+
+Estos inicios de sesión no realizan llamadas a la API y funcionan de manera local en el navegador.

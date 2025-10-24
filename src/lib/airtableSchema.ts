@@ -19,7 +19,6 @@ import {
     FIELD_HORAS_PRACTICAS,
     FIELD_ESTADO_PRACTICA,
     FIELD_INSTITUCION_LINK_PRACTICAS,
-    // FIX: Add missing institution fields to the import list.
     FIELD_NOMBRE_INSTITUCIONES,
     FIELD_DIRECCION_INSTITUCIONES,
 } from '../constants';
@@ -94,7 +93,6 @@ export const schema = {
     },
     instituciones: {
         _tableName: AIRTABLE_TABLE_NAME_INSTITUCIONES,
-        // FIX: Add missing 'nombre' and 'direccion' fields to the schema for type-safe access.
         nombre: FIELD_NOMBRE_INSTITUCIONES,
         direccion: FIELD_DIRECCION_INSTITUCIONES,
         telefono: FIELD_TELEFONO_INSTITUCIONES,

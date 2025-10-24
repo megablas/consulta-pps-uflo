@@ -3,16 +3,11 @@ import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import React from 'react';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from '../../contexts/AuthContext';
 import App from '../../App';
-import * as airtableService from '../../services/airtableService';
+import { db } from '../../lib/db';
 import {
-    AIRTABLE_TABLE_NAME_AUTH_USERS,
-    AIRTABLE_TABLE_NAME_ESTUDIANTES,
-    AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
-    FIELD_LEGAJO_AUTH,
-    FIELD_SALT_AUTH,
-    FIELD_PASSWORD_HASH_AUTH,
-    FIELD_NOMBRE_AUTH,
     FIELD_LEGAJO_ESTUDIANTES,
     FIELD_NOMBRE_ESTUDIANTES,
     FIELD_NOMBRE_PPS_LANZAMIENTOS,
@@ -20,23 +15,14 @@ import {
     FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS,
     FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS,
     FIELD_FECHA_INICIO_LANZAMIENTOS,
-    FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
-    FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS,
-    AIRTABLE_TABLE_NAME_CONVOCATORIAS,
 } from '../../constants';
+import type { LanzamientoPPS } from '../../types';
 
-// Mock the entire airtableService module
-jest.mock('../../services/airtableService');
-const mockedAirtable = airtableService as jest.Mocked<typeof airtableService>;
+// Mock the db module, which is the direct dependency for our data hooks
+jest.mock('../../lib/db');
+const mockedDb = db as jest.Mocked<typeof db>;
 
 // --- Mock Data ---
-const mockStudentUserAuth = {
-    [FIELD_LEGAJO_AUTH]: '99999',
-    [FIELD_NOMBRE_AUTH]: 'Estudiante de Prueba',
-    [FIELD_SALT_AUTH]: 'mock_salt',
-    [FIELD_PASSWORD_HASH_AUTH]: 'mock_hash_of_password123',
-};
-
 const mockStudentDetails = {
     id: 'recStudentTest',
     createdTime: '',
@@ -58,14 +44,6 @@ const mockLanzamiento = {
     }
 };
 
-// Mock the hash verification to always return true for the test password
-// FIX: Cast the result of jest.requireActual to 'object' to satisfy TypeScript's spread operator constraint.
-jest.mock('../../utils/auth', () => ({
-    ...(jest.requireActual('../../utils/auth') as object),
-    verifyPassword: jest.fn(async (password: string) => password === 'password123'),
-}));
-
-
 describe('Flujo de Inscripción de Estudiante (Integration Test)', () => {
 
     beforeEach(() => {
@@ -74,37 +52,55 @@ describe('Flujo de Inscripción de Estudiante (Integration Test)', () => {
         // Start as logged out
         Storage.prototype.getItem = jest.fn((key) => null);
 
-        mockedAirtable.fetchAllAirtableData.mockImplementation(async (tableName: string): Promise<any> => {
-            if (tableName === AIRTABLE_TABLE_NAME_ESTUDIANTES) {
-                 return { records: [mockStudentDetails], error: null };
+        // Mock fetch for the login API call
+        (window.fetch as jest.Mock) = jest.fn((url: string | Request, options?: RequestInit): Promise<Response> => {
+            if (url.toString().includes('/consulta-pps-uflo/api/login')) {
+                const body = options?.body ? JSON.parse(options.body as string) : {};
+                if (body.legajo === '99999' && body.password === 'password123') {
+                    return Promise.resolve({
+                        ok: true,
+                        status: 200,
+                        json: () => Promise.resolve({
+                            message: 'Login exitoso',
+                            user: {
+                                legajo: '99999',
+                                nombre: 'Estudiante de Prueba',
+                            },
+                        }),
+                    } as Response);
+                }
             }
-            if (tableName === AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS) {
-                return { records: [mockLanzamiento], error: null };
-            }
-            // Return empty for other dashboard calls
-            return { records: [], error: null };
+            // Fallback for any other unmocked fetch calls
+            return Promise.resolve({
+                ok: false, status: 404, json: () => Promise.resolve({ message: 'Not Found' }),
+            } as Response);
         });
-        
-        mockedAirtable.fetchAirtableData.mockImplementation(async (tableName: any, fields: any, filterByFormula: any): Promise<any> => {
-            if (tableName === AIRTABLE_TABLE_NAME_AUTH_USERS && filterByFormula?.includes("'99999'")) {
-                return { records: [{ id: 'recAuthUserTest', fields: mockStudentUserAuth }], error: null };
-            }
-            if (tableName === AIRTABLE_TABLE_NAME_ESTUDIANTES && filterByFormula?.includes("'99999'")) {
-                 return { records: [mockStudentDetails], error: null };
-            }
-            return { records: [], error: null };
-        });
+
+        // Mock db methods for data fetching hooks
+        mockedDb.estudiantes.get.mockResolvedValue([mockStudentDetails] as any);
+        mockedDb.lanzamientos.getAll.mockResolvedValue([mockLanzamiento] as any);
+        mockedDb.practicas.getAll.mockResolvedValue([]);
+        mockedDb.solicitudes.getAll.mockResolvedValue([]);
+        mockedDb.convocatorias.getAll.mockResolvedValue([]);
+        mockedDb.instituciones.getAll.mockResolvedValue([]);
     });
 
     it('permite a un estudiante iniciar sesión, ver convocatorias e inscribirse', async () => {
         const user = userEvent.setup();
 
         const createRecordMock = jest.fn(
-            (tableName: string, fields: any) => Promise.resolve({ record: { id: 'new_conv_id', fields, createdTime: '' }, error: null })
+            (fields: any) => Promise.resolve({ id: 'new_conv_id', fields, createdTime: '' })
         );
-        (mockedAirtable.createAirtableRecord as jest.Mock).mockImplementation(createRecordMock);
+        (mockedDb.convocatorias.create as jest.Mock).mockImplementation(createRecordMock);
 
-        render(<App />);
+        const queryClient = new QueryClient();
+        render(
+            <QueryClientProvider client={queryClient}>
+                <AuthProvider>
+                    <App />
+                </AuthProvider>
+            </QueryClientProvider>
+        );
 
         // --- 1. Login ---
         const legajoInput = await screen.findByPlaceholderText(/Número de Legajo/i);
@@ -147,13 +143,11 @@ describe('Flujo de Inscripción de Estudiante (Integration Test)', () => {
             expect(createRecordMock).toHaveBeenCalledTimes(1);
         });
 
-        const [tableName, fields] = createRecordMock.mock.calls[0];
+        const [fields] = createRecordMock.mock.calls[0];
         
-        expect(tableName).toBe(AIRTABLE_TABLE_NAME_CONVOCATORIAS);
         expect(fields).toEqual(expect.objectContaining({
-            [FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS]: [mockLanzamiento.id],
-            [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS]: [mockStudentDetails.id],
-            // Zod schema transforms horario to string
+            lanzamientoVinculado: [mockLanzamiento.id],
+            estudianteInscripto: [mockStudentDetails.id],
             horario: 'Lunes 9 a 13hs',
             terminoCursar: 'Sí',
             finalesAdeuda: '1 Final',

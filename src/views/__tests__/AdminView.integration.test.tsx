@@ -4,6 +4,8 @@ import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import React from 'react';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from '../../contexts/AuthContext';
 import App from '../../App'; // Renderizar App es más fácil para obtener todos los contextos
 import * as airtableService from '../../services/airtableService';
 import {
@@ -78,14 +80,6 @@ describe('Flujo de Integración del Administrador', () => {
 
         // Configurar la simulación de la API para todas las llamadas esperadas
         mockedAirtable.fetchAllAirtableData.mockImplementation(async (tableName: string, fields?: string[], filterByFormula?: string): Promise<any> => {
-            // Búsqueda de AdminSearch
-            if (tableName === AIRTABLE_TABLE_NAME_ESTUDIANTES && filterByFormula?.includes('juana molina')) {
-                return { records: [mockStudentForSearch], error: null };
-            }
-            // useStudentData para el dashboard del alumno
-            if (tableName === AIRTABLE_TABLE_NAME_ESTUDIANTES && filterByFormula?.includes("'12345'")) {
-                return { records: [mockStudentDetails], error: null };
-            }
             // useStudentPracticas
             if (tableName === AIRTABLE_TABLE_NAME_PRACTICAS && filterByFormula?.includes('12345')) {
                 return { records: mockPracticas, error: null };
@@ -98,13 +92,32 @@ describe('Flujo de Integración del Administrador', () => {
             return { records: [], error: null };
         });
 
+        mockedAirtable.fetchAirtableData.mockImplementation(async (tableName: string, fields?: string[], filterByFormula?: string): Promise<any> => {
+            // Búsqueda de AdminSearch
+            if (tableName === AIRTABLE_TABLE_NAME_ESTUDIANTES && filterByFormula?.includes('juana molina')) {
+                return { records: [mockStudentForSearch], error: null };
+            }
+            // useStudentData para el dashboard del alumno
+            if (tableName === AIRTABLE_TABLE_NAME_ESTUDIANTES && filterByFormula?.includes("'12345'")) {
+                return { records: [mockStudentDetails], error: null };
+            }
+             return { records: [], error: null };
+        });
+
         // Simular la operación de actualización de la nota
         mockedAirtable.updateAirtableRecord.mockResolvedValue({ record: { id: 'recPracticaABC', createdTime: '2023-01-01T00:00:00.000Z', fields: { 'Nota': '10' } }, error: null });
     });
 
     it('permite a un admin buscar un alumno, abrir su panel y editar una nota', async () => {
         const user = userEvent.setup();
-        render(<App />);
+        const queryClient = new QueryClient();
+        render(
+            <QueryClientProvider client={queryClient}>
+                <AuthProvider>
+                    <App />
+                </AuthProvider>
+            </QueryClientProvider>
+        );
 
         // 1. Navegar a la herramienta de búsqueda
         const herramientasTab = await screen.findByRole('tab', { name: /Herramientas/i });

@@ -221,32 +221,32 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({
   );
 
   const ActionButton: React.FC = () => {
-      // 1. Si la práctica ya fue completada, es el estado final.
+      // 1. Practice already completed by student. Highest priority.
       if (isCompleted) {
           return <CompletedButton />;
       }
   
-      // 2. Si el estudiante tiene un estado de inscripción, se muestra ese estado.
-      if (enrollmentState !== 'none') {
-          if (enrollmentState === 'seleccionado' || enrollmentState === 'no_seleccionado') {
-              return <VerSeleccionadosButton />; // Muestra "Seleccionado" y permite ver la lista.
-          }
-          if (enrollmentState === 'inscripto') {
-              return <StatusDisplay />; // Muestra "Inscripto".
-          }
+      // 2. Student has a definitive selection status. This is also high priority.
+      if (enrollmentState === 'seleccionado' || enrollmentState === 'no_seleccionado') {
+          return <VerSeleccionadosButton />;
       }
-  
-      // 3. Si no hay estado de inscripción, se evalúa el estado de la convocatoria.
-      if (convocatoriaState === 'abierta') {
-          return <InscribirButton />;
-      }
-  
+
+      // 3. The call is closed. Anyone can see the results, regardless of their enrollment status.
       if (convocatoriaState === 'cerrada') {
-          // El estudiante no se inscribió y la convocatoria ya cerró.
           return <VerSeleccionadosButton />;
       }
   
-      // 4. Fallback para cualquier otro estado (ej: 'Oculto').
+      // 4. The call is open and the student has not enrolled yet. They can enroll.
+      if (convocatoriaState === 'abierta' && enrollmentState === 'none') {
+          return <InscribirButton />;
+      }
+  
+      // 5. The student is enrolled ('inscripto'), and the call is still open. Show their pending status.
+      if (enrollmentState === 'inscripto') {
+          return <StatusDisplay />;
+      }
+  
+      // 6. Fallback for any other state (like 'Oculto' or other unexpected states).
       return <StatusDisplay />;
   };
 

@@ -3,6 +3,7 @@ import { useModal } from '../contexts/ModalContext';
 import { fetchConvocatoriasData } from '../services/dataService';
 import { db } from '../lib/db';
 import type { LanzamientoPPS, InformeTask, Convocatoria, AirtableRecord, ConvocatoriaFields, EstudianteFields } from '../types';
+// FIX: Change import path for `schema` from `../schemas` to `../lib/airtableSchema`.
 import { schema } from '../lib/airtableSchema';
 import { 
     FIELD_NOMBRE_PPS_LANZAMIENTOS, 

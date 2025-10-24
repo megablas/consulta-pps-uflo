@@ -169,7 +169,6 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
   horariosDisponibles = [],
 }) => {
   const [formData, setFormData] = useState<FormData>(initialFormData);
-  // FIX: Allow the 'errors' state to hold a form-level 'submit' error in addition to field-specific errors.
   const [errors, setErrors] = useState<Partial<Record<keyof FormData | 'submit', string>>>({});
   
   const formRef = useRef<HTMLFormElement>(null);

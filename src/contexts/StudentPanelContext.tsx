@@ -18,7 +18,6 @@ interface StudentPanelContextType {
     practicas: Practica[];
     solicitudes: SolicitudPPS[];
     lanzamientos: LanzamientoPPS[];
-    // FIX: Add allLanzamientos to the context type so it can be exposed to consumers.
     allLanzamientos: LanzamientoPPS[];
     enrollmentMap: Map<string, Convocatoria>;
     completedLanzamientoIds: Set<string>;
@@ -88,7 +87,6 @@ export const StudentPanelProvider: React.FC<{ legajo: string; children: ReactNod
         practicas,
         solicitudes,
         lanzamientos,
-        // FIX: Expose allLanzamientos in the context value.
         allLanzamientos,
         institutionAddressMap,
         isLoading,

@@ -145,7 +145,7 @@ const AirtableEditor: React.FC<AirtableEditorProps> = ({ isTestingMode = false }
                             const newFields = { ...record.fields };
                             const schema = EDITABLE_TABLES[activeTable].schema;
                             for (const key in fields) {
-                                const airtableKey = schema[key] || key;
+                                const airtableKey = (schema as any)[key] || key;
                                 newFields[airtableKey] = fields[key];
                             }
                             return { ...record, fields: newFields };
@@ -168,7 +168,7 @@ const AirtableEditor: React.FC<AirtableEditorProps> = ({ isTestingMode = false }
                 const newRecord = { id: `rec_mock_${Date.now()}`, fields: {} as any };
                  const schema = EDITABLE_TABLES[activeTable].schema;
                 for (const key in fields) {
-                    const airtableKey = schema[key] || key;
+                    const airtableKey = (schema as any)[key] || key;
                     newRecord.fields[airtableKey] = fields[key];
                 }
                 setMockData(prev => ({ ...prev, [activeTable]: [...prev[activeTable], newRecord] as any }));
@@ -184,7 +184,7 @@ const AirtableEditor: React.FC<AirtableEditorProps> = ({ isTestingMode = false }
         mutationFn: (record: AirtableRecord<any>) => {
             const { id, createdTime, ...originalFields } = record.fields;
             const newFields: { [key: string]: any } = {};
-            const schema = EDITABLE_TABLES[activeTable].schema;
+            const schema = EDITABLE_TABLES[activeTable].schema as any;
 
             // Map Airtable field names back to dev-friendly keys for create function
             for (const airtableKey in originalFields) {
@@ -203,7 +203,7 @@ const AirtableEditor: React.FC<AirtableEditorProps> = ({ isTestingMode = false }
                 console.log('TEST MODE: Duplicating record with fields:', newFields);
                 const newRecord = { id: `rec_mock_dup_${Date.now()}`, fields: {} as any };
                 for (const key in newFields) {
-                    const airtableKey = schema[key] || key;
+                    const airtableKey = (schema as any)[key] || key;
                     newRecord.fields[airtableKey] = newFields[key];
                 }
                 setMockData(prev => ({ ...prev, [activeTable]: [...prev[activeTable], newRecord] as any }));
@@ -251,7 +251,6 @@ const AirtableEditor: React.FC<AirtableEditorProps> = ({ isTestingMode = false }
     
      const requestSort = (key: string) => {
         let direction: 'asc' | 'desc' = 'asc';
-        // FIX: 'descending' is not a valid sort direction for Airtable, it should be 'desc'.
         if (sortConfig.key === key && sortConfig.direction === 'asc') {
             direction = 'desc';
         }
@@ -296,7 +295,7 @@ const AirtableEditor: React.FC<AirtableEditorProps> = ({ isTestingMode = false }
                                     return (
                                         <tr key={record.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
                                             {activeTableConfig.fieldConfig.map(field => {
-                                                const airtableKey = activeTableConfig.schema[field.key] || field.key;
+                                                const airtableKey = (activeTableConfig.schema as any)[field.key] || field.key;
                                                 const value = record.fields[airtableKey];
                                                 const displayValue = field.type === 'date' ? formatDate(value) : (typeof value === 'boolean' ? (value ? 'Sí' : 'No') : String(value || ''));
                                                 return <td key={field.key} className="p-3 text-slate-700 dark:text-slate-300 truncate max-w-xs" title={displayValue}>{displayValue}</td>;

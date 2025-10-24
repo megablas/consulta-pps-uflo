@@ -1,7 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
 import dotenv from 'dotenv';
-// FIX: Importing 'process' to ensure correct types and access to Node.js APIs in an ESM context.
 import process from 'node:process';
 
 // Cargar variables de entorno desde .env

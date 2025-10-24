@@ -12,7 +12,6 @@ import {
     FIELD_DNI_ESTUDIANTES, FIELD_HORARIO_FORMULA_CONVOCATORIAS, FIELD_CORREO_ESTUDIANTES, FIELD_TELEFONO_ESTUDIANTES, FIELD_NOMBRE_SEPARADO_ESTUDIANTES, FIELD_APELLIDO_SEPARADO_ESTUDIANTES,
     FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
     AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
-    FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS,
     FIELD_NOMBRE_PPS_LANZAMIENTOS,
     FIELD_DIRECCION_LANZAMIENTOS,
     FIELD_FECHA_INICIO_LANZAMIENTOS,
@@ -272,8 +271,9 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal, isTestingM
                 const orientacion = getText(ppsData?.[FIELD_ORIENTACION_LANZAMIENTOS] || (individualConv[FIELD_ORIENTACION_CONVOCATORIAS] as string)) || '';
 
                 const fullName = student?.[FIELD_NOMBRE_ESTUDIANTES] || '';
-                let nombre = student[FIELD_NOMBRE_SEPARADO_ESTUDIANTES] || '';
-                let apellido = student[FIELD_APELLIDO_SEPARADO_ESTUDIANTES] || '';
+                // FIX: Use getText helper to safely extract names which might be lookups/formulas.
+                let nombre = getText(student?.[FIELD_NOMBRE_SEPARADO_ESTUDIANTES]);
+                let apellido = getText(student?.[FIELD_APELLIDO_SEPARADO_ESTUDIANTES]);
                 
                 if (!nombre || !apellido) {
                     const split = simpleNameSplit(fullName);
@@ -459,19 +459,19 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal, isTestingM
     );
 
     const renderReviewStep = () => {
-      const groupedStudents = studentsForReview.reduce((acc, student) => {
-          const key = `${student.institucion}::${student.tutor}`;
-          if (!acc[key]) {
-              acc[key] = {
-                  institucion: student.institucion,
-                  tutor: student.tutor,
-                  orientacion: student.orientacion,
-                  students: [],
-              };
-          }
-          acc[key].students.push(student);
-          return acc;
-      }, {} as Record<string, { institucion: string; tutor: string; orientacion: string; students: StudentForReview[] }>);
+        const groupedStudents = studentsForReview.reduce((acc, student) => {
+            const key = student.institucion;
+            if (!acc[key]) {
+                acc[key] = {
+                    institucion: student.institucion,
+                    tutor: student.tutor,
+                    orientacion: student.orientacion,
+                    students: [],
+                };
+            }
+            acc[key].students.push(student);
+            return acc;
+        }, {} as Record<string, { institucion: string; tutor: string; orientacion: string; students: StudentForReview[] }>);
 
       const handleCopyToClipboard = (students: StudentForReview[]) => {
           const tsv = students.map(s => [
@@ -544,7 +544,7 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal, isTestingM
                    <EmptyState icon="group_off" title="Sin Estudiantes para Revisar" message="No se encontraron estudiantes en las convocatorias seleccionadas." />
               ) : (
                 <div className="space-y-8">
-                  {Object.values(groupedStudents).map((group: { institucion: string; tutor: string; orientacion: string; students: StudentForReview[] }, index) => (
+                  {Object.values(groupedStudents).map((group, index) => (
                       <Card key={index} className="animate-fade-in-up" style={{animationDelay: `${index * 100}ms`}} title={group.institucion} description={`Tutor: ${group.tutor} - Orientación: ${group.orientacion}`}>
                           <div className="mt-4 pt-4 border-t border-slate-200/60 dark:border-slate-700/60">
                               <div className="flex flex-col sm:flex-row gap-3">

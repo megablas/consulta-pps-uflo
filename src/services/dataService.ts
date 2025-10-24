@@ -105,7 +105,6 @@ export const fetchStudentData = async (legajo: string): Promise<{ studentDetails
 
   const studentRecord = validationResult.data[0];
 
-  // FIX: Cast fields to `any` to bypass TypeScript error with complex inferred types from Zod.
   if (!studentRecord || !(studentRecord.fields as any)[FIELD_LEGAJO_ESTUDIANTES] || !(studentRecord.fields as any)[FIELD_NOMBRE_ESTUDIANTES]) {
     return { studentDetails: null, studentAirtableId: null };
   }
@@ -129,7 +128,6 @@ export const fetchPracticas = async (legajo: string): Promise<Practica[]> => {
       throw new Error(`Error de validación de datos en 'Prácticas':\n${formattedErrors}`);
   }
 
-  // FIX: Cast `r.fields` to `any` to avoid spread operator error with complex Zod types.
   return validationResult.data.map(r => ({ ...(r.fields as any), id: r.id }));
 };
 
@@ -153,7 +151,6 @@ export const fetchSolicitudes = async (legajo: string, studentAirtableId: string
       throw new Error(`Error de validación de datos en 'Solicitud de PPS':\n${formattedErrors}`);
   }
 
-  // FIX: Cast `r.fields` to `any` to avoid spread operator error with complex Zod types.
   return validationResult.data.map(r => ({ ...(r.fields as any), id: r.id }));
 };
 
@@ -194,7 +191,6 @@ export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: 
       const formattedErrors = myEnrollmentsValidation.error.issues.map(issue => `  - Registro #${String(issue.path[0])}, Campo '${issue.path.slice(1).join('.')}': ${issue.message}`).join('\n');
       throw new Error(`Error de validación de datos en 'Mis Inscripciones':\n${formattedErrors}`);
   }
-  // FIX: Cast `r.fields` to `any` to avoid spread operator error with complex Zod types.
   const myEnrollments = myEnrollmentsValidation.data.map(r => ({ ...(r.fields as any), id: r.id }));
 
   const lanzamientosValidation = lanzamientoPPSArraySchema.safeParse(lanzamientosRecords);
@@ -203,7 +199,6 @@ export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: 
     const formattedErrors = lanzamientosValidation.error.issues.map(issue => `  - Registro #${String(issue.path[0])}, Campo '${issue.path.slice(1).join('.')}': ${issue.message}`).join('\n');
     throw new Error(`Error de validación de datos en 'Lanzamientos de PPS':\n${formattedErrors}`);
   }
-  // FIX: Cast `r.fields` to `any` to avoid spread operator error with complex Zod types.
   const allLanzamientosRecords = lanzamientosValidation.data.map(r => ({ ...(r.fields as any), id: r.id }));
   
   const lanzamientos = allLanzamientosRecords.filter(lanzamiento => {
@@ -288,6 +283,8 @@ export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<G
         grouped[horario].sort((a, b) => a.nombre.localeCompare(b.nombre));
     }
 
+    if (Object.keys(grouped).length === 0) return null;
+
     return grouped;
 };
 
@@ -338,7 +335,7 @@ function findLanzamientoForPractica(practica: Practica, allLanzamientos: Lanzami
     const normalizedPracticaName = normalizeStringForComparison(practicaInstitucion);
     const normalizedPracticaOrientacion = normalizeStringForComparison(practicaOrientacion);
     let bestMatch: LanzamientoPPS | undefined;
-    let smallestDaysDiff = 32;
+    let smallestDaysDiff = 32; // Only match within a month's tolerance
 
     for (const lanzamiento of allLanzamientos) {
         const lanzamientoName = lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS];

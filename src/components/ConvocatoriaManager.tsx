@@ -381,7 +381,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
             });
             setInstitutionsMap(newInstitutionsMap);
 
-            const mappedRecords = lanzamientosRes.records.map((r: AirtableRecord<LanzamientoPPSFields>) => ({ ...r.fields, id: r.id } as LanzamientoPPS));
+            const mappedRecords = lanzamientosRes.records.map((r: AirtableRecord<LanzamientoPPSFields>) => ({ ...r.fields as any, id: r.id } as LanzamientoPPS));
             const filteredRecords = mappedRecords.filter(pps => 
                 !String(pps[FIELD_NOMBRE_PPS_LANZAMIENTOS] || '').toLowerCase().includes('uflo')
             );
@@ -496,8 +496,9 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
           setInstitutionsMap(prev => {
               const newMap = new Map(prev);
               for (const [key, val] of newMap.entries()) {
-                  if (val.id === institutionId) {
-                      newMap.set(key, { ...val, phone });
+                  const instValue = val as { id: string; phone?: string };
+                  if (instValue.id === institutionId) {
+                      newMap.set(key, { ...instValue, phone });
                       break;
                   }
               }
@@ -519,8 +520,9 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
           setInstitutionsMap(prevMap => {
               const newMap = new Map(prevMap);
               for (const [key, value] of newMap.entries()) {
-                  if ((value as { id: string, phone?: string }).id === institutionId) {
-                      newMap.set(key, { ...(value as { id: string, phone?: string }), phone });
+                  const instValue = value as { id: string, phone?: string };
+                  if (instValue.id === institutionId) {
+                      newMap.set(key, { ...instValue, phone });
                       break;
                   }
               }
@@ -567,7 +569,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
             if (practicasError) throw new Error('Error al obtener las prácticas antiguas desde Airtable.');
     
             const groupedPracticas = new Map<string, (PracticaFields & { id: string })[]>();
-            const mappedPracticas: Practica[] = recentPracticas.map((p: AirtableRecord<PracticaFields>) => ({ ...p.fields, id: p.id }));
+            const mappedPracticas: Practica[] = recentPracticas.map((p: AirtableRecord<PracticaFields>) => ({ ...(p.fields as any), id: p.id }));
 
             for (const practica of mappedPracticas) {
                 const nameRaw = practica[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
@@ -583,7 +585,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                 groupedPracticas.get(key)!.push(practica);
             }
     
-            const newLaunchesToCreate: Partial<LanzamientoPPS>[] = [];
+            const newLaunchesToCreate: any[] = [];
             for (const [key, practicasGroup] of groupedPracticas.entries()) {
                 if (!existingLaunchKeys.has(key)) {
                     const templatePractica = practicasGroup[0];
@@ -616,6 +618,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
     
             let successfulCreations = 0;
             let failedCreations = 0;
+            // FIX: Property 'length' does not exist on type 'unknown'. Since newLaunchesToCreate is typed as any[], we can directly access its length property without a cast.
             const totalToCreate = newLaunchesToCreate.length;
 
             for (let i = 0; i < totalToCreate; i++) {

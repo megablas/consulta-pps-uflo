@@ -20,7 +20,6 @@ const MetricsView: React.FC<MetricsViewProps> = ({ onStudentSelect, isTestingMod
     <>
       <SubTabs tabs={metricsSubTabs} activeTabId={activeMetricsTabId} onTabChange={setActiveMetricsTabId} />
       <div className="mt-6">
-          {/* FIX: Passed isTestingMode to MetricsDashboard to fix type error */}
           {activeMetricsTabId === 'dashboard' && <MetricsDashboard onStudentSelect={onStudentSelect} isTestingMode={isTestingMode} />}
           {activeMetricsTabId === 'timeline' && <TimelineView isTestingMode={isTestingMode} />}
       </div>

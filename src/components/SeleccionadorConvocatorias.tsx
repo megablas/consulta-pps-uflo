@@ -263,7 +263,8 @@ const SeleccionadorConvocatorias: React.FC<{ isTestingMode?: boolean }> = ({ isT
                 )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {columns && Object.values(columns).map(column => (
+                {/* FIX: Explicitly cast the result of `Object.values(columns)` to `KanbanColumn[]` to resolve TypeScript errors where properties like 'id', 'title', and 'studentIds' were not found on the inferred 'unknown' type. */}
+                {columns && (Object.values(columns) as KanbanColumn[]).map(column => (
                     <div 
                         key={column.id}
                         onDragOver={handleDragOver}

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { db } from '../lib/db';
 import type { InformeCorreccionPPS, InformeCorreccionStudent, ConvocatoriaFields, PracticaFields, EstudianteFields, LanzamientoPPSFields, FlatCorreccionStudent, AirtableRecord } from '../types';
 import {
-  // FIX: Corrected duplicate identifier by removing incorrect alias. FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS is for status, FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS is for the student link.
   FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS,
   FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
   FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS,
@@ -46,7 +45,6 @@ const managerConfig: Record<Manager, { orientations: string[], label: string }> 
   'Cynthia Rossi': { orientations: ['laboral', 'comunitaria'], label: 'Cynthia Rossi (Laboral & Comunitaria)' }
 };
 
-// FIX: Added props interface to accept isTestingMode prop.
 interface CorreccionPanelProps {
   isTestingMode?: boolean;
 }
@@ -69,7 +67,6 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
     setLoadingState('loading');
     setError(null);
 
-    // FIX: Added mock data handling for testing mode.
     if (isTestingMode) {
       setAllPpsGroups(new Map());
       setLoadingState('loaded');
@@ -124,8 +121,7 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
           const studentId = legajoToStudentIdMap.get(legajo);
           if (!studentId) continue;
 
-          const instRaw = practicaRecord.fields[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS] as string[] | undefined;
-          const instName = instRaw ? instRaw[0] : null;
+          const instName = practicaRecord.fields[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS] as string | undefined;
           if (!instName) continue;
 
           const practicaStartDate = parseToUTCDate(practicaRecord.fields[FIELD_FECHA_INICIO_PRACTICAS]);
@@ -156,8 +152,8 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
 
       const ppsGroups = new Map<string, InformeCorreccionPPS>();
       const validConvocatorias = convocatoriasRes.filter(conv => {
-        // FIX: Corrected typo from FIELD_ESTADO_INSCRIPTO_CONVOCATORIAS to FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS
         const estado = normalizeStringForComparison(conv.fields[FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS]);
+        // FIX: Corrected logical bug by using the correct constant for status filtering.
         return estado !== 'inscripto' && estado !== 'no seleccionado';
       });
 
@@ -190,7 +186,6 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
         const practica = practicasMap.get(`${studentId}-${lanzamiento.id}`);
 
         if (!ppsGroups.has(lanzamiento.id)) {
-          // FIX: Handle 'orientacion' potentially being an array from Airtable.
           const orientacionRaw = lanzamiento.fields[FIELD_ORIENTACION_LANZAMIENTOS];
           const orientacionString = Array.isArray(orientacionRaw) ? orientacionRaw.join(', ') : (orientacionRaw || 'N/A');
 
@@ -206,7 +201,6 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
 
         const informeSubido = !!convRecord.fields[FIELD_INFORME_SUBIDO_CONVOCATORIAS];
         const notaActual = practica?.fields?.[FIELD_NOTA_PRACTICAS];
-        // FIX: Handle 'orientacion' potentially being an array from Airtable, take first for student.
         const studentOrientacionRaw = lanzamiento.fields[FIELD_ORIENTACION_LANZAMIENTOS];
         const studentOrientacion = Array.isArray(studentOrientacionRaw) ? studentOrientacionRaw[0] : studentOrientacionRaw;
         ppsGroups.get(lanzamiento.id)!.students.push({
@@ -392,18 +386,18 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
   const managerData = useMemo(() => {
     const jefeOrientations = authenticatedUser?.orientaciones;
     const managerOrientations = isJefeMode
-      ? new Set((jefeOrientations || []).map(normalizeStringForComparison))
+      ? new Set((Array.isArray(jefeOrientations) ? jefeOrientations : []).map(normalizeStringForComparison))
       : new Set(managerConfig[activeManager].orientations.map(normalizeStringForComparison));
 
     const filteredGroups: InformeCorreccionPPS[] = [...allPpsGroups.values()].filter((group: InformeCorreccionPPS) => {
-        // FIX: Handle group.orientacion being a string or string array by simplifying logic.
         const groupOrientations = (group.orientacion || '').split(',').map(o => normalizeStringForComparison(o.trim()));
         return groupOrientations.some(o => managerOrientations.has(o));
     });
 
     const flatList: FlatCorreccionStudent[] = [];
     for (const group of filteredGroups) {
-      for (const student of group.students) {
+      // FIX: Add null check before iterating to prevent runtime errors if `group.students` is undefined.
+      for (const student of (group.students || [])) { 
         if (student.informeSubido && (student.nota === 'Sin calificar' || student.nota === 'Entregado (sin corregir)')) {
             const baseDateForDeadline = student.fechaEntregaInforme 
                 ? parseToUTCDate(student.fechaEntregaInforme) 
@@ -436,8 +430,9 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
     let ppsFilteredGroups = filteredGroups;
     if (searchTerm) {
         const lowercasedFilter = searchTerm.toLowerCase();
-        ppsFilteredGroups = ppsFilteredGroups.map((group: InformeCorreccionPPS) => {
-            const matchingStudents = group.students.filter(student => student.studentName.toLowerCase().includes(lowercasedFilter));
+        // FIX: Add null check before calling .map to prevent runtime crashes.
+        ppsFilteredGroups = (ppsFilteredGroups || []).map((group: InformeCorreccionPPS) => {
+            const matchingStudents = (group.students || []).filter(student => student.studentName.toLowerCase().includes(lowercasedFilter));
             if ((group.ppsName || '').toLowerCase().includes(lowercasedFilter)) {
                 return group;
             }
@@ -449,7 +444,7 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
     }
 
     const pendientes = ppsFilteredGroups.filter(group => 
-      group.students.some(s => !s.nota || s.nota === 'Sin calificar' || s.nota === 'Entregado (sin corregir)')
+      (group.students || []).some(s => !s.nota || s.nota === 'Sin calificar' || s.nota === 'Entregado (sin corregir)')
     );
 
     const today = new Date();
@@ -475,7 +470,7 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
     });
 
     const finalizados = ppsFilteredGroups.filter(group => 
-      group.students.every(s => s.nota && s.nota !== 'Sin calificar' && s.nota !== 'Entregado (sin corregir)')
+      (group.students || []).every(s => s.nota && s.nota !== 'Sin calificar' && s.nota !== 'Entregado (sin corregir)')
     );
     
     return { pendientes, finalizados, flatList: searchFilteredFlatList, totalSinCorregir };

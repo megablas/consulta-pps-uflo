@@ -11,18 +11,13 @@ import InformesList from '../components/InformesList';
 import WhatsAppExportButton from '../components/WhatsAppExportButton';
 import { useAuth } from '../contexts/AuthContext';
 import type { AuthUser } from '../contexts/AuthContext';
-import type { TabId, Orientacion, Convocatoria, InformeTask } from '../types';
-import { calculateCriterios } from '../utils/criteriaCalculations';
+import type { TabId, Orientacion } from '../types';
 import DashboardLoadingSkeleton from '../components/DashboardLoadingSkeleton';
 import ErrorState from '../components/ErrorState';
-import { useStudentData } from '../hooks/useStudentData';
-import { useStudentPracticas } from '../hooks/useStudentPracticas';
-import { useStudentSolicitudes } from '../hooks/useStudentSolicitudes';
-import { useConvocatorias } from '../hooks/useConvocatorias';
-import { processAndLinkStudentData } from '../utils/dataLinker';
 import ProfileView from '../components/ProfileView';
 import HomeView from '../components/HomeView';
 import PrintableReport from '../components/PrintableReport';
+import { useStudentPanel } from '../contexts/StudentPanelContext';
 
 interface StudentDashboardProps {
   user: AuthUser;
@@ -35,42 +30,34 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   const { isSuperUserMode } = useAuth();
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
 
-  // --- CUSTOM HOOKS FOR DATA FETCHING AND MUTATIONS ---
-  const { studentDetails, studentAirtableId, isStudentLoading, studentError, updateOrientation, updateInternalNotes, refetchStudent } = useStudentData(user.legajo);
-  const { practicas, isPracticasLoading, practicasError, updateNota, refetchPracticas } = useStudentPracticas(user.legajo);
-  const { solicitudes, isSolicitudesLoading, solicitudesError, refetchSolicitudes } = useStudentSolicitudes(user.legajo, studentAirtableId);
-  const { 
-    lanzamientos, myEnrollments, allLanzamientos, isConvocatoriasLoading, convocatoriasError,
-    enrollStudent, confirmInforme, refetchConvocatorias, institutionAddressMap,
-  } = useConvocatorias(user.legajo, studentAirtableId, isSuperUserMode);
+  const {
+    studentDetails,
+    practicas,
+    solicitudes,
+    lanzamientos,
+    allLanzamientos,
+    institutionAddressMap,
+    isLoading,
+    error,
+    updateOrientation,
+    updateInternalNotes,
+    updateNota,
+    enrollStudent,
+    confirmInforme,
+    refetchAll,
+    criterios,
+    enrollmentMap,
+    completedLanzamientoIds,
+    informeTasks
+  } = useStudentPanel();
 
   // --- DERIVED STATE & MEMOIZATION ---
   const [internalActiveTab, setInternalActiveTab] = useState<TabId>(showExportButton ? 'practicas' : 'inicio');
   const currentActiveTab = activeTab ?? internalActiveTab;
   const setCurrentActiveTab = onTabChange ?? setInternalActiveTab;
   
-  const isLoading = isStudentLoading || isPracticasLoading || isSolicitudesLoading || isConvocatoriasLoading;
-  const error = studentError || practicasError || solicitudesError || convocatoriasError;
-
-  const refetchAll = useCallback(() => {
-    refetchStudent();
-    refetchPracticas();
-    refetchSolicitudes();
-    refetchConvocatorias();
-  }, [refetchStudent, refetchPracticas, refetchSolicitudes, refetchConvocatorias]);
-  
   const selectedOrientacion = (studentDetails?.['Orientación Elegida'] || "") as Orientacion | "";
   const studentNameForPanel = studentDetails?.['Nombre'] || user.nombre;
-
-  const criterios = useMemo(() => calculateCriterios(practicas, selectedOrientacion), [practicas, selectedOrientacion]);
-  
-  const { enrollmentMap, completedLanzamientoIds, informeTasks } = useMemo(() => {
-    if (isConvocatoriasLoading || isPracticasLoading) {
-      return { enrollmentMap: new Map<string, Convocatoria>(), completedLanzamientoIds: new Set<string>(), informeTasks: [] as InformeTask[] };
-    }
-    return processAndLinkStudentData({ myEnrollments, allLanzamientos, practicas });
-  }, [myEnrollments, allLanzamientos, practicas, isConvocatoriasLoading, isPracticasLoading]);
-
 
   // --- MUTATION HANDLERS ---
   const handleOrientacionChange = useCallback((orientacion: Orientacion | "") => {
@@ -87,9 +74,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   }, [updateNota]);
   
   // --- MEMOIZED TAB CONTENT ---
-  // FIX: Pass all required props to HomeView to ensure it functions correctly and resolves type errors.
   const homeContent = useMemo(() => <HomeView 
-      myEnrollments={myEnrollments} 
+      myEnrollments={enrollmentMap ? Array.from(enrollmentMap.values()) : []} 
       allLanzamientos={allLanzamientos} 
       informeTasks={informeTasks} 
       lanzamientos={lanzamientos} 
@@ -99,11 +85,12 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
       institutionAddressMap={institutionAddressMap}
       enrollmentMap={enrollmentMap}
       completedLanzamientoIds={completedLanzamientoIds}
-  />, [myEnrollments, allLanzamientos, informeTasks, lanzamientos, setCurrentActiveTab, studentDetails, enrollStudent.mutate, institutionAddressMap, enrollmentMap, completedLanzamientoIds]);
+  />, [enrollmentMap, allLanzamientos, informeTasks, lanzamientos, setCurrentActiveTab, studentDetails, enrollStudent.mutate, institutionAddressMap, completedLanzamientoIds]);
+  
   const informesContent = useMemo(() => <InformesList tasks={informeTasks} onConfirmar={confirmInforme.mutate} />, [informeTasks, confirmInforme]);
   const solicitudesContent = useMemo(() => <SolicitudesList solicitudes={solicitudes} />, [solicitudes]);
   const practicasContent = useMemo(() => <PracticasTable practicas={practicas} handleNotaChange={handleNotaChange} />, [practicas, handleNotaChange]);
-  const profileContent = useMemo(() => <ProfileView studentDetails={studentDetails} isLoading={isStudentLoading} updateInternalNotes={updateInternalNotes} />, [studentDetails, isStudentLoading, updateInternalNotes]);
+  const profileContent = useMemo(() => <ProfileView studentDetails={studentDetails} isLoading={isLoading} updateInternalNotes={updateInternalNotes} />, [studentDetails, isLoading, updateInternalNotes]);
 
   const studentDataTabs = useMemo(() => {
     const tabs: { id: TabId; label: string; icon: string; content: React.ReactNode; badge?: number }[] = [

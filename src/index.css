@@ -314,7 +314,7 @@ html.dark body {
   .printable-executive-report th {
     background-color: #f2f2f2 !important;
     -webkit-print-color-adjust: exact;
-    color-adjust: exact;
+    print-color-adjust: exact;
   }
   .print-chart-container {
     page-break-inside: avoid;

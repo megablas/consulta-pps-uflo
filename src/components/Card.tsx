@@ -1,7 +1,6 @@
 import React from 'react';
 
 interface CardProps {
-  // FIX: Make the children prop optional
   children?: React.ReactNode;
   title?: React.ReactNode;
   description?: React.ReactNode;
