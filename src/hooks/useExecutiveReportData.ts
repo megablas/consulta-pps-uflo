@@ -13,9 +13,7 @@ import {
     FIELD_NOMBRE_PPS_LANZAMIENTOS,
     FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS,
     FIELD_NOMBRE_INSTITUCIONES,
-    // FIX: Add missing import for FIELD_ORIENTACION_LANZAMIENTOS
     FIELD_ORIENTACION_LANZAMIENTOS,
-    // FIX: Add missing import for FIELD_FECHA_INICIO_PRACTICAS
     FIELD_FECHA_INICIO_PRACTICAS,
 } from '../constants';
 import { fetchAllAirtableData } from '../services/airtableService';
@@ -147,9 +145,8 @@ const getMetricsSnapshot = (
 
     const studentPracticeTypes = new Map<string, { hasRelevamiento: boolean; hasOther: boolean }>();
     allPracticas.forEach(p => {
-        // FIX: Cast fields to any to prevent 'unknown' type errors on property access.
-        const studentIds = (p.fields as any)[FIELD_ESTUDIANTE_LINK_PRACTICAS] || [];
-        const institucionRaw = (p.fields as any)[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
+        const studentIds = (p.fields[FIELD_ESTUDIANTE_LINK_PRACTICAS] as any) || [];
+        const institucionRaw = (p.fields[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS] as any);
         const institucion = String((Array.isArray(institucionRaw) ? institucionRaw[0] : institucionRaw) || '');
         const isRelevamiento = normalizeStringForComparison(institucion).includes('relevamiento');
 
@@ -216,7 +213,6 @@ const calculateFlowMetrics = (
     };
 };
 
-// FIX: Defined missing mock data objects to resolve 'Cannot find name' errors.
 const MOCK_REPORT_DATA: ExecutiveReportData = {
     reportType: 'singleYear',
     year: new Date().getFullYear(),

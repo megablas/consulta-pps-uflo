@@ -271,9 +271,9 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal, isTestingM
                 const orientacion = getText(ppsData?.[FIELD_ORIENTACION_LANZAMIENTOS] || (individualConv[FIELD_ORIENTACION_CONVOCATORIAS] as string)) || '';
 
                 const fullName = student?.[FIELD_NOMBRE_ESTUDIANTES] || '';
-                // FIX: Use getText helper to safely extract names which might be lookups/formulas.
-                let nombre = getText(student?.[FIELD_NOMBRE_SEPARADO_ESTUDIANTES]);
-                let apellido = getText(student?.[FIELD_APELLIDO_SEPARADO_ESTUDIANTES]);
+                // FIX: Removed optional chaining `?.` as `student` is guaranteed to be defined here.
+                let nombre = getText(student[FIELD_NOMBRE_SEPARADO_ESTUDIANTES]);
+                let apellido = getText(student[FIELD_APELLIDO_SEPARADO_ESTUDIANTES]);
                 
                 if (!nombre || !apellido) {
                     const split = simpleNameSplit(fullName);
@@ -459,7 +459,9 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal, isTestingM
     );
 
     const renderReviewStep = () => {
-        const groupedStudents = studentsForReview.reduce((acc, student) => {
+        // FIX: Explicitly type the accumulator `acc` to prevent it from being inferred
+        // as an empty object `{}`, which causes type errors on property access.
+        const groupedStudents = studentsForReview.reduce((acc: Record<string, { institucion: string; tutor: string; orientacion: string; students: StudentForReview[] }>, student) => {
             const key = student.institucion;
             if (!acc[key]) {
                 acc[key] = {
@@ -544,7 +546,8 @@ const SeguroGenerator: React.FC<SeguroGeneratorProps> = ({ showModal, isTestingM
                    <EmptyState icon="group_off" title="Sin Estudiantes para Revisar" message="No se encontraron estudiantes en las convocatorias seleccionadas." />
               ) : (
                 <div className="space-y-8">
-                  {Object.values(groupedStudents).map((group, index) => (
+                  {/* FIX: Type `group` as `any` to resolve properties not existing on `unknown` type error from Object.values. */}
+                  {Object.values(groupedStudents).map((group: any, index) => (
                       <Card key={index} className="animate-fade-in-up" style={{animationDelay: `${index * 100}ms`}} title={group.institucion} description={`Tutor: ${group.tutor} - Orientación: ${group.orientacion}`}>
                           <div className="mt-4 pt-4 border-t border-slate-200/60 dark:border-slate-700/60">
                               <div className="flex flex-col sm:flex-row gap-3">

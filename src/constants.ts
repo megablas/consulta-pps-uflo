@@ -1,8 +1,8 @@
 // --- Airtable Configuration ---
 // Las claves se cargan desde variables de entorno para mayor seguridad y flexibilidad.
 // El archivo .env en la raíz del proyecto debe contener estas variables.
-export const AIRTABLE_PAT = import.meta.env.VITE_AIRTABLE_PAT!;
-export const AIRTABLE_BASE_ID = import.meta.env.VITE_AIRTABLE_BASE_ID!;
+export const AIRTABLE_PAT = process.env.VITE_AIRTABLE_PAT!;
+export const AIRTABLE_BASE_ID = process.env.VITE_AIRTABLE_BASE_ID!;
 
 // Table Names
 export const AIRTABLE_TABLE_NAME_PPS = 'Solicitud de PPS';
@@ -77,6 +77,7 @@ export const FIELD_ESTADO_GESTION_LANZAMIENTOS = 'Estado de Gestión';
 export const FIELD_NOTAS_GESTION_LANZAMIENTOS = 'Notas de Gestión';
 export const FIELD_FECHA_RELANZAMIENTO_LANZAMIENTOS = 'Fecha de Relanzamiento';
 export const FIELD_TELEFONO_INSTITUCION_LANZAMIENTOS = 'Teléfono (from Instituciones)';
+export const FIELD_PERMITE_CERTIFICADO_LANZAMIENTOS = 'Permite Certificado';
 
 
 // --- Fields for 'Instituciones' table ---
@@ -109,6 +110,7 @@ export const FIELD_FECHA_NACIMIENTO_CONVOCATORIAS = 'Fecha de Nacimiento'; // Lo
 export const FIELD_TELEFONO_CONVOCATORIAS = 'Teléfono'; // Lookup
 export const FIELD_INFORME_SUBIDO_CONVOCATORIAS = 'Informe Subido';
 export const FIELD_FECHA_ENTREGA_INFORME_CONVOCATORIAS = 'Fecha_Entrega_Informe';
+export const FIELD_CERTIFICADO_CONVOCATORIAS = 'Certificado';
 
 // --- Fields for 'Finalizacion PPS' table ---
 export const FIELD_ESTUDIANTE_FINALIZACION = 'Nombre';

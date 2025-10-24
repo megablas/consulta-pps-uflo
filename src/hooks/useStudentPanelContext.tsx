@@ -7,7 +7,7 @@ import { useConvocatorias } from './useConvocatorias';
 
 import type { UseMutationResult } from '@tanstack/react-query';
 import type {
-    EstudianteFields, Practica, SolicitudPPS, LanzamientoPPS, Convocatoria, Orientacion, InformeTask, AirtableRecord, AirtableErrorResponse
+    EstudianteFields, Practica, SolicitudPPS, LanzamientoPPS, Convocatoria, Orientacion, InformeTask, AirtableRecord
 } from '../types';
 
 interface StudentPanelContextType {

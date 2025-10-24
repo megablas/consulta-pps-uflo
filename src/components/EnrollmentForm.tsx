@@ -1,20 +1,16 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Checkbox from './Checkbox';
 import { z } from 'zod';
+import Input from './Input';
 
 interface EnrollmentFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (formData: {
-    terminoDeCursar: boolean;
-    cursandoElectivas: boolean | null;
-    finalesAdeudados: string;
-    otraSituacionAcademica: string;
-    horarios: string[];
-  }) => void;
+  onSubmit: (formData: any) => void;
   convocatoriaName: string;
   isSubmitting: boolean;
   horariosDisponibles?: string[];
+  permiteCertificado?: boolean;
 }
 
 // Zod Schema for validation
@@ -26,6 +22,7 @@ const enrollmentFormSchema = z.object({
   finalesAdeudados: z.string(),
   otraSituacionAcademica: z.string().min(10, { message: 'Las aclaraciones deben tener al menos 10 caracteres.' }),
   horarios: z.array(z.string()),
+  certificadoLink: z.string().url({ message: "Por favor, ingresa una URL válida." }).optional().or(z.literal('')),
 }).superRefine((data, ctx) => {
   if (data.terminoDeCursar === true) {
     if (data.finalesAdeudados === '') {
@@ -158,6 +155,7 @@ const initialFormData: FormData = {
     finalesAdeudados: '',
     otraSituacionAcademica: '',
     horarios: [],
+    certificadoLink: '',
 };
 
 export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
@@ -167,6 +165,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
   convocatoriaName,
   isSubmitting,
   horariosDisponibles = [],
+  permiteCertificado = false,
 }) => {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData | 'submit', string>>>({});
@@ -179,7 +178,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
   
   const finalSchema = useMemo(() => {
     if (showHorariosSection && hasMultipleHorarios) {
-      return enrollmentFormSchema.extend({
+      return enrollmentFormSchema.safeExtend({
         horarios: z.array(z.string()).min(1, { message: 'Por favor, selecciona al menos una opción de horario.' })
       });
     }
@@ -240,6 +239,11 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
         ...prev,
         horarios: checked ? [...prev.horarios, value] : prev.horarios.filter(h => h !== value)
     }));
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const { name, value } = e.target;
+      setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -388,6 +392,37 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                 )}
               </div>
             )}
+            
+            {permiteCertificado && (
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200/70 dark:border-slate-700 shadow-sm">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="material-icons text-blue-500 !text-xl">work</span>
+                  <h3 className="text-slate-800 dark:text-slate-100 font-semibold text-base leading-tight">
+                    Certificado de Trabajo (Opcional)
+                  </h3>
+                </div>
+                 <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
+                    Si trabajas en un horario que podría superponerse, pega aquí un enlace a tu certificado de trabajo (ej. desde Google Drive, Dropbox). Asegúrate de que el enlace sea público.
+                </p>
+                <Input
+                  id="certificadoLink"
+                  name="certificadoLink"
+                  type="url"
+                  placeholder="https://..."
+                  icon="link"
+                  value={formData.certificadoLink || ''}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
+                  aria-invalid={!!errors.certificadoLink}
+                  aria-describedby={errors.certificadoLink ? "certificado-error" : undefined}
+                />
+                {errors.certificadoLink && (
+                  <p id="certificado-error" className="mt-2 text-sm text-red-600 dark:text-red-400 font-medium" role="alert">
+                    {errors.certificadoLink}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Academic Status */}
             <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200/70 dark:border-slate-700 shadow-sm transition-all duration-300 hover:shadow-lg hover:border-slate-300/80 dark:hover:border-slate-600">
@@ -493,7 +528,7 @@ export const EnrollmentForm: React.FC<EnrollmentFormProps> = ({
                 name="otraSituacionAcademica"
                 rows={3}
                 value={formData.otraSituacionAcademica}
-                onChange={(e) => setFormData(prev => ({ ...prev, otraSituacionAcademica: e.target.value }))}
+                onChange={handleChange}
                 disabled={isSubmitting}
                 className={`w-full text-sm rounded-lg border p-3 bg-white/50 dark:bg-slate-700/50 shadow-sm outline-none transition-all duration-200 ${
                   errors.otraSituacionAcademica 

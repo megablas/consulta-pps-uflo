@@ -3,7 +3,6 @@ import { useModal } from '../contexts/ModalContext';
 import { fetchConvocatoriasData } from '../services/dataService';
 import { db } from '../lib/db';
 import type { LanzamientoPPS, InformeTask, Convocatoria, AirtableRecord, ConvocatoriaFields, EstudianteFields } from '../types';
-// FIX: Change import path for `schema` from `../schemas` to `../lib/airtableSchema`.
 import { schema } from '../lib/airtableSchema';
 import { 
     FIELD_NOMBRE_PPS_LANZAMIENTOS, 
@@ -28,6 +27,7 @@ import {
     FIELD_DIRECCION_CONVOCATORIAS,
     FIELD_ORIENTACION_CONVOCATORIAS,
     FIELD_HORAS_ACREDITADAS_CONVOCATORIAS,
+    FIELD_CERTIFICADO_CONVOCATORIAS,
 } from '../constants';
 
 export const useConvocatorias = (legajo: string, studentAirtableId: string | null, isSuperUserMode: boolean) => {
@@ -79,7 +79,9 @@ export const useConvocatorias = (legajo: string, studentAirtableId: string | nul
                 terminoCursar: formData.terminoDeCursar ? "Sí" : "No",
                 otraSituacion: formData.otraSituacionAcademica,
                 finalesAdeuda: formData.finalesAdeudados || null,
-                nombrePPS: selectedLanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS]
+                nombrePPS: selectedLanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS],
+                fechaInicio: selectedLanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS],
+                fechaFin: selectedLanzamiento[FIELD_FECHA_FIN_LANZAMIENTOS],
             };
             
             const legajoAsNumber = parseInt(legajo, 10);
@@ -95,6 +97,10 @@ export const useConvocatorias = (legajo: string, studentAirtableId: string | nul
                 newRecordFields.cursandoElectivas = formData.cursandoElectivas ? "Sí" : "No";
             }
             
+            if (formData.certificadoLink) {
+                newRecordFields.certificado = [{ url: formData.certificadoLink }];
+            }
+
             return db.convocatorias.create(newRecordFields);
         },
         onMutate: () => setIsSubmittingEnrollment(true),
@@ -133,6 +139,11 @@ export const useConvocatorias = (legajo: string, studentAirtableId: string | nul
                         [FIELD_FINALES_ADEUDA_CONVOCATORIAS]: formData.finalesAdeudados || null,
                         [FIELD_OTRA_SITUACION_CONVOCATORIAS]: formData.otraSituacionAcademica,
                     };
+                    
+                    if (formData.certificadoLink) {
+                        (newEnrollment as any)[FIELD_CERTIFICADO_CONVOCATORIAS] = [{ url: formData.certificadoLink }];
+                    }
+
 
                     return {
                         ...oldData,

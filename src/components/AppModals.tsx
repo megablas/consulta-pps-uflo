@@ -3,7 +3,7 @@ import { useModal } from '../contexts/ModalContext';
 import Modal from './Modal';
 import { EnrollmentForm } from './EnrollmentForm';
 import SeleccionadosModal from './SeleccionadosModal';
-import { FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS } from '../constants';
+import { FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS, FIELD_PERMITE_CERTIFICADO_LANZAMIENTOS } from '../constants';
 
 const AppModals: React.FC = () => {
     const { 
@@ -22,6 +22,7 @@ const AppModals: React.FC = () => {
 
     const horariosStr = selectedLanzamientoForEnrollment?.[FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS] || '';
     const horariosArray = horariosStr ? horariosStr.split(';').map(h => h.trim()).filter(Boolean) : [];
+    const permiteCertificado = !!selectedLanzamientoForEnrollment?.[FIELD_PERMITE_CERTIFICADO_LANZAMIENTOS];
 
     return (
         <>
@@ -39,6 +40,7 @@ const AppModals: React.FC = () => {
               convocatoriaName={selectedLanzamientoForEnrollment?.['Nombre PPS'] || ''}
               horariosDisponibles={horariosArray}
               isSubmitting={isSubmittingEnrollment}
+              permiteCertificado={permiteCertificado}
             />
 
             <SeleccionadosModal

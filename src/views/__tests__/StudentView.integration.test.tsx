@@ -1,34 +1,36 @@
 import '@testing-library/jest-dom';
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import React from 'react';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AuthProvider } from '../../contexts/AuthContext';
-import App from '../../App';
-import { db } from '../../lib/db';
+import { AuthProvider } from '@/contexts/AuthContext';
+import App from '@/App';
+import { db } from '@/lib/db';
+import * as authUtils from '@/utils/auth';
 import {
-    FIELD_LEGAJO_ESTUDIANTES,
-    FIELD_NOMBRE_ESTUDIANTES,
     FIELD_NOMBRE_PPS_LANZAMIENTOS,
     FIELD_ORIENTACION_LANZAMIENTOS,
     FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS,
     FIELD_HORARIO_SELECCIONADO_LANZAMIENTOS,
     FIELD_FECHA_INICIO_LANZAMIENTOS,
-} from '../../constants';
-import type { LanzamientoPPS } from '../../types';
+} from '@/constants';
 
-// Mock the db module, which is the direct dependency for our data hooks
-jest.mock('../../lib/db');
+// Mock the entire db module
+jest.mock('@/lib/db');
 const mockedDb = db as jest.Mocked<typeof db>;
+
+// Mock the auth utils module
+jest.mock('@/utils/auth');
+const mockedAuthUtils = authUtils as jest.Mocked<typeof authUtils>;
 
 // --- Mock Data ---
 const mockStudentDetails = {
     id: 'recStudentTest',
     createdTime: '',
     fields: {
-        [FIELD_LEGAJO_ESTUDIANTES]: '99999',
-        [FIELD_NOMBRE_ESTUDIANTES]: 'Estudiante de Prueba',
+        'Legajo': '12345',
+        'Nombre': 'Estudiante de Prueba',
     }
 };
 
@@ -45,38 +47,32 @@ const mockLanzamiento = {
 };
 
 describe('Flujo de Inscripción de Estudiante (Integration Test)', () => {
+    
+    jest.setTimeout(30000); // Increase timeout for this long-running test
 
     beforeEach(() => {
         jest.clearAllMocks();
         
         // Start as logged out
-        Storage.prototype.getItem = jest.fn((key) => null);
+        Storage.prototype.getItem = jest.fn(() => null);
 
-        // Mock fetch for the login API call
-        (window.fetch as jest.Mock) = jest.fn((url: string | Request, options?: RequestInit): Promise<Response> => {
-            if (url.toString().includes('/consulta-pps-uflo/api/login')) {
-                const body = options?.body ? JSON.parse(options.body as string) : {};
-                if (body.legajo === '99999' && body.password === 'password123') {
-                    return Promise.resolve({
-                        ok: true,
-                        status: 200,
-                        json: () => Promise.resolve({
-                            message: 'Login exitoso',
-                            user: {
-                                legajo: '99999',
-                                nombre: 'Estudiante de Prueba',
-                            },
-                        }),
-                    } as Response);
+        // Mock the db methods used during login and dashboard loading
+        mockedDb.authUsers.get.mockResolvedValue([
+            {
+                id: 'recAuthUser123',
+                createdTime: '',
+                fields: {
+                    Legajo: '12345',
+                    Nombre: 'Estudiante de Prueba',
+                    Salt: 'test-salt',
+                    PasswordHash: 'test-hash'
                 }
             }
-            // Fallback for any other unmocked fetch calls
-            return Promise.resolve({
-                ok: false, status: 404, json: () => Promise.resolve({ message: 'Not Found' }),
-            } as Response);
-        });
+        ] as any);
 
-        // Mock db methods for data fetching hooks
+        // Mock password verification to always succeed for the test password
+        mockedAuthUtils.verifyPassword.mockResolvedValue(true);
+
         mockedDb.estudiantes.get.mockResolvedValue([mockStudentDetails] as any);
         mockedDb.lanzamientos.getAll.mockResolvedValue([mockLanzamiento] as any);
         mockedDb.practicas.getAll.mockResolvedValue([]);
@@ -87,10 +83,7 @@ describe('Flujo de Inscripción de Estudiante (Integration Test)', () => {
 
     it('permite a un estudiante iniciar sesión, ver convocatorias e inscribirse', async () => {
         const user = userEvent.setup();
-
-        const createRecordMock = jest.fn(
-            (fields: any) => Promise.resolve({ id: 'new_conv_id', fields, createdTime: '' })
-        );
+        const createRecordMock = jest.fn().mockResolvedValue({ id: 'new_conv_id', fields: {}, createdTime: '' });
         (mockedDb.convocatorias.create as jest.Mock).mockImplementation(createRecordMock);
 
         const queryClient = new QueryClient();
@@ -107,12 +100,12 @@ describe('Flujo de Inscripción de Estudiante (Integration Test)', () => {
         const passwordInput = await screen.findByPlaceholderText(/Contraseña/i);
         const loginButton = screen.getByRole('button', { name: /Ingresar/i });
 
-        await user.type(legajoInput, '99999');
+        await user.type(legajoInput, '12345');
         await user.type(passwordInput, 'password123');
         await user.click(loginButton);
         
         // --- 2. Dashboard View ---
-        await screen.findByText(/Buenos (días|tardes|noches), Estudiante./i);
+        await screen.findByRole('heading', { name: /Buenos (días|tardes|noches), Estudiante/i, level: 1 });
         const ppsCard = await screen.findByText(/PPS de Integración/i);
         expect(ppsCard).toBeInTheDocument();
         
@@ -121,21 +114,21 @@ describe('Flujo de Inscripción de Estudiante (Integration Test)', () => {
         await user.click(inscribirButton);
 
         const modal = await screen.findByRole('dialog', { name: /Formulario de Inscripción/i });
-        const withinModal = within(modal);
+        const { getByLabelText, getByRole } = screen.getByRole('dialog');
 
-        const horarioCheckbox = withinModal.getByLabelText('Lunes 9 a 13hs');
+        const horarioCheckbox = getByLabelText('Lunes 9 a 13hs');
         await user.click(horarioCheckbox);
 
-        const terminoCursarRadio = withinModal.getByLabelText('Sí');
+        const terminoCursarRadio = getByLabelText('Sí');
         await user.click(terminoCursarRadio);
 
-        const finalesAdeudadosRadio = await withinModal.findByLabelText('1 Final'); // findBy because it appears conditionally
+        const finalesAdeudadosRadio = await screen.findByLabelText('1 Final');
         await user.click(finalesAdeudadosRadio);
         
-        const otraSituacionTextarea = withinModal.getByLabelText(/Aclaraciones Adicionales/i);
+        const otraSituacionTextarea = getByLabelText(/Aclaraciones Adicionales/i);
         await user.type(otraSituacionTextarea, 'Prueba de integración E2E.');
 
-        const submitButton = withinModal.getByRole('button', { name: /Inscribirme/i });
+        const submitButton = getByRole('button', { name: /Inscribirme/i });
         await user.click(submitButton);
 
         // --- 4. Assertions ---

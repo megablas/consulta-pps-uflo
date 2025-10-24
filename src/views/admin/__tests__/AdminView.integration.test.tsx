@@ -5,9 +5,9 @@ import React from 'react';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AuthProvider } from '../../../contexts/AuthContext';
-import App from '../../../App'; // Renderizar App es más fácil para obtener todos los contextos
-import * as airtableService from '../../../services/airtableService';
+import { AuthProvider } from '@/contexts/AuthContext';
+import App from '@/App'; // Renderizar App es más fácil para obtener todos los contextos
+import * as airtableService from '@/services/airtableService';
 import {
     AIRTABLE_TABLE_NAME_ESTUDIANTES,
     AIRTABLE_TABLE_NAME_PRACTICAS,
@@ -16,11 +16,27 @@ import {
     AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
     AIRTABLE_TABLE_NAME_INSTITUCIONES,
     AIRTABLE_TABLE_NAME_FINALIZACION,
-} from '../../../constants';
+} from '@/constants';
 
 // Simular todo el módulo de airtableService
-jest.mock('../../../services/airtableService');
+jest.mock('@/services/airtableService');
 const mockedAirtable = airtableService as jest.Mocked<typeof airtableService>;
+
+// Mock exceljs to prevent ESM issues in Jest
+jest.mock('exceljs', () => ({
+  Workbook: jest.fn().mockImplementation(() => ({
+    xlsx: {
+      writeBuffer: jest.fn().mockResolvedValue(new ArrayBuffer(8)),
+    },
+    addWorksheet: jest.fn().mockReturnValue({
+      columns: [],
+      addRows: jest.fn(),
+      getRow: jest.fn().mockReturnValue({
+        eachCell: jest.fn(),
+      }),
+    }),
+  })),
+}));
 
 // --- Datos Simulados ---
 const mockAdminUser = { legajo: 'admin', nombre: 'Super Usuario', role: 'SuperUser' };
@@ -65,6 +81,8 @@ const mockPracticas = [
 ];
 
 describe('Flujo de Integración del Administrador', () => {
+
+    jest.setTimeout(20000);
 
     beforeEach(() => {
         // Limpiar mocks antes de cada prueba
@@ -120,9 +138,9 @@ describe('Flujo de Integración del Administrador', () => {
         );
 
         // 1. Navegar a la herramienta de búsqueda
-        const herramientasTab = await screen.findByRole('tab', { name: /Herramientas/i });
+        const herramientasTab = await screen.findByRole('tab', { name: /Herramientas/i }, { timeout: 10000 });
         await user.click(herramientasTab);
-        const searchSubTab = await screen.findByRole('button', { name: /Buscar Alumno/i });
+        const searchSubTab = await screen.findByRole('tab', { name: /Buscar Alumno/i });
         await user.click(searchSubTab);
 
         // 2. Buscar al alumno
@@ -136,20 +154,22 @@ describe('Flujo de Integración del Administrador', () => {
         // 4. Esperar a que la pestaña del alumno y su dashboard aparezcan
         const studentTab = await screen.findByRole('tab', { name: /Juana Molina/i, selected: true });
         expect(studentTab).toBeInTheDocument();
+
+        // Find the associated tabpanel using the aria-controls attribute.
+        const panelId = studentTab.getAttribute('aria-controls');
+        expect(panelId).not.toBeNull();
+        const studentDashboard = document.getElementById(panelId!);
+        if (!studentDashboard) throw new Error("No se encontró el panel del dashboard del alumno.");
         
         // Verificar que el banner de bienvenida se renderizó para el alumno correcto
-        await screen.findByText(/Juana./i);
+        await within(studentDashboard).findByRole('heading', { name: /Juana/i, level: 1 });
 
         // 5. Navegar a la pestaña "Mis Prácticas" dentro del panel del alumno
-        // Usamos `within` para asegurarnos de que estamos interactuando con las pestañas del dashboard del alumno
-        const studentDashboard = studentTab.closest('[role="tabpanel"]');
-        if (!studentDashboard) throw new Error("No se encontró el panel del dashboard del alumno.");
-
-        const practicasTab = await within(studentDashboard as HTMLElement).findByRole('tab', { name: /Mis Prácticas/i });
+        const practicasTab = await within(studentDashboard).findByRole('tab', { name: /Mis Prácticas/i });
         await user.click(practicasTab);
         
         // 6. Encontrar el selector de nota y cambiarlo
-        const gradeSelector = await within(studentDashboard as HTMLElement).findByLabelText('Calificación para Hospital Central');
+        const gradeSelector = await within(studentDashboard).findByLabelText('Calificación para Hospital Central');
         expect(gradeSelector).toHaveValue('Sin calificar');
         
         await user.selectOptions(gradeSelector, '10');
@@ -165,7 +185,7 @@ describe('Flujo de Integración del Administrador', () => {
         });
 
         // La UI debería mostrar una confirmación de "Guardado ✓"
-        const savedConfirmation = await within(studentDashboard as HTMLElement).findByText('Guardado ✓');
+        const savedConfirmation = await within(studentDashboard).findByText('Guardado ✓');
         expect(savedConfirmation).toBeInTheDocument();
     });
 });

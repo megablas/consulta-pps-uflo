@@ -5,7 +5,7 @@ import {
     FIELD_ORIENTACION_LANZAMIENTOS,
     FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS,
 } from '../constants';
-import { getEspecialidadClasses, getStatusVisuals, normalizeStringForComparison } from '../utils/formatters';
+import { getEspecialidadClasses, getStatusVisuals, normalizeStringForComparison, isValidLocation } from '../utils/formatters';
 import { useModal } from '../contexts/ModalContext';
 
 interface ConvocatoriaCardProps {
@@ -132,14 +132,33 @@ const ConvocatoriaCard: React.FC<ConvocatoriaCardProps> = ({
     ) : null
   );
 
-  const LocationInfo: React.FC = () => (
-    direccion ? (
-      <p className="mt-2 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 transition-colors duration-200 group-hover:text-slate-800 dark:group-hover:text-slate-200">
-        <span className="material-icons !text-base text-slate-400 dark:text-slate-500">location_on</span>
-        <span>{direccion}</span>
-      </p>
-    ) : null
-  );
+  const LocationInfo: React.FC = () => {
+    if (!direccion) return null;
+
+    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(direccion)}`;
+
+    return (
+      <div className="mt-2 flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400 transition-colors duration-200 group-hover:text-slate-800 dark:group-hover:text-slate-200">
+        <span className="material-icons !text-base text-slate-400 dark:text-slate-500 mt-0.5">location_on</span>
+        <div>
+          <span>{direccion}</span>
+          {isValidLocation(direccion) && (
+            <a
+              href={googleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline mt-1 ml-1"
+              aria-label={`Ver ${direccion} en Google Maps`}
+            >
+              Ver en Google Maps
+              <span className="material-icons !text-xs">open_in_new</span>
+            </a>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const InscribirButton: React.FC = () => (
     <button

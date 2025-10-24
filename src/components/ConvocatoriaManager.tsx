@@ -585,7 +585,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                 groupedPracticas.get(key)!.push(practica);
             }
     
-            const newLaunchesToCreate: any[] = [];
+            const newLaunchesToCreate: Partial<LanzamientoPPSFields>[] = [];
             for (const [key, practicasGroup] of groupedPracticas.entries()) {
                 if (!existingLaunchKeys.has(key)) {
                     const templatePractica = practicasGroup[0];
@@ -596,7 +596,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                         continue;
                     }
 
-                    const newLaunch = {
+                    const newLaunch: Partial<LanzamientoPPSFields> = {
                         [FIELD_NOMBRE_PPS_LANZAMIENTOS]: String(ppsName),
                         [FIELD_FECHA_INICIO_LANZAMIENTOS]: templatePractica[FIELD_FECHA_INICIO_PRACTICAS],
                         [FIELD_FECHA_FIN_LANZAMIENTOS]: templatePractica[FIELD_FECHA_FIN_PRACTICAS],
@@ -618,9 +618,8 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
     
             let successfulCreations = 0;
             let failedCreations = 0;
-            // FIX: Property 'length' does not exist on type 'unknown'. Since newLaunchesToCreate is typed as any[], we can directly access its length property without a cast.
+            
             const totalToCreate = newLaunchesToCreate.length;
-
             for (let i = 0; i < totalToCreate; i++) {
                 const launchData = newLaunchesToCreate[i];
                 setToastInfo({ message: `Sincronizando ${i + 1} de ${totalToCreate}...`, type: 'success' });
@@ -638,6 +637,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
             }
 
             if (failedCreations > 0) {
+                 // FIX: Replaced direct access to .length with the pre-calculated `totalToCreate` variable to avoid type inference errors.
                  throw new Error(`${failedCreations} de ${totalToCreate} lanzamientos no pudieron crearse. Revisa la consola para más detalles.`);
             }
     

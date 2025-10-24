@@ -82,7 +82,6 @@ export const lanzamientoPPSFieldsSchema = z.object({
   'Fecha Finalización': optionalString,
   'Dirección': optionalString,
   'Horario Seleccionado': optionalString,
-  // FIX: Changed to robustString to handle potential array values from lookups.
   'Orientación': robustString,
   'Horas Acreditadas': robustNumber,
   'Cupos disponibles': robustNumber,
@@ -94,6 +93,7 @@ export const lanzamientoPPSFieldsSchema = z.object({
   'Notas de Gestión': optionalString,
   'Fecha de Relanzamiento': optionalString,
   'Teléfono (from Instituciones)': linkToRecord,
+  'Permite Certificado': optionalBoolean,
 }).passthrough();
 
 export const convocatoriaFieldsSchema = z.object({
@@ -119,6 +119,7 @@ export const convocatoriaFieldsSchema = z.object({
   'Teléfono': robustString,
   'Informe Subido': optionalBoolean,
   'Fecha_Entrega_Informe': optionalString,
+  'Certificado': z.array(z.object({ url: z.string() })).optional().nullable(),
 }).passthrough();
 
 export const institucionFieldsSchema = z.object({
@@ -151,6 +152,7 @@ export const lanzamientoPPSSchema = airtableRecord(lanzamientoPPSFieldsSchema);
 export const convocatoriaSchema = airtableRecord(convocatoriaFieldsSchema);
 export const institucionSchema = airtableRecord(institucionFieldsSchema);
 export const penalizacionSchema = airtableRecord(penalizacionFieldsSchema);
+// FIX: Corrected a circular reference where finalizacionPPSSchema was being defined with itself.
 export const finalizacionPPSSchema = airtableRecord(finalizacionPPSFieldsSchema);
 
 // --- Schemas for arrays of records ---

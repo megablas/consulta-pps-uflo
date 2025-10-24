@@ -48,7 +48,6 @@ const EDITABLE_TABLES = {
         label: 'Instituciones', 
         icon: 'apartment', 
         schema: schema.instituciones,
-        // FIX: Use developer-friendly schema keys instead of raw Airtable field names.
         displayFields: ['nombre', 'telefono'],
         fieldConfig: [
             { key: 'nombre', label: 'Nombre', type: 'text' as const },

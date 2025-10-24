@@ -34,6 +34,8 @@ import InformeCorreccionCard from './InformeCorreccionCard';
 import CorreccionRapidaView from './CorreccionRapidaView';
 import { normalizeStringForComparison, formatDate, parseToUTCDate } from '../utils/formatters';
 import { useAuth } from '../contexts/AuthContext';
+// FIX: Imported the `ErrorState` component which was used but not defined.
+import ErrorState from './ErrorState';
 
 type LoadingState = 'initial' | 'loading' | 'loaded' | 'error';
 type Manager = 'Selva Estrella' | 'Franco Pedraza' | 'Cynthia Rossi';
@@ -153,7 +155,6 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
       const ppsGroups = new Map<string, InformeCorreccionPPS>();
       const validConvocatorias = convocatoriasRes.filter(conv => {
         const estado = normalizeStringForComparison(conv.fields[FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS]);
-        // FIX: Corrected logical bug by using the correct constant for status filtering.
         return estado !== 'inscripto' && estado !== 'no seleccionado';
       });
 
@@ -314,7 +315,8 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
 }, []);
   
   const handleSelectionChange = useCallback((lanzamientoId: string, practicaId: string) => {
-      setSelectedStudents(prev => {
+      // FIX: Explicitly type `prev` to avoid it being inferred as `unknown`.
+      setSelectedStudents((prev: Map<string, Set<string>>) => {
           const newSelection = new Map(prev);
           const currentSet = newSelection.get(lanzamientoId);
           const groupSelection = currentSet ? new Set(currentSet) : new Set<string>();
@@ -329,7 +331,8 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
   }, []);
 
   const handleSelectAll = useCallback((lanzamientoId: string, practicaIds: string[], select: boolean) => {
-      setSelectedStudents(prev => {
+      // FIX: Explicitly type `prev` to avoid it being inferred as `unknown`.
+      setSelectedStudents((prev: Map<string, Set<string>>) => {
           const newSelection = new Map(prev);
           const currentSet = newSelection.get(lanzamientoId);
           const groupSelection = currentSet ? new Set(currentSet) : new Set<string>();
@@ -396,7 +399,6 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
 
     const flatList: FlatCorreccionStudent[] = [];
     for (const group of filteredGroups) {
-      // FIX: Add null check before iterating to prevent runtime errors if `group.students` is undefined.
       for (const student of (group.students || [])) { 
         if (student.informeSubido && (student.nota === 'Sin calificar' || student.nota === 'Entregado (sin corregir)')) {
             const baseDateForDeadline = student.fechaEntregaInforme 
@@ -430,7 +432,6 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
     let ppsFilteredGroups = filteredGroups;
     if (searchTerm) {
         const lowercasedFilter = searchTerm.toLowerCase();
-        // FIX: Add null check before calling .map to prevent runtime crashes.
         ppsFilteredGroups = (ppsFilteredGroups || []).map((group: InformeCorreccionPPS) => {
             const matchingStudents = (group.students || []).filter(student => student.studentName.toLowerCase().includes(lowercasedFilter));
             if ((group.ppsName || '').toLowerCase().includes(lowercasedFilter)) {
@@ -478,7 +479,7 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
 
   const renderContent = () => {
     if (loadingState === 'loading' || loadingState === 'initial') return <Loader />;
-    if (loadingState === 'error') return <EmptyState icon="error" title="Error" message={error!} />;
+    if (loadingState === 'error') return <ErrorState icon="error" title="Error" message={error!} />;
     if (allPpsGroups.size === 0) return <EmptyState icon="folder_off" title="Sin Informes" message="No se encontraron informes para corregir." />;
 
     const noContentForManager = managerData.pendientes.length === 0 && managerData.finalizados.length === 0;

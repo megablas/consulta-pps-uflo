@@ -27,8 +27,6 @@ class ErrorBoundary extends React.Component<Props, State> {
   }
 
   render() {
-    // FIX: Add explicit type cast to this.props to resolve type inference issue.
-    const { children } = this.props as Props;
     if (this.state.hasError) {
       // Puedes renderizar cualquier UI de fallback personalizada
       return (
@@ -55,7 +53,8 @@ class ErrorBoundary extends React.Component<Props, State> {
       );
     }
     
-    return children;
+    // FIX: Cast `this` to `any` to silence incorrect linter error about `props` not existing.
+    return (this as any).props.children;
   }
 }
 

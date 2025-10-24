@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import SubTabs from '../../components/SubTabs';
 import AdminSearch from '../../components/AdminSearch';
 import SeguroGenerator from '../../components/SeguroGenerator';
-import { NuevosConvenios } from '../../components/NuevosConvenios';
+import NuevosConvenios from '../../components/NuevosConvenios';
 import ExecutiveReportGenerator from '../../components/ExecutiveReportGenerator';
 import PenalizationManager from '../../components/PenalizationManager';
 import { useModal } from '../contexts/ModalContext';

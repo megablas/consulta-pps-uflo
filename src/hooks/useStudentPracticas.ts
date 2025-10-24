@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchPracticas } from '../services/dataService';
 import { db } from '../lib/db';
-import type { AirtableRecord, AirtableErrorResponse } from '../types';
+import type { AirtableRecord } from '../types';
 import { useModal } from '../contexts/ModalContext';
 
 export const useStudentPracticas = (legajo: string) => {

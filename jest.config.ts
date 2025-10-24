@@ -1,22 +1,22 @@
 import type { Config } from 'jest';
 
 const config: Config = {
-  // Indica que el entorno de prueba es un entorno similar al de un navegador
+  // Indicates that the test environment is a browser-like environment
   testEnvironment: 'jsdom',
 
-  // Una lista de rutas a módulos que ejecutan código para configurar el framework de pruebas antes de cada prueba
+  // A list of paths to modules that run some code to configure or set up the testing framework before each test
   setupFilesAfterEnv: ['<rootDir>/jest-setup.ts'],
 
-  // El preset es una configuración base que utiliza Jest
+  // The preset is a base configuration that Jest uses
   preset: 'ts-jest',
 
-  // Un mapa de expresiones regulares a nombres de módulos que permite simular recursos con un solo módulo
+  // A map from regular expressions to module names that allows to stub out resources with a single module
   moduleNameMapper: {
-    // Manejar alias de módulos (esto se configurará automáticamente pronto)
+    // Handle module aliases (this will be automatically configured soon)
     '^@/(.*)$': '<rootDir>/src/$1',
   },
 
-  // Agregado para que Jest sepa cómo transformar archivos TypeScript
+  // Added so Jest knows how to transform TypeScript files
   transform: {
     '^.+\\.(ts|tsx)$': 'ts-jest',
   },

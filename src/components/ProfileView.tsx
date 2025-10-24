@@ -36,7 +36,7 @@ const ProfileViewSkeleton: React.FC = () => (
     </div>
 );
 
-// FIX: Added a props interface to make the component prop-driven.
+// FIX: Added a props interface to make the component prop-driven and fix type errors related to missing props.
 interface ProfileViewProps {
   studentDetails: EstudianteFields | null;
   isLoading: boolean;
