@@ -1,8 +1,8 @@
 // --- Airtable Configuration ---
 // Las claves se cargan desde variables de entorno para mayor seguridad y flexibilidad.
 // El archivo .env en la raíz del proyecto debe contener estas variables.
-export const AIRTABLE_PAT = process.env.VITE_AIRTABLE_PAT!;
-export const AIRTABLE_BASE_ID = process.env.VITE_AIRTABLE_BASE_ID!;
+export const AIRTABLE_PAT = import.meta.env.VITE_AIRTABLE_PAT!;
+export const AIRTABLE_BASE_ID = import.meta.env.VITE_AIRTABLE_BASE_ID!;
 
 // Table Names
 export const AIRTABLE_TABLE_NAME_PPS = 'Solicitud de PPS';
