@@ -192,7 +192,7 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSel
 
   const { data: metrics, isLoading, error, refetch, isFetching } = useMetricsData({ targetYear, isTestingMode });
 
-  // FIX: Added an initial value of 0 to the reduce function to correctly sum the total spots.
+  // FIX: Added an initial value of 0 to the reduce function to correctly sum the total spots. The accumulator was incorrectly starting as an object instead of a number.
   const totalCuposMesActual = metrics ? metrics.lanzamientosMesActual.reduce((acc, group) => acc + group.totalCupos, 0) : 0;
   const MONTH_NAMES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 

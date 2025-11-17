@@ -205,9 +205,10 @@ export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<G
     }
 
     const escapedPpsName = ppsName.replace(/'/g, "\\'");
+    // Use ARRAYJOIN and SEARCH for robust lookup field matching
     const formula = `AND(
         LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = "seleccionado",
-        {${FIELD_NOMBRE_PPS_CONVOCATORIAS}} = '${escapedPpsName}',
+        SEARCH('${escapedPpsName}', ARRAYJOIN({${FIELD_NOMBRE_PPS_CONVOCATORIAS}})),
         DATETIME_FORMAT({${FIELD_FECHA_INICIO_CONVOCATORIAS}}, 'YYYY-MM-DD') = '${startDate}'
     )`;
     
