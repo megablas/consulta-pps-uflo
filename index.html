@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta de PPS y Prácticas</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22%252563eb%22%3E%3Cpath%20d%3D%22M5%2013.18v4L12%2021l7-3.82v-4L12%2017l-7-3.82zM12%203L1%209l11%206%209-4.91V17h2V9L12%203z%22%2F%3E%3C%2Fsvg%3E">
+    <!-- PWA Manifest Link -->
+    <link rel="manifest" href="/manifest.json">
+    <!-- Theme Color for browsers -->
+    <meta name="theme-color" content="#2563eb">
+    <!-- Tailwind Play CDN for preview environment -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              primary: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a', 950: '#172554' },
+              secondary: { 50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc', 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81', 950: '#1e1b4b' },
+              success: { 50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac', 400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d', 800: '#166534', 900: '#14532d', 950: '#052e16' },
+              danger: { 50: '#fff1f2', 100: '#ffe4e6', 200: '#fecdd3', 300: '#fda4af', 400: '#fb7185', 500: '#f43f5e', 600: '#e11d48', 700: '#be123c', 800: '#9f1239', 900: '#881337', 950: '#4c0519' },
+              warning: { 50: '#fffbeb', 100: '#fef3c7', 200: '#fde68a', 300: '#fcd34d', 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706', 700: '#b45309', 800: '#92400e', 900: '#78350f', 950: '#451a03' },
+              info: { 50: '#f0f9ff', 100: '#e0f2fe', 200: '#bae6fd', 300: '#7dd3fc', 400: '#38bdf8', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1', 800: '#075985', 900: '#0c4a6e', 950: '#082f49' },
+              gray: { 50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1', 400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155', 800: '#1e293b', 900: '#0f172a', 950: '#020617' },
+            }
+          }
+        }
+      }
+    </script>
+    <script>
+      // Prevents FOUC (Flash of Unstyled Content) by setting the theme class before the page renders.
+      if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet">
+<script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "@tanstack/react-query": "https://aistudiocdn.com/@tanstack/react-query@^5.90.5",
+    "@tanstack/react-query-devtools": "https://aistudiocdn.com/@tanstack/react-query-devtools@^5.90.2",
+    "vite": "https://aistudiocdn.com/vite@^5.0.4",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.0.4",
+    "exceljs": "https://aistudiocdn.com/exceljs@^4.4.0",
+    "jest": "https://aistudiocdn.com/jest@^30.2.0",
+    "@testing-library/jest-dom": "https://aistudiocdn.com/@testing-library/jest-dom@^6.9.1",
+    "@jest/globals": "https://aistudiocdn.com/@jest/globals@^30.2.0",
+    "@testing-library/react": "https://aistudiocdn.com/@testing-library/react@^16.3.0",
+    "zod": "https://aistudiocdn.com/zod@3.24.1",
+    "@storybook/react-vite": "https://aistudiocdn.com/@storybook/react-vite@^8.2.6",
+    "@storybook/react": "https://aistudiocdn.com/@storybook/react@^8.2.6",
+    "@testing-library/user-event": "https://aistudiocdn.com/@testing-library/user-event@^14.6.1",
+    "crypto": "https://aistudiocdn.com/crypto@^1.0.1",
+    "buffer": "https://aistudiocdn.com/buffer@^6.0.3",
+    "fs/": "https://aistudiocdn.com/fs@^0.0.1-security/",
+    "path": "https://aistudiocdn.com/path@^0.12.7",
+    "dotenv": "https://aistudiocdn.com/dotenv@^17.2.3",
+    "tailwindcss": "https://aistudiocdn.com/tailwindcss@^4.1.14",
+    "autoprefixer": "https://aistudiocdn.com/autoprefixer@^10.4.21",
+    "xlsx": "https://aistudiocdn.com/xlsx@^0.18.5",
+    "process": "https://aistudiocdn.com/process@^0.11.10",
+    "cookie": "https://aistudiocdn.com/cookie@^1.0.2",
+    "@vercel/node": "https://aistudiocdn.com/@vercel/node@^5.5.6",
+    "jsonwebtoken": "https://aistudiocdn.com/jsonwebtoken@^9.0.2"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+</body>
+</html>
