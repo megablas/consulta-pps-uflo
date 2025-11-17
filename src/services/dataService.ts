@@ -106,7 +106,7 @@ export const fetchPracticas = async (legajo: string): Promise<Practica[]> => {
     // It does not return an object with `records` and `error` properties.
     try {
         const records = await db.practicas.getAll({ filterByFormula });
-        return records.map(r => ({ ...r.fields, id: r.id }));
+        return records.map(r => ({ ...(r.fields as any), id: r.id }));
     } catch (e: any) {
         console.error("Error fetching practicas:", e);
         throw new Error('Error al cargar las prácticas.');
@@ -126,7 +126,7 @@ export const fetchSolicitudes = async (legajo: string, studentAirtableId: string
             filterByFormula,
             sort: [{ field: FIELD_ULTIMA_ACTUALIZACION_PPS, direction: 'desc' }]
         });
-        return records.map(r => ({ ...r.fields, id: r.id }));
+        return records.map(r => ({ ...(r.fields as any), id: r.id }));
     } catch (e: any) {
         console.error("Error fetching solicitudes:", e);
         throw new Error('Error al cargar las solicitudes.');
@@ -163,28 +163,25 @@ export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: 
             db.instituciones.getAll({ fields: [FIELD_NOMBRE_INSTITUCIONES, FIELD_DIRECCION_INSTITUCIONES] })
         ]);
         
-        const myEnrollments = convocatoriasRes.map(r => ({ ...r.fields, id: r.id }));
-        const allLanzamientos = lanzamientosRes.map(r => ({ ...r.fields, id: r.id }));
+        const myEnrollments = convocatoriasRes.map(r => ({ ...r.fields, id: r.id } as Convocatoria));
+        const allLanzamientos = lanzamientosRes.map(r => ({ ...r.fields, id: r.id } as LanzamientoPPS));
 
         const institutionAddressMap = new Map<string, string>();
         institucionesRes.forEach(inst => {
             const name = inst.fields[FIELD_NOMBRE_INSTITUCIONES];
             const address = inst.fields[FIELD_DIRECCION_INSTITUCIONES];
             if (name && address) {
-                institutionAddressMap.set(normalizeStringForComparison(name), address);
+                institutionAddressMap.set(normalizeStringForComparison(name as string), address as string);
             }
         });
         
-        // Default behavior: students see only 'Abierta'
-        const lanzamientosAbiertos = allLanzamientos.filter(l => normalizeStringForComparison(l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]) === 'abierta');
-
-        // Logic for what to display:
-        // In Preview mode, ALL users (students and admins) see ALL convocatorias to facilitate testing.
-        // In Production mode, only SuperUsers see all; students see only open ones.
-        const lanzamientosParaMostrar = (IS_PREVIEW_MODE && !isSuperUser) || isSuperUser
-            ? allLanzamientos
-            : lanzamientosAbiertos;
-
+        // The visibility logic is now the same for all users: show everything that is not 'Oculto'.
+        // The UI components will handle role-specific actions (like editing or enrolling).
+        const lanzamientosParaMostrar = allLanzamientos.filter(l => {
+            const estado = normalizeStringForComparison(l[FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS]);
+            return estado !== 'oculto';
+        });
+        
         return { 
             lanzamientos: lanzamientosParaMostrar,
             myEnrollments,

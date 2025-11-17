@@ -3,8 +3,7 @@ import React, { createContext, useState, useContext, useEffect, useCallback, Rea
 export type AuthUser = {
   legajo: string;
   nombre: string;
-  // FIX: Added 'AdminTester' to the role type to support testing roles.
-  role?: 'Jefe' | 'SuperUser' | 'Directivo' | 'Reportero' | 'AdminTester';
+  role?: 'Jefe' | 'SuperUser' | 'Directivo' | 'Reportero';
   orientaciones?: string[];
 };
 
