@@ -46,12 +46,8 @@ const managerConfig: Record<Manager, { orientations: string[], label: string }> 
   'Cynthia Rossi': { orientations: ['laboral', 'comunitaria'], label: 'Cynthia Rossi (Laboral & Comunitaria)' }
 };
 
-interface CorreccionPanelProps {
-  isTestingMode?: boolean;
-}
-
-const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false }) => {
-  const { isJefeMode, authenticatedUser } = useAuth();
+const CorreccionPanel: React.FC = () => {
+  const { isJefeMode } = useAuth();
   const [loadingState, setLoadingState] = useState<LoadingState>('initial');
   const [error, setError] = useState<string | null>(null);
   const [allPpsGroups, setAllPpsGroups] = useState<Map<string, InformeCorreccionPPS>>(new Map());
@@ -200,10 +196,6 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
   }, [fetchData]);
 
   const handleNotaChange = useCallback(async (student: InformeCorreccionStudent, newNota: string) => {
-    if (isTestingMode) {
-      setToastInfo({ message: 'Modo de prueba: La nota no se guardará.', type: 'success' });
-      return;
-    }
     setUpdatingNotaId(student.practicaId || `creating-${student.studentId}`);
     try {
         let practicaId = student.practicaId;
@@ -254,7 +246,7 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
     } finally {
         setUpdatingNotaId(null);
     }
-  }, [isTestingMode, allPpsGroups]);
+  }, [allPpsGroups]);
   
   const handleSelectionChange = useCallback((practicaId: string) => {
     setSelectedStudents((prev: Map<string, Set<string>>) => {
@@ -269,7 +261,7 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
             }
         }
         
-// FIX: Iterate over an array created from the Map iterator to avoid type inference issues.
+        // FIX: Iterate over an array created from the Map iterator to avoid type inference issues.
         for (const [lanzamientoId, ppsGroup] of Array.from(allPpsGroups.entries())) {
             if (ppsGroup.students.some((s: InformeCorreccionStudent) => s.practicaId === practicaId)) {
                 if (!newSelection.has(lanzamientoId)) {
@@ -288,7 +280,7 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
     const firstPracticaId = practicaIds[0];
     let lanzamientoIdForGroup: string | null = null;
     
-// FIX: Iterate over an array created from the Map iterator to avoid type inference issues.
+    // FIX: Iterate over an array created from the Map iterator to avoid type inference issues.
     for (const [lanzamientoId, ppsGroup] of Array.from(allPpsGroups.entries())) {
         if (ppsGroup.students.some((s: InformeCorreccionStudent) => s.practicaId === firstPracticaId)) {
             lanzamientoIdForGroup = lanzamientoId;
@@ -324,12 +316,7 @@ const CorreccionPanel: React.FC<CorreccionPanelProps> = ({ isTestingMode = false
             fields: { [FIELD_NOTA_PRACTICAS]: newNota }
         }));
         
-        if (isTestingMode) {
-            console.log("TEST MODE: Batch updating:", updates);
-            await new Promise(res => setTimeout(res, 1000));
-        } else {
-            await db.practicas.updateMany(updates as any);
-        }
+        await db.practicas.updateMany(updates as any);
 
         setAllPpsGroups((prev: Map<string, InformeCorreccionPPS>) => {
             const newGroups = new Map(prev);

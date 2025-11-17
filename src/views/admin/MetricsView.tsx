@@ -5,10 +5,9 @@ import TimelineView from '../../components/TimelineView';
 
 interface MetricsViewProps {
   onStudentSelect: (student: { legajo: string, nombre: string }) => void;
-  isTestingMode?: boolean;
 }
 
-const MetricsView: React.FC<MetricsViewProps> = ({ onStudentSelect, isTestingMode = false }) => {
+const MetricsView: React.FC<MetricsViewProps> = ({ onStudentSelect }) => {
   const [activeMetricsTabId, setActiveMetricsTabId] = useState('dashboard');
 
   const metricsSubTabs = [
@@ -20,8 +19,8 @@ const MetricsView: React.FC<MetricsViewProps> = ({ onStudentSelect, isTestingMod
     <>
       <SubTabs tabs={metricsSubTabs} activeTabId={activeMetricsTabId} onTabChange={setActiveMetricsTabId} />
       <div className="mt-6">
-          {activeMetricsTabId === 'dashboard' && <MetricsDashboard onStudentSelect={onStudentSelect} isTestingMode={isTestingMode} />}
-          {activeMetricsTabId === 'timeline' && <TimelineView isTestingMode={isTestingMode} />}
+          {activeMetricsTabId === 'dashboard' && <MetricsDashboard onStudentSelect={onStudentSelect} />}
+          {activeMetricsTabId === 'timeline' && <TimelineView />}
       </div>
     </>
   );

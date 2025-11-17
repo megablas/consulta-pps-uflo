@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useGestionConvocatorias } from '../hooks/useGestionConvocatorias';
 import type { LanzamientoPPS, LanzamientoPPSFields } from '../types';
 import {
@@ -280,10 +280,9 @@ const CollapsibleSection: React.FC<{ title: string; count: number; children: Rea
 
 interface ConvocatoriaManagerProps {
   forcedOrientations?: string[];
-  isTestingMode?: boolean;
 }
 
-const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrientations, isTestingMode = false }) => {
+const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrientations }) => {
     const {
         institutionsMap,
         loadingState,
@@ -300,7 +299,7 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
         handleUpdateInstitutionPhone,
         handleSync,
         filteredData,
-    } = useGestionConvocatorias({ forcedOrientations, isTestingMode });
+    } = useGestionConvocatorias({ forcedOrientations });
 
     const renderContent = () => {
         if (loadingState === 'loading' || loadingState === 'initial') return <Loader />;
@@ -419,9 +418,8 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                     </div>
                      <button
                         onClick={handleSync}
-                        disabled={isSyncing || isTestingMode}
+                        disabled={isSyncing}
                         className="bg-rose-600 text-white font-bold py-2.5 px-6 rounded-lg text-sm transition-colors shadow-md disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-rose-700"
-                        title={isTestingMode ? "Deshabilitado en modo de prueba" : ""}
                     >
                         <span className="material-icons">{isSyncing ? 'sync' : 'history'}</span>
                         <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>

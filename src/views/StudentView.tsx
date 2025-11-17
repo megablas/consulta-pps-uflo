@@ -16,9 +16,7 @@ const StudentView: React.FC = () => {
         return null; // Or a loading/error state if the user somehow gets here without being authenticated
     }
 
-    // When the logged-in user is the generic 'testing' user, we fetch data for a real student
-    // to allow for realistic testing in the preview environment.
-    const legajoForProvider = authenticatedUser.legajo === '99999' ? '12345' : authenticatedUser.legajo;
+    const legajoForProvider = authenticatedUser.legajo;
 
     // Define tabs here to pass to the mobile nav
     const mobileNavTabs = [

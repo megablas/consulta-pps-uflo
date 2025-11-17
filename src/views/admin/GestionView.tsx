@@ -3,11 +3,7 @@ import SubTabs from '../../components/SubTabs';
 import ConvocatoriaManager from '../../components/ConvocatoriaManager';
 import ConvocatoriaStatusManager from '../../components/ConvocatoriaStatusManager';
 
-interface GestionViewProps {
-  isTestingMode?: boolean;
-}
-
-const GestionView: React.FC<GestionViewProps> = ({ isTestingMode = false }) => {
+const GestionView: React.FC = () => {
   const [activeGestionTabId, setActiveGestionTabId] = useState('manager');
   
   const gestionSubTabs = [
@@ -19,8 +15,8 @@ const GestionView: React.FC<GestionViewProps> = ({ isTestingMode = false }) => {
     <>
       <SubTabs tabs={gestionSubTabs} activeTabId={activeGestionTabId} onTabChange={setActiveGestionTabId} />
       <div className="mt-6">
-          {activeGestionTabId === 'manager' && <ConvocatoriaManager isTestingMode={isTestingMode} />}
-          {activeGestionTabId === 'status-manager' && <ConvocatoriaStatusManager isTestingMode={isTestingMode} />}
+          {activeGestionTabId === 'manager' && <ConvocatoriaManager />}
+          {activeGestionTabId === 'status-manager' && <ConvocatoriaStatusManager />}
       </div>
     </>
   );

@@ -54,8 +54,8 @@ export const useAuthLogic = ({ login }: UseAuthLogicProps) => {
         setError(null);
 
         const specialUsers: { [key: string]: { pass: string, payload: AuthUser } } = {
-            'testing': { pass: 'testing', payload: { legajo: '99999', nombre: 'Admin de Prueba', role: 'AdminTester' } },
-            '12345': { pass: '12345', payload: { legajo: '99999', nombre: 'Estudiante de Prueba' } },
+            'testing': { pass: 'testing', payload: { legajo: '99999', nombre: 'Admin de Prueba', role: 'SuperUser' } },
+            '12345': { pass: '12345', payload: { legajo: '12345', nombre: 'Estudiante de Prueba' } },
             'reportero': { pass: 'reportero', payload: { legajo: 'reportero', nombre: 'Usuario Reportero', role: 'Reportero' } },
             'admin': { pass: 'superadmin', payload: { legajo: 'admin', nombre: 'Super Usuario', role: 'SuperUser' } },
         };

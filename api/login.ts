@@ -58,7 +58,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // --- DEMO/SPECIAL USER HANDLING ---
     const specialUsers: { [key: string]: { pass: string, payload: AuthUser } } = {
         'testing': { pass: 'testing', payload: { legajo: '99999', nombre: 'Admin de Prueba', role: 'AdminTester' } },
-        '12345': { pass: '12345', payload: { legajo: '99999', nombre: 'Estudiante de Prueba' } },
+        '12345': { pass: '12345', payload: { legajo: '12345', nombre: 'Estudiante de Prueba' } },
         'reportero': { pass: 'reportero', payload: { legajo: 'reportero', nombre: 'Usuario Reportero', role: 'Reportero' } },
         'admin': { pass: 'superadmin', payload: { legajo: 'admin', nombre: 'Super Usuario', role: 'SuperUser' } },
     };

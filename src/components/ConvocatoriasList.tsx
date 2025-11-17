@@ -1,6 +1,6 @@
 import React from 'react';
 import { useMutation } from '@tanstack/react-query';
-import type { Convocatoria, LanzamientoPPS, EstudianteFields } from '../types';
+import type { Convocatoria, LanzamientoPPS, EstudianteFields, GroupedSeleccionados } from '../types';
 import ConvocatoriaCard from './ConvocatoriaCard';
 import { 
     FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS,
@@ -11,7 +11,6 @@ import EmptyState from './EmptyState';
 import { useModal } from '../contexts/ModalContext';
 import { normalizeStringForComparison } from '../utils/formatters';
 import { fetchSeleccionados } from '../services/dataService';
-import { useAuth } from '../contexts/AuthContext';
 
 
 interface ConvocatoriasListProps {
@@ -32,32 +31,21 @@ const ConvocatoriasList: React.FC<ConvocatoriasListProps> = ({
     completedLanzamientoIds 
 }) => {
     const { openSeleccionadosModal, showModal } = useModal();
-    const { authenticatedUser } = useAuth();
-    const isTesting = authenticatedUser?.legajo === '99999';
     
     const seleccionadosMutation = useMutation({
-        mutationFn: (lanzamiento: LanzamientoPPS) => {
-            if (isTesting && lanzamiento.id === 'lanz_mock_2') {
-                 return Promise.resolve({
-                    'Turno Mañana': [
-                        { nombre: 'Ana Rodriguez (Ejemplo)', legajo: '99901' },
-                        { nombre: 'Carlos Gomez (Ejemplo)', legajo: '99902' },
-                    ],
-                    'Turno Tarde': [
-                        { nombre: 'Lucia Fernandez (Ejemplo)', legajo: '99903' },
-                    ],
-                });
-            }
-            return fetchSeleccionados(lanzamiento);
-        },
+        mutationFn: (lanzamiento: LanzamientoPPS) => fetchSeleccionados(lanzamiento),
         onSuccess: (data, lanzamiento) => {
             const title = lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS] || 'Convocatoria';
-            if (!data || Object.keys(data).length === 0) {
+            const isDataEmpty = !data || Object.keys(data).length === 0;
+
+            if (isDataEmpty) {
+                // Si no hay datos, siempre mostrar el mensaje estándar.
                 showModal(
                     'Lista de Seleccionados', 
                     'La lista de seleccionados para esta convocatoria aún no ha sido publicada o no hubo seleccionados. Por favor, vuelve a consultar más tarde.'
                 );
             } else {
+                // Si se encontraron datos, mostrarlos.
                 openSeleccionadosModal(data, title);
             }
         },

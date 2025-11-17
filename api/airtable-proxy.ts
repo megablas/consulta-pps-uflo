@@ -59,19 +59,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ message: 'Table name is required.' });
     }
     
-    // --- SPECIAL FILTER HANDLING FOR `fetchSeleccionados` ---
-    const { ppsNameToFilter } = queryParams;
-    if (typeof ppsNameToFilter === 'string' && ppsNameToFilter) {
-        // This is a request from fetchSeleccionados. Using SEARCH() for case-insensitive matching, which is more robust.
-        const formula = `AND(
-            LOWER({Estado}) = "seleccionado",
-            SEARCH("${ppsNameToFilter.replace(/"/g, '\\"')}", {Nombre PPS})
-        )`;
-        queryParams.filterByFormula = formula;
-        delete queryParams.ppsNameToFilter;
-    }
-
-
     // --- SECURITY RULES ---
     if (!isSuperUser) {
         let formula = queryParams.filterByFormula as string | undefined;
