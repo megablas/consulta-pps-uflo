@@ -205,12 +205,13 @@ export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<G
     }
 
     const escapedPpsName = ppsName.replace(/'/g, "\\'");
-    // The `Fecha Inicio` field in Convocatorias is a standard Date field, not a lookup.
-    // The `Nombre PPS` field in Convocatorias IS a lookup.
+    
+    // Use IS_SAME for robust date comparison, ignoring time.
+    // Use DATETIME_PARSE to ensure the startDate string is treated as a date object by Airtable.
     const formula = `AND(
         LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = "seleccionado",
         SEARCH('${escapedPpsName}', ARRAYJOIN({${FIELD_NOMBRE_PPS_CONVOCATORIAS}})),
-        DATETIME_FORMAT({${FIELD_FECHA_INICIO_CONVOCATORIAS}}, 'YYYY-MM-DD') = '${startDate}'
+        IS_SAME({${FIELD_FECHA_INICIO_CONVOCATORIAS}}, DATETIME_PARSE('${startDate}', 'YYYY-MM-DD'))
     )`;
     
     const { records: convocatorias, error: convError } = await fetchAllAirtableData<ConvocatoriaFields>(
