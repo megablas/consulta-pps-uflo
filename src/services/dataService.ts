@@ -191,9 +191,27 @@ export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: 
 
 
 export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<GroupedSeleccionados | null> => {
-    // --- DIAGNOSTIC CODE ---
-    // The formula is simplified to find all "seleccionado" records for debugging.
-    const formula = `LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = "seleccionado"`;
+    const ppsNameToMatch = lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS];
+    const ppsStartDateToMatch = lanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS];
+
+    if (!ppsNameToMatch || !ppsStartDateToMatch) {
+        console.error("El objeto de lanzamiento no tiene Nombre o Fecha de Inicio.", lanzamiento);
+        return null;
+    }
+
+    // Escape single and double quotes for safety in the formula string
+    const escapedPpsName = ppsNameToMatch.replace(/["']/g, '\\$&');
+
+    // Due to potential data integrity issues with the `{Lanzamiento Vinculado}` link,
+    // we match by combining the lookup fields for Name and Start Date.
+    // This creates a robust composite key to identify the correct set of enrollments.
+    const formula = `
+      AND(
+        SEARCH('${escapedPpsName}', ARRAYJOIN({${FIELD_NOMBRE_PPS_CONVOCATORIAS}})),
+        SEARCH('${ppsStartDateToMatch}', ARRAYJOIN({${FIELD_FECHA_INICIO_CONVOCATORIAS}})),
+        LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = "seleccionado"
+      )
+    `;
     
     const { records: convocatorias, error: convError } = await fetchAllAirtableData<ConvocatoriaFields>(
         AIRTABLE_TABLE_NAME_CONVOCATORIAS, 
@@ -201,17 +219,12 @@ export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<G
         [
             FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, 
             FIELD_HORARIO_FORMULA_CONVOCATORIAS,
-            FIELD_NOMBRE_PPS_CONVOCATORIAS, // Added for diagnostic
-            FIELD_FECHA_INICIO_CONVOCATORIAS // Added for diagnostic
         ],
         formula
     );
-    
-    // Log the raw response from Airtable to the console for analysis.
-    console.log('Respuesta de Airtable para diagnóstico (solo con filtro de estado):', JSON.stringify(convocatorias, null, 2));
-
 
     if (convError || convocatorias.length === 0) {
+        if (convError) console.error("Airtable error fetching seleccionados:", convError);
         return null;
     }
 
@@ -226,7 +239,10 @@ export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<G
         studentFormula
     );
 
-    if (studentError || studentRecords.length === 0) return null;
+    if (studentError || studentRecords.length === 0) {
+        if(studentError) console.error("Airtable error fetching student details for seleccionados:", studentError);
+        return null;
+    }
 
     const studentMap = new Map(studentRecords.map(r => [r.id, r.fields]));
     const grouped: GroupedSeleccionados = {};
