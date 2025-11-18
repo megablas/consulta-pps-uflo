@@ -196,6 +196,7 @@ export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: 
 
 
 export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<GroupedSeleccionados | null> => {
+    // We keep these for context, but they are not used in the diagnostic formula
     const ppsName = lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS];
     const startDate = lanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS];
 
@@ -204,15 +205,10 @@ export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<G
         return null;
     }
 
-    const escapedPpsName = ppsName.replace(/'/g, "\\'");
-    
-    // --- INICIO: CÓDIGO DE DIAGNÓSTICO ---
-    // 1. Hemos eliminado temporalmente el filtro de fecha.
-    // 2. Hemos añadido 'Fecha Inicio' a la lista de campos que queremos ver.
-    const formula = `AND(
-        LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = "seleccionado",
-        SEARCH('${escapedPpsName}', ARRAYJOIN({${FIELD_NOMBRE_PPS_CONVOCATORIAS}}))
-    )`;
+    // --- INICIO: CÓDIGO DE DIAGNÓSTICO FINAL ---
+    // Simplificamos la fórmula al máximo para ver qué registros devuelve Airtable
+    // que estén marcados como "seleccionado", sin importar la fecha o el nombre.
+    const formula = `LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = "seleccionado"`;
     
     const { records: convocatorias, error: convError } = await fetchAllAirtableData<ConvocatoriaFields>(
         AIRTABLE_TABLE_NAME_CONVOCATORIAS, 
@@ -220,13 +216,14 @@ export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<G
         [
             FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, 
             FIELD_HORARIO_FORMULA_CONVOCATORIAS,
+            FIELD_NOMBRE_PPS_CONVOCATORIAS, // <--- Campo añadido para diagnóstico
             FIELD_FECHA_INICIO_CONVOCATORIAS // <--- Campo añadido para diagnóstico
         ],
         formula
     );
     
-    // 3. Imprimimos el resultado en la consola para analizarlo.
-    console.log('Respuesta de Airtable para diagnóstico (sin filtro de fecha):', JSON.stringify(convocatorias, null, 2));
+    // Imprimimos el resultado en la consola para analizarlo.
+    console.log('Respuesta de Airtable para diagnóstico (solo con filtro de estado):', JSON.stringify(convocatorias, null, 2));
     // --- FIN: CÓDIGO DE DIAGNÓSTICO ---
 
 
