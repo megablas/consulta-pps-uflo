@@ -51,10 +51,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } catch (error) {
         return res.status(401).json({ message: 'Invalid token.' });
     }
-
-    const isSuperUser = user.role === 'SuperUser' || user.role === 'Jefe' || user.role === 'Directivo' || user.role === 'AdminTester' || user.role === 'Reportero';
+    
     const { table, recordId, ...queryParams } = req.query;
 
+    console.log(`--- [Airtable Proxy Log] ---`);
+    console.log(`Timestamp: ${new Date().toISOString()}`);
+    console.log(`Request for table: "${table}"`);
+    console.log('Incoming Query Params:', queryParams);
+
+    const isSuperUser = user.role === 'SuperUser' || user.role === 'Jefe' || user.role === 'Directivo' || user.role === 'AdminTester' || user.role === 'Reportero';
+    
     if (typeof table !== 'string') {
         return res.status(400).json({ message: 'Table name is required.' });
     }
@@ -70,7 +76,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         } else if (table === 'Prácticas') {
             legajoFilter = `SEARCH('${studentLegajo}', {Legajo Busqueda} & '')`;
         } else if (table === 'Solicitud de PPS' || table === 'Convocatorias') {
-            // These tables use a 'Legajo' field (Lookup or direct) for filtering.
             legajoFilter = `SEARCH('${studentLegajo}', {Legajo} & '')`;
         }
         
@@ -79,6 +84,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         queryParams.filterByFormula = formula ?? '';
+        console.log(`Applied Security Filter for user ${user.legajo}: ${queryParams.filterByFormula}`);
     }
 
     try {
@@ -97,7 +103,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             for (const key in params) {
                 const value = params[key];
                 if (Array.isArray(value)) {
-                    // Do NOT encode the key for array parameters like 'fields[]' or 'sort[0][field]'
                     value.forEach(v => {
                         queryStringParts.push(`${key}=${encodeURIComponent(v)}`);
                     });
@@ -108,17 +113,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return queryStringParts.join('&');
         };
 
-        // If not a GET request or not fetching all, just make a single request
         if (req.method !== 'GET' || !fetchAll) {
             const queryString = buildQueryString(queryParams);
             if (queryString) {
                 path += `?${queryString}`;
             }
+            console.log(`Executing single request to Airtable: /${path}`);
             const data = await fetchAirtable(req.method || 'GET', path, req.body);
+            console.log('Airtable response (single):', data);
             return res.status(200).json(data);
         }
         
-        // Handle pagination for GET requests with fetchAll=true
         let allRecords: any[] = [];
         let offset: string | undefined = undefined;
 
@@ -133,17 +138,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 currentPath += `?${queryString}`;
             }
 
+            console.log(`Executing paginated request to Airtable: /${currentPath}`);
             const pageData: any = await fetchAirtable('GET', currentPath);
+            
             if (pageData.records) {
                 allRecords = allRecords.concat(pageData.records);
             }
             offset = pageData.offset;
         } while (offset);
+        
+        console.log(`Total records received from Airtable: ${allRecords.length}`);
+        if (allRecords.length > 0) {
+            console.log('Structure of first record received:', JSON.stringify(allRecords[0], null, 2));
+        }
 
         return res.status(200).json({ records: allRecords });
 
     } catch (error: any) {
-        console.error(`[Airtable Proxy Error] ${req.method} ${table}:`, error);
+        console.error(`[Airtable Proxy Error] for table "${table}":`, error);
         return res.status(error.status || 500).json({ message: error.message || 'An internal error occurred.' });
     }
 }

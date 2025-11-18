@@ -192,8 +192,8 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSel
 
   const { data: metrics, isLoading, error, refetch, isFetching } = useMetricsData({ targetYear, isTestingMode });
 
-  // FIX: Explicitly type the accumulator as a number to resolve a TypeScript type inference issue with reduce.
-  const totalCuposMesActual = metrics ? metrics.lanzamientosMesActual.reduce((acc: number, group) => acc + group.totalCupos, 0) : 0;
+  // FIX: The initial value for reduce must be provided as the second argument to fix the type error.
+  const totalCuposMesActual = metrics ? metrics.lanzamientosMesActual.reduce((acc, group) => acc + group.totalCupos, 0) : 0;
   const MONTH_NAMES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
 
