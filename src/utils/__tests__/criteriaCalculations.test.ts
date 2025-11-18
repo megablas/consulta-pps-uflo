@@ -1,8 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
 import { calculateCriterios } from '../criteriaCalculations';
-// FIX: Corrected relative import path
 import type { Practica, Orientacion } from '../../types';
-// FIX: Corrected relative import path
 import { FIELD_HORAS_PRACTICAS, FIELD_ESPECIALIDAD_PRACTICAS } from '../../constants';
 
 // Mock data

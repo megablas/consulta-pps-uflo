@@ -204,12 +204,16 @@ export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<G
     const escapedPpsName = ppsName.replace(/"/g, '\\"');
     
     // The fields `Nombre PPS` and `Fecha Inicio` in the `Convocatorias` table are lookups
-    // from the `Lanzamientos` table. Lookups return arrays, which cannot be compared directly with `=`.
-    // We must use ARRAYJOIN to convert them to strings and then SEARCH to find a match.
+    // from the `Lanzamientos` table. Lookups return arrays.
+    // For dates, the lookup returns an ISO string. We extract the 'YYYY-MM-DD' part using LEFT() for a robust comparison.
+    // For names, we use SEARCH within an ARRAYJOIN to find partial matches (e.g., "Hospital" in "Hospital - Turno Mañana").
     const formula = `
       AND(
         SEARCH("${escapedPpsName}", ARRAYJOIN({${FIELD_NOMBRE_PPS_CONVOCATORIAS}})),
-        SEARCH('${ppsStartDate}', ARRAYJOIN({${FIELD_FECHA_INICIO_CONVOCATORIAS}})),
+        IF(
+          {${FIELD_FECHA_INICIO_CONVOCATORIAS}},
+          LEFT(ARRAYJOIN({${FIELD_FECHA_INICIO_CONVOCATORIAS}}), 10) = '${ppsStartDate}'
+        ),
         LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = "seleccionado"
       )
     `;
