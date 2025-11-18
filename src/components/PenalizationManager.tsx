@@ -85,7 +85,7 @@ const AddPenaltyModal: React.FC<{
             practicasRes.records.forEach(p => (p.fields[FIELD_LANZAMIENTO_VINCULADO_PRACTICAS] || []).forEach(id => lanzamientoIds.add(id)));
             if (lanzamientoIds.size === 0) return [];
             const lanzamientosFormula = `OR(${Array.from(lanzamientoIds).map(id => `RECORD_ID()='${id}'`).join(',')})`;
-            // FIX: Corrected argument order for fetchAllAirtableData
+            // FIX: Corrected argument order for fetchAllAirtableData by adding the schema validator.
             const { records: lanzamientosRes } = await fetchAllAirtableData<LanzamientoPPSFields>(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, lanzamientoPPSArraySchema, [FIELD_NOMBRE_PPS_LANZAMIENTOS, FIELD_FECHA_INICIO_LANZAMIENTOS], lanzamientosFormula);
             return lanzamientosRes.map(r => ({ id: r.id, name: `${r.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS]} (${formatDate(r.fields[FIELD_FECHA_INICIO_LANZAMIENTOS])})` }));
         },

@@ -193,7 +193,7 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSel
   const { data: metrics, isLoading, error, refetch, isFetching } = useMetricsData({ targetYear, isTestingMode });
 
   // FIX: Using an explicit generic for `reduce` ensures TypeScript selects the correct overload, resolving the type error.
-  const totalCuposMesActual = metrics ? metrics.lanzamientosMesActual.reduce<number>((acc, group) => acc + group.totalCupos, 0) : 0;
+  const totalCuposMesActual = metrics ? metrics.lanzamientosMesActual.reduce((acc, group) => acc + group.totalCupos, 0) : 0;
   const MONTH_NAMES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
 

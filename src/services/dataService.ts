@@ -199,16 +199,13 @@ export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<G
         return null;
     }
 
-    // Escape single and double quotes for safety in the formula string
     const escapedPpsName = ppsNameToMatch.replace(/["']/g, '\\$&');
 
-    // Due to potential data integrity issues with the `{Lanzamiento Vinculado}` link,
-    // we match by combining the lookup fields for Name and Start Date.
-    // This creates a robust composite key to identify the correct set of enrollments.
+    // Use a robust formula: direct name comparison and precise date comparison.
     const formula = `
       AND(
-        SEARCH('${escapedPpsName}', ARRAYJOIN({${FIELD_NOMBRE_PPS_CONVOCATORIAS}})),
-        SEARCH('${ppsStartDateToMatch}', ARRAYJOIN({${FIELD_FECHA_INICIO_CONVOCATORIAS}})),
+        {${FIELD_NOMBRE_PPS_CONVOCATORIAS}} = '${escapedPpsName}',
+        IS_SAME({${FIELD_FECHA_INICIO_CONVOCATORIAS}}, DATETIME_PARSE('${ppsStartDateToMatch}', 'YYYY-MM-DD'), 'day'),
         LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = "seleccionado"
       )
     `;
