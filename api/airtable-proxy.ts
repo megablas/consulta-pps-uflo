@@ -74,9 +74,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (table === 'Estudiantes') {
             formula = `{Legajo} = '${studentLegajo}'`;
         } else if (table === 'Prácticas') {
-            legajoFilter = `SEARCH('${studentLegajo}', {Legajo Busqueda} & '')`;
+            // 'Legajo Busqueda' is a lookup field and returns an array. Use ARRAYJOIN.
+            legajoFilter = `SEARCH('${studentLegajo}', ARRAYJOIN({${'Legajo Busqueda'}}) & '')`;
         } else if (table === 'Solicitud de PPS' || table === 'Convocatorias') {
-            legajoFilter = `SEARCH('${studentLegajo}', {Legajo} & '')`;
+            // 'Legajo' in these tables are also lookup fields. Use ARRAYJOIN.
+            legajoFilter = `SEARCH('${studentLegajo}', ARRAYJOIN({Legajo}) & '')`;
         }
         
         if (legajoFilter) {
@@ -120,7 +122,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
             console.log(`Executing single request to Airtable: /${path}`);
             const data = await fetchAirtable(req.method || 'GET', path, req.body);
-            console.log('Airtable response (single):', data);
+            console.log('Airtable response (single):', JSON.stringify(data, null, 2));
             return res.status(200).json(data);
         }
         
