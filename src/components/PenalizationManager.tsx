@@ -192,7 +192,7 @@ const AddPenaltyModal: React.FC<{
                     <div>
                         <label htmlFor="pps-select-modal" className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-1 block">PPS Afectada (Opcional)</label>
                         {isLoadingPPS ? <p>Cargando PPS...</p> : (
-                            <select id="pps-select-modal" value={selectedPpsId} onChange={e => setSelectedPpsId(e.target.value)} className="w-full text-sm rounded-lg border border-slate-300 dark:border-slate-600 p-2.5 bg-white dark:bg-slate-700">
+                            <select id="pps-select-modal" value={selectedPpsId} onChange={e => setSelectedPpsId(e.target.value)} className="w-full text-sm rounded-lg border border-slate-300 dark:border-slate-600 p-2.5 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100">
                                 <option value="">Seleccionar una PPS...</option>
                                 {relevantPPS?.map(pps => <option key={pps.id} value={pps.id}>{pps.name}</option>)}
                             </select>
