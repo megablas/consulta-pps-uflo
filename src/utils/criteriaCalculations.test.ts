@@ -1,5 +1,5 @@
 import { describe, it, expect } from '@jest/globals';
-import { calculateCriterios } from '../criteriaCalculations';
+import { calculateCriterios } from './criteriaCalculations';
 // FIX: Corrected relative import path
 import type { Practica, Orientacion } from '../types';
 // FIX: Corrected relative import path

@@ -198,13 +198,15 @@ export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<G
         console.error("El objeto de lanzamiento no tiene Nombre o Fecha de Inicio.", lanzamiento);
         return null;
     }
+    
+    // Escape single quotes in the name for the formula
+    const escapedPpsName = ppsNameToMatch.replace(/'/g, "\\'");
 
-    const escapedPpsName = ppsNameToMatch.replace(/["']/g, '\\$&');
-
-    // Use a robust formula: direct name comparison and precise date comparison.
+    // Airtable's {Nombre PPS} in Convocatorias is a lookup, so it's an array. 
+    // We must use a function like SEARCH() that can operate on arrays/strings.
     const formula = `
       AND(
-        {${FIELD_NOMBRE_PPS_CONVOCATORIAS}} = '${escapedPpsName}',
+        SEARCH('${escapedPpsName}', ARRAYJOIN({${FIELD_NOMBRE_PPS_CONVOCATORIAS}})),
         IS_SAME({${FIELD_FECHA_INICIO_CONVOCATORIAS}}, DATETIME_PARSE('${ppsStartDateToMatch}', 'YYYY-MM-DD'), 'day'),
         LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = "seleccionado"
       )
