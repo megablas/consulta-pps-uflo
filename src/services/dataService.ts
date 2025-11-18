@@ -191,22 +191,19 @@ export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: 
 
 
 export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<GroupedSeleccionados | null> => {
-    const ppsNameToMatch = lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS];
-    const ppsStartDateToMatch = lanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS];
+    const lanzamientoId = lanzamiento.id;
 
-    if (!ppsNameToMatch || !ppsStartDateToMatch) {
-        console.error("El objeto de lanzamiento no tiene Nombre o Fecha de Inicio.", lanzamiento);
+    if (!lanzamientoId) {
+        console.error("El objeto de lanzamiento no tiene un ID válido.", lanzamiento);
         return null;
     }
-    
-    const escapedPpsName = ppsNameToMatch.replace(/'/g, "\\'");
 
-    // REVERTED DATE COMPARISON: Using SEARCH on ARRAYJOIN for the date lookup field.
-    // This is necessary as IS_SAME fails on lookup fields (arrays).
+    // This is the robust way to filter. It finds records in 'Convocatorias'
+    // where the 'Lanzamiento Vinculado' field (which is an array of record IDs)
+    // contains our specific 'lanzamiento.id'. FIND is used for safety with array fields.
     const formula = `
       AND(
-        SEARCH('${escapedPpsName}', ARRAYJOIN({${FIELD_NOMBRE_PPS_CONVOCATORIAS}})),
-        SEARCH('${ppsStartDateToMatch}', ARRAYJOIN({${FIELD_FECHA_INICIO_CONVOCATORIAS}})),
+        FIND('${lanzamientoId}', ARRAYJOIN({${FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS}})),
         LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = "seleccionado"
       )
     `;
