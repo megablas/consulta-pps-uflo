@@ -16,7 +16,6 @@ export const IS_PREVIEW_MODE = !viteEnv || viteEnv.VITE_APP_MODE === 'preview';
 export const AIRTABLE_PAT = (viteEnv && viteEnv.VITE_AIRTABLE_PAT) || '';
 export const AIRTABLE_BASE_ID = (viteEnv && viteEnv.VITE_AIRTABLE_BASE_ID) || '';
 
-
 // Table Names
 export const AIRTABLE_TABLE_NAME_PPS = 'Solicitud de PPS';
 export const AIRTABLE_TABLE_NAME_PRACTICAS = 'Prácticas';

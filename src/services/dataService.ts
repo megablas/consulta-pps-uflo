@@ -191,25 +191,28 @@ export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: 
 
 
 export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<GroupedSeleccionados | null> => {
-    const lanzamientoId = lanzamiento.id;
+    const ppsName = lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS];
+    const ppsStartDate = lanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS];
 
-    if (!lanzamientoId) {
-        console.error("El objeto de lanzamiento no tiene un ID válido.", lanzamiento);
+    if (!ppsName || !ppsStartDate) {
+        console.error("Lanzamiento is missing name or start date for filtering.", lanzamiento);
         return null;
     }
-
-    // This is the robust way to filter. It finds records in 'Convocatorias'
-    // where the 'Lanzamiento Vinculado' field (an array of record IDs)
-    // contains our specific 'lanzamiento.id'. SEARCH is more flexible than FIND.
+    
+    const escapedPpsName = ppsName.replace(/"/g, '\\"');
+    
+    // The `Convocatorias` table has lookup fields for both the name and the start date.
+    // Filtering on these looked-up values is robust and reliable.
     const formula = `
       AND(
-        SEARCH('${lanzamientoId}', ARRAYJOIN({${FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS}})),
+        {${FIELD_NOMBRE_PPS_CONVOCATORIAS}} = "${escapedPpsName}",
+        {${FIELD_FECHA_INICIO_CONVOCATORIAS}} = '${ppsStartDate}',
         LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = "seleccionado"
       )
     `;
     
     const { records: convocatorias, error: convError } = await fetchAllAirtableData<ConvocatoriaFields>(
-        AIRTABLE_TABLE_NAME_CONVOCATORIAS, 
+        AIRTABLE_TABLE_NAME_CONVOCATORIAS,
         convocatoriaArraySchema,
         [
             FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, 
