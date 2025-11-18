@@ -192,7 +192,6 @@ export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: 
 
 export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<GroupedSeleccionados | null> => {
     const ppsName = lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS];
-    // The date from Airtable is already in 'YYYY-MM-DD' format
     const ppsStartDate = lanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS];
 
     if (!ppsName || !ppsStartDate) {
@@ -200,13 +199,11 @@ export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<G
         return null;
     }
     
-    // Escape double quotes in the name for the formula
     const escapedPpsName = ppsName.replace(/"/g, '\\"');
     
-    // The fields `Nombre PPS` and `Fecha Inicio` in the `Convocatorias` table are lookups
-    // from the `Lanzamientos` table. Lookups return arrays.
-    // For dates, the lookup returns an ISO string. We extract the 'YYYY-MM-DD' part using LEFT() for a robust comparison.
-    // For names, we use SEARCH within an ARRAYJOIN to find partial matches (e.g., "Hospital" in "Hospital - Turno Mañana").
+    // The fields `Nombre PPS` and `Fecha Inicio` in the `Convocatorias` table are lookups.
+    // They return arrays. We must use ARRAYJOIN and then search/compare.
+    // The IF condition prevents errors if the date field is empty for a record.
     const formula = `
       AND(
         SEARCH("${escapedPpsName}", ARRAYJOIN({${FIELD_NOMBRE_PPS_CONVOCATORIAS}})),
