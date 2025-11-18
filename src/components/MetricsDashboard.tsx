@@ -193,6 +193,7 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSel
   const { data: metrics, isLoading, error, refetch, isFetching } = useMetricsData({ targetYear, isTestingMode });
 
   // FIX: The reduce function for `totalCuposMesActual` was missing an initial value. This caused a TypeError because the accumulator `acc` was initialized as the first object in the array, leading to an attempt to add an object and a number. Adding `0` as the initial value corrects this.
+  // FIX: Added the initial value of 0 to the reduce function to correct the TypeError.
   const totalCuposMesActual = metrics ? metrics.lanzamientosMesActual.reduce((acc, group) => acc + group.totalCupos, 0) : 0;
   const MONTH_NAMES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 

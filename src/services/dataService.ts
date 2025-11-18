@@ -206,12 +206,15 @@ export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<G
 
     const escapedPpsName = ppsName.replace(/'/g, "\\'");
     
-    // Use IS_SAME for robust date comparison, ignoring time.
-    // Use DATETIME_PARSE to ensure the startDate string is treated as a date object by Airtable.
+    // This robust formula handles cases where {Fecha Inicio} might be a lookup (array) in the API context,
+    // which can happen even if it's a date field in the UI.
     const formula = `AND(
         LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = "seleccionado",
         SEARCH('${escapedPpsName}', ARRAYJOIN({${FIELD_NOMBRE_PPS_CONVOCATORIAS}})),
-        IS_SAME({${FIELD_FECHA_INICIO_CONVOCATORIAS}}, DATETIME_PARSE('${startDate}', 'YYYY-MM-DD'))
+        IS_SAME(
+            DATETIME_PARSE(ARRAYJOIN({${FIELD_FECHA_INICIO_CONVOCATORIAS}})),
+            DATETIME_PARSE('${startDate}', 'YYYY-MM-DD')
+        )
     )`;
     
     const { records: convocatorias, error: convError } = await fetchAllAirtableData<ConvocatoriaFields>(
