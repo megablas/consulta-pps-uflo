@@ -1,20 +1,8 @@
-// --- Environment Mode ---
-// This determines whether the app should make direct client-side calls to Airtable (for AI Studio preview)
-// or use the serverless proxy (for Vercel deployment).
-const viteEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined;
-
-// IS_PREVIEW_MODE is true in two cases:
-// 1. In a Vite dev server when VITE_APP_MODE is explicitly set to "preview" in .env.
-// 2. In browser environments like AI Studio where Vite does not inject env variables (viteEnv will be undefined).
-// It will be false in Vercel/production builds where VITE_APP_MODE is not set.
-export const IS_PREVIEW_MODE = !viteEnv || viteEnv.VITE_APP_MODE === 'preview';
-
-
 // --- Airtable Configuration ---
-// These keys are ONLY used in PREVIEW_MODE.
-// In production (Vercel), the serverless proxy uses environment variables directly.
-export const AIRTABLE_PAT = (viteEnv && viteEnv.VITE_AIRTABLE_PAT) || '';
-export const AIRTABLE_BASE_ID = (viteEnv && viteEnv.VITE_AIRTABLE_BASE_ID) || '';
+// Las claves se cargan desde variables de entorno para mayor seguridad y flexibilidad.
+// El archivo .env en la raíz del proyecto debe contener estas variables.
+export const AIRTABLE_PAT = "";
+export const AIRTABLE_BASE_ID = "";
 
 // Table Names
 export const AIRTABLE_TABLE_NAME_PPS = 'Solicitud de PPS';

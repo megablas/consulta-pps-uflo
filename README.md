@@ -27,89 +27,82 @@ La plataforma ofrece funcionalidades tanto para estudiantes como para administra
 ## Pila Tecnológica (Tech Stack)
 
 - **Frontend:** [React](https://react.dev/) con [Vite](https://vitejs.dev/)
-- **Backend (para Vercel):** [Vercel Serverless Functions](https://vercel.com/docs/functions) (Node.js)
 - **Lenguaje:** [TypeScript](https://www.typescriptlang.org/)
 - **Estilos:** [Tailwind CSS](https://tailwindcss.com/)
-- **Base de Datos:** [Airtable](https://www.airtable.com/)
+- **Bases de Datos:** [Airtable](https://www.airtable.com/)
 
 ---
 
-## 🛠️ Desarrollo Local y Entornos de Vista Previa
+## 🛠️ Primeros Pasos y Desarrollo Local
 
-Sigue estos pasos para configurar y ejecutar el proyecto en tu máquina local. La aplicación tiene dos modos de ejecución para simular diferentes entornos.
+Sigue estos pasos para configurar y ejecutar el proyecto en tu máquina local.
+
+### Prerrequisitos
+
+- [Node.js](https://nodejs.org/) (versión 18 o superior recomendada).
 
 ### Instalación
 
-1.  **Clona el repositorio e instala dependencias:**
+1.  **Clona el repositorio:**
     ```bash
     git clone [URL_DEL_REPOSITORIO]
     cd [NOMBRE_DEL_DIRECTORIO]
+    ```
+
+2.  **Instala las dependencias:**
+    Usa `npm` para instalar todos los paquetes necesarios.
+    ```bash
     npm install
     ```
 
-2.  **Configura las Credenciales de Airtable:**
-    Crea un archivo llamado `.env` en la raíz del proyecto. Este archivo manejará las credenciales para los diferentes modos de desarrollo.
+### Configuración del Entorno
 
-    ```
-    # Archivo .env
+La aplicación necesita credenciales para conectarse a Airtable. Todas las llamadas a la API se realizan directamente desde el cliente.
 
-    # --- Para el modo de producción (Vercel Proxy) ---
-    # Usado por `vercel dev`. Estas no llevan el prefijo VITE_.
-    AIRTABLE_PAT="pat..."
-    AIRTABLE_BASE_ID="app..."
-    JWT_SECRET="tu-secreto-muy-largo-y-seguro"
+1.  **Crea un archivo `.env`:**
+    En la raíz del proyecto, crea un archivo llamado `.env`.
 
-    # --- Para el modo de vista previa (Client-Side) ---
-    # Usado por `npm run dev`. Estas SÍ llevan el prefijo VITE_.
-    VITE_APP_MODE="preview"
+2.  **Añade tus credenciales:**
+    Abre `.env` y añade las siguientes variables, reemplazando los valores con tus propias credenciales.
+
+    ```bash
+    # Archivo .env en la raíz del proyecto
+
+    # Token de Acceso Personal (PAT) de Airtable
     VITE_AIRTABLE_PAT="pat..."
+
+    # ID de tu Base de Airtable
     VITE_AIRTABLE_BASE_ID="app..."
     ```
 
-### Modos de Ejecución
+    -   **Importante:** El prefijo `VITE_` es necesario para que Vite exponga estas variables a la aplicación en el navegador durante el desarrollo.
+    -   Puedes encontrar el **Base ID** de Airtable en la [documentación de la API de Airtable](https://airtable.com/developers/web/api/introduction) al seleccionar tu base.
+    -   Puedes generar un **Personal Access Token (PAT)** en la sección de [Cuenta de Desarrollador de Airtable](https://airtable.com/create/tokens). Asegúrate de que el token tenga los permisos (`scopes`) necesarios para leer y escribir en tu base (`data.records:read` y `data.records:write`).
 
-#### Modo 1: Simulación de Producción (Vercel)
+### Iniciar la Aplicación
 
-Este modo utiliza las funciones serverless como un proxy seguro para comunicarse con Airtable. Es ideal para probar el comportamiento que tendrá la aplicación en Vercel.
+Una vez instaladas las dependencias y configuradas las credenciales, inicia el servidor de desarrollo:
 
-1.  Asegúrate de que las variables `AIRTABLE_PAT`, `AIRTABLE_BASE_ID` y `JWT_SECRET` estén en tu archivo `.env`.
-2.  Inicia la aplicación con la CLI de Vercel:
-    ```bash
-    npm install -g vercel # Si no la tienes instalada
-    vercel dev
-    ```
-    La aplicación se ejecutará en un puerto local (ej. `http://localhost:3000`) y las llamadas a `/api/*` serán manejadas por el proxy serverless.
+```bash
+npm run dev
+```
 
-#### Modo 2: Simulación de Vista Previa (AI Studio / Client-Side)
-
-Este modo hace que la aplicación se conecte a Airtable directamente desde el navegador. Es útil para entornos que no soportan un backend, como la vista previa de AI Studio.
-
-1.  Asegúrate de que las variables `VITE_APP_MODE="preview"`, `VITE_AIRTABLE_PAT` y `VITE_AIRTABLE_BASE_ID` estén en tu archivo `.env`.
-2.  Inicia el servidor de desarrollo de Vite:
-    ```bash
-    npm run dev
-    ```
-    La aplicación se ejecutará en `http://localhost:5173` (o similar) y hará llamadas directas a la API de Airtable.
+La aplicación estará disponible en `http://localhost:5173` (o el puerto que Vite asigne). Toda la lógica de autenticación y datos se maneja en el lado del cliente, por lo que no es necesario un backend adicional.
 
 ---
 
-### 🧪 Usuarios de Demostración
+### 🧪 Testing y Entorno de Vista Previa (Preview)
 
-Para facilitar las pruebas, se han habilitado usuarios de demostración. Estos inicios de sesión no consultan la tabla de usuarios de Airtable, pero una vez dentro, **cargarán datos reales** de la base de datos para simular una experiencia completa.
+Para facilitar las pruebas en entornos donde el backend no está disponible (como la vista previa de AI Studio o un despliegue estático), se han habilitado usuarios de demostración:
 
 -   **Usuario Administrador de Pruebas:**
     -   **Legajo:** `testing`
     -   **Contraseña:** `testing`
-    -   Acceso a un panel de administrador que consume datos reales de Airtable.
+    -   Este usuario te dará acceso a un panel de administrador con datos simulados.
 
 -   **Usuario Estudiante de Demostración:**
     -   **Legajo:** `12345`
     -   **Contraseña:** `12345`
-    -   Inicia sesión como un usuario de prueba, pero carga el panel del estudiante real con legajo `12345`.
+    -   Este usuario te permitirá iniciar sesión como un estudiante de prueba y ver un panel con datos simulados.
 
--   **Usuario Reportero de Demostración:**
-    -   **Legajo:** `reportero`
-    -   **Contraseña:** `reportero`
-    -   Acceso de solo lectura al panel de métricas y reportes con datos reales.
-
-El inicio de sesión de cualquier otro usuario real solo funcionará en el **Modo 1 (Simulación de Producción)**, ya que requiere el proxy para verificar la contraseña.
+Estos inicios de sesión no realizan llamadas a la API y funcionan de manera local en el navegador.

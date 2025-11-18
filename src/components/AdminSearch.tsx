@@ -9,12 +9,19 @@ import type { EstudianteFields, AirtableRecord } from '../types';
 import { estudianteArraySchema } from '../schemas';
 import Input from './Input';
 
+const MOCK_STUDENTS_FOR_SEARCH: AirtableRecord<EstudianteFields>[] = [
+    { id: 'recTest1', createdTime: '', fields: { 'Legajo': 'T0001', 'Nombre': 'Tester Alfa' } },
+    { id: 'recTest2', createdTime: '', fields: { 'Legajo': 'T0002', 'Nombre': 'Beta Tester' } },
+    { id: 'recTest3', createdTime: '', fields: { 'Legajo': 'T0003', 'Nombre': 'Gama Tester' } },
+];
+
 interface AdminSearchProps {
   onStudentSelect: (student: AirtableRecord<EstudianteFields>) => void;
   onSearchChange?: (term: string) => Promise<void>;
+  isTestingMode?: boolean;
 }
 
-const AdminSearch: React.FC<AdminSearchProps> = ({ onStudentSelect, onSearchChange }) => {
+const AdminSearch: React.FC<AdminSearchProps> = ({ onStudentSelect, onSearchChange, isTestingMode = false }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState<AirtableRecord<EstudianteFields>[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -33,11 +40,25 @@ const AdminSearch: React.FC<AdminSearchProps> = ({ onStudentSelect, onSearchChan
     }
     setIsLoading(true);
     
+    if (isTestingMode) {
+        setTimeout(() => {
+            const lowerTerm = term.toLowerCase();
+            const filtered = MOCK_STUDENTS_FOR_SEARCH.filter(s => 
+                s.fields.Nombre?.toLowerCase().includes(lowerTerm) || 
+                s.fields.Legajo?.toLowerCase().includes(lowerTerm)
+            );
+            setResults(filtered);
+            setIsLoading(false);
+        }, 300);
+        return;
+    }
+    
     const cleanedTerm = term.replace(/"/g, '\\"').toLowerCase();
     const formula = `OR(
         SEARCH("${cleanedTerm}", LOWER({${FIELD_NOMBRE_ESTUDIANTES}})),
         SEARCH("${cleanedTerm}", {${FIELD_LEGAJO_ESTUDIANTES}} & '')
     )`;
+    // FIX: Added zod schema as second argument to fetchAirtableData
     const { records, error } = await fetchAirtableData<EstudianteFields>(
         AIRTABLE_TABLE_NAME_ESTUDIANTES,
         estudianteArraySchema,
@@ -50,7 +71,7 @@ const AdminSearch: React.FC<AdminSearchProps> = ({ onStudentSelect, onSearchChan
       setResults(records);
     }
     setIsLoading(false);
-  }, [onSearchChange]);
+  }, [onSearchChange, isTestingMode]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -90,6 +111,10 @@ const AdminSearch: React.FC<AdminSearchProps> = ({ onStudentSelect, onSearchChan
 
   const showDropdown = isDropdownOpen && searchTerm.length > 0 && !onSearchChange;
 
+  const placeholderText = isTestingMode
+    ? "Buscar (ej: Tester Alfa, T0001)"
+    : "Buscar por Legajo o Nombre...";
+
   return (
     <div ref={searchContainerRef} className="relative w-full max-w-lg mx-auto">
         <Input
@@ -97,7 +122,7 @@ const AdminSearch: React.FC<AdminSearchProps> = ({ onStudentSelect, onSearchChan
             value={searchTerm}
             onChange={handleInputChange}
             onFocus={() => setIsDropdownOpen(true)}
-            placeholder="Buscar por Legajo o Nombre..."
+            placeholder={placeholderText}
             icon="search"
             aria-label="Buscar Estudiante"
             autoComplete="off"

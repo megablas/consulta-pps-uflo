@@ -28,7 +28,9 @@ root.render(
 // Service Worker Registration
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    // In this environment, an absolute path based on the app's base path is required
+    // to avoid cross-origin errors during service worker registration.
+    navigator.serviceWorker.register('/consulta-pps-uflo/sw.js')
       .then(registration => {
         console.log('Service Worker registered with scope:', registration.scope);
       })

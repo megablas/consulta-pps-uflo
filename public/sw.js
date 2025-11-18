@@ -1,9 +1,9 @@
-// sw.js
+// sw.js para /consulta-pps-uflo/
 
 const CACHE_NAME = 'mi-panel-academico-cache-v11';
 const FILES_TO_CACHE = [
-  '/index.html',
-  '/manifest.json',
+  '/consulta-pps-uflo/index.html',
+  '/consulta-pps-uflo/manifest.json',
 ];
 
 // Instala y precachea el shell mínimo
@@ -58,7 +58,7 @@ self.addEventListener('fetch', (event) => {
 
         // Para navegaciones, sirve el index como fallback de SPA
         if (event.request.mode === 'navigate') {
-          const fallback = await caches.match('/index.html');
+          const fallback = await caches.match('/consulta-pps-uflo/index.html');
           if (fallback) return fallback;
         }
 

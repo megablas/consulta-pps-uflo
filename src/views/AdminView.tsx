@@ -20,7 +20,11 @@ interface StudentTabInfo {
     nombre: string;
 }
 
-const AdminView: React.FC<{ isTestingMode?: boolean }> = ({ isTestingMode = false }) => {
+interface AdminViewProps {
+  isTestingMode?: boolean;
+}
+
+const AdminView: React.FC<AdminViewProps> = ({ isTestingMode = false }) => {
     const { authenticatedUser } = useAuth();
     const [studentTabs, setStudentTabs] = useState<StudentTabInfo[]>([]);
     const [activeTabId, setActiveTabId] = useState('metrics');
@@ -53,10 +57,10 @@ const AdminView: React.FC<{ isTestingMode?: boolean }> = ({ isTestingMode = fals
 
     const allTabs = useMemo(() => {
         const mainTabs = [
-            { id: 'metrics', label: 'Métricas', icon: 'analytics', content: <MetricsView onStudentSelect={(student) => openStudentPanel({ id: '', createdTime: '', fields: { Legajo: student.legajo, Nombre: student.nombre }})} /> },
-            { id: 'gestion', label: 'Gestión', icon: 'tune', content: <GestionView /> },
-            { id: 'correccion', label: 'Corrección', icon: 'rule', content: <CorreccionView /> },
-            { id: 'herramientas', label: 'Herramientas', icon: 'construction', content: <HerramientasView onStudentSelect={openStudentPanel} /> },
+            { id: 'metrics', label: 'Métricas', icon: 'analytics', content: <MetricsView onStudentSelect={(student) => openStudentPanel({ id: '', createdTime: '', fields: { Legajo: student.legajo, Nombre: student.nombre }})} isTestingMode={isTestingMode} /> },
+            { id: 'gestion', label: 'Gestión', icon: 'tune', content: <GestionView isTestingMode={isTestingMode} /> },
+            { id: 'correccion', label: 'Corrección', icon: 'rule', content: <CorreccionView isTestingMode={isTestingMode} /> },
+            { id: 'herramientas', label: 'Herramientas', icon: 'construction', content: <HerramientasView onStudentSelect={openStudentPanel} isTestingMode={isTestingMode} /> },
         ];
 
         const dynamicStudentTabs = studentTabs.map(student => ({
@@ -64,15 +68,15 @@ const AdminView: React.FC<{ isTestingMode?: boolean }> = ({ isTestingMode = fals
             label: student.nombre,
             icon: 'school',
             content: (
-                <StudentPanelProvider legajo={student.legajo}>
-                    <StudentDashboard key={student.legajo} user={student as AuthUser} showExportButton />
+                <StudentPanelProvider legajo={isTestingMode ? '99999' : student.legajo}>
+                    <StudentDashboard key={student.legajo} user={{...student, legajo: isTestingMode ? '99999' : student.legajo} as AuthUser} showExportButton />
                 </StudentPanelProvider>
             ),
             isClosable: true,
         }));
 
         return [...mainTabs, ...dynamicStudentTabs];
-    }, [studentTabs, openStudentPanel]);
+    }, [studentTabs, openStudentPanel, isTestingMode]);
 
     return (
         <div className="space-y-6">

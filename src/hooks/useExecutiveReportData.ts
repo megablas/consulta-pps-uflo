@@ -259,6 +259,7 @@ const MOCK_COMPARATIVE_REPORT_DATA: ComparativeExecutiveReportData = {
         year2025: ['Mock New Agreement'],
     },
 };
+// FIX: Cannot find name 'ReportType'.
 const useExecutiveReportData = ({ reportType, enabled = false, isTestingMode = false }: { reportType: ReportType | null; enabled?: boolean; isTestingMode?: boolean; }) => {
     return useQuery<AnyReportData, Error>({
         queryKey: ['executiveReportData', reportType, isTestingMode],

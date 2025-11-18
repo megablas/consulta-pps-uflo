@@ -1,22 +1,22 @@
 {
   "name": "Mi Panel Académico",
   "short_name": "Mi Panel",
-  "id": "/",
+  "id": "/consulta-pps-uflo/",
   "description": "Una aplicación para que los estudiantes consulten de forma segura el estado de sus Prácticas Profesionales Supervisadas (PPS) y prácticas realizadas.",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "/consulta-pps-uflo/",
+  "scope": "/consulta-pps-uflo/",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#2563eb",
   "icons": [
     {
-      "src": "/icons/icon-192x192.png",
+      "src": "/consulta-pps-uflo/icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-512x512.png",
+      "src": "/consulta-pps-uflo/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

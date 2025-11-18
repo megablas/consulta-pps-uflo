@@ -3,7 +3,7 @@ import React, { createContext, useState, useContext, useEffect, useCallback, Rea
 export type AuthUser = {
   legajo: string;
   nombre: string;
-  role?: 'Jefe' | 'SuperUser' | 'Directivo' | 'Reportero';
+  role?: 'Jefe' | 'SuperUser' | 'Directivo' | 'AdminTester' | 'Reportero';
   orientaciones?: string[];
 };
 
@@ -12,6 +12,7 @@ interface AuthContextType {
   isSuperUserMode: boolean;
   isJefeMode: boolean;
   isDirectivoMode: boolean;
+  isAdminTesterMode: boolean;
   isReporteroMode: boolean;
   isAuthLoading: boolean;
   login: (user: AuthUser, rememberMe?: boolean) => void;
@@ -24,17 +25,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [authenticatedUser, setAuthenticatedUser] = useState<AuthUser | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-  const verifyUserSession = useCallback(() => {
+  useEffect(() => {
     try {
-        // Check both storages to maintain session after refresh
-        const storedUser = localStorage.getItem('authenticatedUser') || sessionStorage.getItem('authenticatedUser');
-        if (storedUser) {
-            setAuthenticatedUser(JSON.parse(storedUser));
-        }
+      // Check localStorage first for "remembered" users
+      let storedUser = localStorage.getItem('authenticatedUser');
+      // If not found, check sessionStorage for non-remembered sessions
+      if (!storedUser) {
+        storedUser = sessionStorage.getItem('authenticatedUser');
+      }
+      
+      if (storedUser) {
+        setAuthenticatedUser(JSON.parse(storedUser));
+      }
     } catch (error) {
-        console.error("Failed to verify user session from storage", error);
-        setAuthenticatedUser(null);
-        // Clear potentially corrupted storage
+        console.error("Failed to parse user from storage", error);
         localStorage.removeItem('authenticatedUser');
         sessionStorage.removeItem('authenticatedUser');
     } finally {
@@ -42,31 +46,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, []);
 
-  useEffect(() => {
-    verifyUserSession();
-  }, [verifyUserSession]);
-
   const login = useCallback((user: AuthUser, rememberMe = false) => {
-    setAuthenticatedUser(user);
-    // Use localStorage for "remember me", otherwise use sessionStorage
     const storage = rememberMe ? localStorage : sessionStorage;
     storage.setItem('authenticatedUser', JSON.stringify(user));
+    setAuthenticatedUser(user);
   }, []);
 
   const logout = useCallback(() => {
-    setAuthenticatedUser(null);
-    // Clear from both storages on logout
-    localStorage.removeItem('authenticatedUser');
     sessionStorage.removeItem('authenticatedUser');
+    localStorage.removeItem('authenticatedUser');
+    setAuthenticatedUser(null);
   }, []);
 
   const isSuperUserMode = authenticatedUser?.role === 'SuperUser' || authenticatedUser?.legajo === 'admin';
   const isJefeMode = authenticatedUser?.role === 'Jefe';
   const isDirectivoMode = authenticatedUser?.role === 'Directivo';
+  const isAdminTesterMode = authenticatedUser?.role === 'AdminTester';
   const isReporteroMode = authenticatedUser?.role === 'Reportero';
 
   return (
-    <AuthContext.Provider value={{ authenticatedUser, isSuperUserMode, isJefeMode, isDirectivoMode, isReporteroMode, isAuthLoading, login, logout }}>
+    <AuthContext.Provider value={{ authenticatedUser, isSuperUserMode, isJefeMode, isDirectivoMode, isAdminTesterMode, isReporteroMode, isAuthLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

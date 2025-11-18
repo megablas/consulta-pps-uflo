@@ -1,8 +1,12 @@
 import React from 'react';
 import CorreccionPanel from '../../components/CorreccionPanel';
 
-const CorreccionView: React.FC = () => {
-  return <CorreccionPanel />;
+interface CorreccionViewProps {
+  isTestingMode?: boolean;
+}
+
+const CorreccionView: React.FC<CorreccionViewProps> = ({ isTestingMode = false }) => {
+  return <CorreccionPanel isTestingMode={isTestingMode} />;
 };
 
 export default CorreccionView;

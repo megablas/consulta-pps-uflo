@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import MiPanelLogo from './MiPanelLogo';
 import UfloLogo from './UfloLogo';
 import { useAuth } from '../contexts/AuthContext';
+import { useModal } from '../contexts/ModalContext';
 import { useTheme } from '../contexts/ThemeContext';
 import Input from './Input';
 import { useAuthLogic } from '../hooks/useAuthLogic';
-import Modal from './Modal';
 import { 
     FIELD_DNI_ESTUDIANTES, 
     FIELD_FECHA_NACIMIENTO_ESTUDIANTES, 
@@ -16,6 +16,7 @@ import {
 
 const Auth: React.FC = () => {
   const { login } = useAuth();
+  const { showModal } = useModal();
   const { resolvedTheme } = useTheme();
 
   const {
@@ -24,13 +25,13 @@ const Auth: React.FC = () => {
       password, setPassword,
       confirmPassword, setConfirmPassword,
       rememberMe, setRememberMe,
-      isLoading, error, setError,
+      isLoading, error,
       legajoCheckState, legajoMessage,
       foundStudent, missingFields,
       newData, handleNewDataChange,
       verificationData, handleVerificationDataChange,
       handleFormSubmit, handleForgotLegajoSubmit,
-  } = useAuthLogic({ login });
+  } = useAuthLogic({ login, showModal });
   
   const [showPassword, setShowPassword] = useState(false);
 
@@ -180,13 +181,6 @@ const Auth: React.FC = () => {
   );
 
   return (
-    <>
-    <Modal
-        isOpen={!!error}
-        title="Error de Acceso"
-        message={error || ''}
-        onClose={() => setError(null)}
-      />
     <div className="w-full bg-white dark:bg-slate-800 md:grid md:grid-cols-2 min-h-[85vh] rounded-2xl shadow-2xl shadow-slate-200/40 dark:shadow-black/20 overflow-hidden border border-slate-200/60 dark:border-slate-700/80">
       <div className="hidden md:flex flex-col justify-between p-8 lg:p-12 bg-gradient-to-br from-slate-50 to-slate-200 dark:bg-gradient-to-br dark:from-slate-900 dark:to-slate-800 text-slate-800 dark:text-white relative overflow-hidden">
         <div className="absolute -top-1/4 -right-1/4 w-3/4 h-3/4 bg-blue-600/30 dark:bg-blue-500/40 rounded-full filter blur-3xl animate-pulse" style={{animationDuration: '8s'}} />
@@ -211,10 +205,12 @@ const Auth: React.FC = () => {
              mode === 'forgot' ? renderForgot() :
              renderReset()
             }
+            <div aria-live="assertive" className="mt-4">
+              {error && <p className="text-red-600 dark:text-red-400 text-sm text-center pt-2">{error}</p>}
+            </div>
         </main>
       </div>
     </div>
-    </>
   );
 };
 

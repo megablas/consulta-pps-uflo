@@ -192,8 +192,8 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSel
 
   const { data: metrics, isLoading, error, refetch, isFetching } = useMetricsData({ targetYear, isTestingMode });
 
-  // FIX: The initial value for reduce must be provided as the second argument to fix the type error.
-  const totalCuposMesActual = metrics ? metrics.lanzamientosMesActual.reduce((acc: number, group) => acc + group.totalCupos, 0) : 0;
+  // FIX: Provide an initial value (0) to the reduce function to prevent type errors.
+  const totalCuposMesActual = metrics ? metrics.lanzamientosMesActual.reduce((acc, group) => acc + group.totalCupos, 0) : 0;
   const MONTH_NAMES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
 
@@ -274,7 +274,7 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSel
         ) : (
           <>
             <HeroMetric
-              title={`Cupos Ofrecidos (${targetYear})`}
+              title="Cupos Ofrecidos"
               value={metrics.cuposOfrecidos.value}
               icon="supervisor_account"
               description={`El número con relevamiento profesional es: ${metrics.cuposTotalesConRelevamiento.value}`}
@@ -366,24 +366,147 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({ onStudentSel
                 </div>
               </Card>
 
-              <Card icon="calendar_month" title={`Lanzamientos de ${MONTH_NAMES[new Date().getMonth()]}`} description={`Total de ${totalCuposMesActual} cupos ofrecidos este mes.`}>
-                <div className="mt-4">
-                  <BarChart 
-                      data={metrics.lanzamientosMesActual.map(group => ({ label: group.groupName, value: group.totalCupos }))}
-                      title=""
-                      onBarClick={(label) => {
-                          const group = metrics.lanzamientosMesActual.find(g => g.groupName === label);
-                          if(group) {
-                              openModal({
-                                  title: `Variantes para ${label}`,
-                                  students: group.variants.map(v => ({ legajo: '', nombre: v.name, cupos: v.cupos })),
-                                  headers: [{ key: 'nombre', label: 'Nombre Variante' }]
-                              })
-                          }
-                      }}
-                  />
-                </div>
+              <Card icon="campaign" title="Lanzamientos del Mes Actual" description={`Total de instituciones con PPS lanzadas en ${MONTH_NAMES[new Date().getMonth()]}.`}>
+                    <div className="mt-4 grid grid-cols-2 gap-4 divide-x divide-slate-200/70 dark:divide-slate-700/70 border-b border-slate-200/70 dark:border-slate-700/70 pb-4">
+                        <div className="text-center px-2">
+                            <p className="text-5xl font-black text-slate-800 dark:text-slate-100">{metrics.lanzamientosMesActual.length}</p>
+                            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">Instituciones</p>
+                        </div>
+                        <div className="text-center px-2">
+                            <p className="text-5xl font-black text-slate-800 dark:text-slate-100">{totalCuposMesActual}</p>
+                            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">Cupos Ofrecidos</p>
+                        </div>
+                    </div>
+                  {metrics.lanzamientosMesActual.length > 0 ? (
+                      <ul className="mt-4 space-y-3">
+                          {metrics.lanzamientosMesActual.map((group) => (
+                              <li key={group.groupName} className="text-sm p-3 rounded-lg bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700">
+                                  <div className="flex justify-between items-center">
+                                      <span className="font-bold text-slate-800 dark:text-slate-100">{group.groupName}</span>
+                                      <span className="text-xs font-bold text-blue-700 dark:text-blue-200 bg-blue-100 dark:bg-blue-900/50 px-2.5 py-1 rounded-full">
+                                          {group.totalCupos} cupos
+                                      </span>
+                                  </div>
+                                  {group.variants.length > 1 && (
+                                      <details className="mt-2 text-xs group/details">
+                                          <summary className="cursor-pointer text-slate-500 dark:text-slate-400 font-medium list-none flex items-center gap-1">
+                                              Ver desglose ({group.variants.length})
+                                              <span className="material-icons !text-sm transition-transform duration-200 group-open/details:rotate-180">expand_more</span>
+                                          </summary>
+                                          <ul className="pl-4 mt-2 pt-2 border-t border-slate-200 dark:border-slate-700 space-y-1.5">
+                                              {group.variants.map(variant => (
+                                                  <li key={variant.id} className="flex justify-between items-center">
+                                                      <span className="text-slate-600 dark:text-slate-300">{variant.name.replace(`${group.groupName} - `, '')}</span>
+                                                      <span className="font-mono text-slate-500 dark:text-slate-400">{variant.cupos} cupos</span>
+                                                  </li>
+                                              ))}
+                                          </ul>
+                                      </details>
+                                  )}
+                              </li>
+                          ))}
+                      </ul>
+                  ) : (
+                      <p className="mt-4 text-sm text-center text-slate-500 dark:text-slate-400">No hubo lanzamientos este mes.</p>
+                  )}
               </Card>
+            </div>
+          )}
+
+          {activeTab === 'students' && (
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <MetricCard
+                  title="Estudiantes Activos (Total)"
+                  value={metrics.alumnosActivos.value}
+                  icon="school"
+                  description="Total de estudiantes que aún no finalizan."
+                  isLoading={isLoading}
+                  onClick={() => openModal({ title: 'Estudiantes Activos (Total)', students: metrics.alumnosActivos.list })}
+              />
+               <MetricCard
+                  title="Con PPS Activa"
+                  value={metrics.alumnosEnPPS.value}
+                  icon="work"
+                  description="Estudiantes con una práctica activa durante el ciclo."
+                  isLoading={isLoading}
+                  onClick={() => openModal({ title: 'Alumnos con PPS Activa', students: metrics.alumnosEnPPS.list, headers: [{ key: 'nombre', label: 'Nombre' }, { key: 'legajo', label: 'Legajo' }, { key: 'institucion', label: 'Institución' }, { key: 'fechaFin', label: 'Finaliza' }] })}
+              />
+              <MetricCard
+                title="Estudiantes con PPS este año"
+                value={metrics.alumnosConPpsEsteAno.value}
+                icon="transfer_within_a_station"
+                description={`Alumnos que realizaron al menos una práctica durante el ciclo ${targetYear}.`}
+                isLoading={isLoading}
+                onClick={() => openModal({ title: `Estudiantes con PPS en ${targetYear}`, students: metrics.alumnosConPpsEsteAno.list })}
+              />
+              <MetricCard
+                title="Activos sin PPS este año"
+                value={metrics.alumnosActivosSinPpsEsteAno.value}
+                icon="person_off"
+                description={`Estudiantes activos que no realizaron prácticas en ${targetYear}.`}
+                isLoading={isLoading}
+                onClick={() => openModal({ title: `Activos sin PPS en ${targetYear}`, students: metrics.alumnosActivosSinPpsEsteAno.list })}
+              />
+              <MetricCard
+                  title="Próximos a Finalizar"
+                  value={metrics.alumnosProximosAFinalizar.value}
+                  icon="flag"
+                  description="Con 230+ horas o con 250+ y práctica en curso."
+                  isLoading={isLoading}
+                  onClick={() => setProximosModalOpen(true)}
+              />
+              <MetricCard
+                  title="Activos sin NINGUNA PPS"
+                  value={metrics.alumnosSinNingunaPPS.value}
+                  icon="person_search"
+                  description="No tienen ninguna práctica registrada (incl. Relevamiento)."
+                  isLoading={isLoading}
+                  onClick={() => openModal({ title: 'Activos sin NINGUNA PPS', students: metrics.alumnosSinNingunaPPS.list })}
+              />
+               <MetricCard
+                  title="Listos para Acreditar"
+                  value={metrics.alumnosParaAcreditar.value}
+                  icon="military_tech"
+                  description="Cumplen con todos los criterios para finalizar."
+                  isLoading={isLoading}
+                  onClick={() => openModal({ title: 'Listos para Acreditar', students: metrics.alumnosParaAcreditar.list, headers: [{ key: 'nombre', label: 'Nombre' }, { key: 'legajo', label: 'Legajo' }, { key: 'totalHoras', label: 'Horas' }, { key: 'orientaciones', label: 'Orientaciones' }] })}
+              />
+               <MetricCard
+                  title="Finalizados este Ciclo"
+                  value={metrics.alumnosFinalizados.value}
+                  icon="school"
+                  description={`Estudiantes que solicitaron acreditación en ${targetYear}.`}
+                  isLoading={isLoading}
+                  onClick={() => openModal({ title: `Finalizados en ${targetYear}`, students: metrics.alumnosFinalizados.list })}
+              />
+            </div>
+          )}
+           {activeTab === 'institutions' && (
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <MetricCard
+                  title="PPS Lanzadas"
+                  value={metrics.ppsLanzadas.value}
+                  icon="rocket_launch"
+                  description={`Total de instituciones con lanzamientos en ${targetYear}.`}
+                  isLoading={isLoading}
+                  onClick={() => openModal({ title: `PPS Lanzadas (${targetYear})`, students: metrics.ppsLanzadas.list as StudentInfo[], headers: [{ key: 'nombre', label: 'Institución' }, { key: 'legajo', label: 'Info' }, {key: 'cupos', label: 'Cupos'}] })}
+              />
+              <MetricCard
+                  title="Convenios Nuevos"
+                  value={metrics.nuevosConvenios.value}
+                  icon="handshake"
+                  description={`Instituciones con su primer lanzamiento en ${targetYear}.`}
+                  isLoading={isLoading}
+                  onClick={() => openModal({ title: `Convenios Nuevos (${targetYear})`, students: metrics.nuevosConvenios.list as StudentInfo[], headers: [{ key: 'nombre', label: 'Institución' }, { key: 'cupos', label: 'Cupos Ofertados' }] })}
+              />
+              <MetricCard
+                  title="Instituciones Activas"
+                  value={metrics.activeInstitutions.value}
+                  icon="apartment"
+                  description={`Instituciones con al menos un lanzamiento en ${targetYear}.`}
+                  isLoading={isLoading}
+                  onClick={() => openModal({ title: `Instituciones Activas (${targetYear})`, students: metrics.activeInstitutions.list, headers: [{ key: 'nombre', label: 'Institución' }, { key: 'legajo', label: 'Orientaciones' }, {key: 'cupos', label: 'Cupos Totales'}] })}
+              />
             </div>
           )}
         </>

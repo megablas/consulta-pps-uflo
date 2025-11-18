@@ -3,6 +3,7 @@ import Footer from '../components/Footer';
 import type { TabId } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import StudentDashboard from './StudentDashboard'; // Import the new reusable component
+import AppModals from '../components/AppModals';
 import MobileBottomNav from '../components/MobileBottomNav'; // Import the new nav
 import { StudentPanelProvider } from '../contexts/StudentPanelContext';
 
@@ -16,8 +17,6 @@ const StudentView: React.FC = () => {
         return null; // Or a loading/error state if the user somehow gets here without being authenticated
     }
 
-    const legajoForProvider = authenticatedUser.legajo;
-
     // Define tabs here to pass to the mobile nav
     const mobileNavTabs = [
       { id: 'inicio' as TabId, label: 'Inicio', icon: 'home' },
@@ -26,13 +25,14 @@ const StudentView: React.FC = () => {
     ];
 
     return (
-        <StudentPanelProvider legajo={legajoForProvider}>
+        <StudentPanelProvider legajo={authenticatedUser.legajo}>
             <StudentDashboard 
                 user={authenticatedUser}
                 activeTab={activeTab} 
                 onTabChange={setActiveTab} 
             />
             <Footer activeTab={activeTab} />
+            <AppModals />
             <MobileBottomNav 
                 tabs={mobileNavTabs}
                 activeTabId={activeTab}

@@ -27,71 +27,87 @@ La plataforma ofrece funcionalidades tanto para estudiantes como para administra
 ## Pila Tecnológica (Tech Stack)
 
 - **Frontend:** [React](https://react.dev/) con [Vite](https://vitejs.dev/)
-- **Backend:** [Vercel Serverless Functions](https://vercel.com/docs/functions) (Node.js)
 - **Lenguaje:** [TypeScript](https://www.typescriptlang.org/)
 - **Estilos:** [Tailwind CSS](https://tailwindcss.com/)
 - **Bases de Datos:** [Airtable](https://www.airtable.com/)
 
 ---
 
-## 🚀 Despliegue en Vercel
+## 🛠️ Primeros Pasos y Desarrollo Local
 
-Esta aplicación está diseñada para ser desplegada en Vercel, que maneja tanto el frontend estático como las funciones de backend.
+Sigue estos pasos para configurar y ejecutar el proyecto en tu máquina local.
 
-1.  **Conecta tu Repositorio:** Importa tu repositorio de Git en Vercel.
-2.  **Configura el Proyecto:** Vercel detectará automáticamente que es un proyecto Vite y aplicará la configuración correcta.
-3.  **Variables de Entorno:** Ve a la configuración de tu proyecto en Vercel y añade las siguientes variables de entorno:
-    -   `AIRTABLE_PAT`: Tu Personal Access Token de Airtable.
-    -   `AIRTABLE_BASE_ID`: El ID de tu base de Airtable.
-    -   `JWT_SECRET`: Una cadena de texto larga, aleatoria y secreta para firmar los tokens de sesión.
+### Prerrequisitos
 
-4.  **Despliega:** Al hacer push a la rama principal, Vercel desplegará automáticamente la aplicación.
+- [Node.js](https://nodejs.org/) (versión 18 o superior recomendada).
 
-## 🛠️ Desarrollo Local
+### Instalación
 
-1.  **Clona el repositorio e instala dependencias:**
+1.  **Clona el repositorio:**
     ```bash
     git clone [URL_DEL_REPOSITORIO]
     cd [NOMBRE_DEL_DIRECTORIO]
+    ```
+
+2.  **Instala las dependencias:**
+    Usa `npm` para instalar todos los paquetes necesarios.
+    ```bash
     npm install
     ```
 
-2.  **Configura el Entorno Local:**
-    -   Crea un archivo `.env` en la raíz del proyecto.
-    -   Añade las mismas variables de entorno que configurarías en Vercel:
-        ```
-        AIRTABLE_PAT="pat..."
-        AIRTABLE_BASE_ID="app..."
-        JWT_SECRET="tu-secreto-muy-largo-y-seguro"
-        ```
+### Configuración del Entorno
 
-3.  **Inicia la Aplicación:**
-    Usa la CLI de Vercel para emular el entorno de producción localmente.
+La aplicación necesita credenciales para conectarse a Airtable. Todas las llamadas a la API se realizan directamente desde el cliente.
+
+1.  **Crea un archivo `.env`:**
+    En la raíz del proyecto, crea un archivo llamado `.env`.
+
+2.  **Añade tus credenciales:**
+    Abre `.env` y añade las siguientes variables, reemplazando los valores con tus propias credenciales.
+
     ```bash
-    npm install -g vercel # Si no la tienes instalada
-    vercel dev
+    # Archivo .env en la raíz del proyecto
+
+    # Token de Acceso Personal (PAT) de Airtable
+    VITE_AIRTABLE_PAT="pat..."
+
+    # ID de tu Base de Airtable
+    VITE_AIRTABLE_BASE_ID="app..."
     ```
-    La aplicación estará disponible en un puerto local (ej. `http://localhost:3000`).
+
+    -   **Importante:** El prefijo `VITE_` es necesario para que Vite exponga estas variables a la aplicación en el navegador durante el desarrollo.
+    -   Puedes encontrar el **Base ID** de Airtable en la [documentación de la API de Airtable](https://airtable.com/developers/web/api/introduction) al seleccionar tu base.
+    -   Puedes generar un **Personal Access Token (PAT)** en la sección de [Cuenta de Desarrollador de Airtable](https://airtable.com/create/tokens). Asegúrate de que el token tenga los permisos (`scopes`) necesarios para leer y escribir en tu base (`data.records:read` y `data.records:write`).
+
+### Iniciar la Aplicación
+
+Una vez instaladas las dependencias y configuradas las credenciales, inicia el servidor de desarrollo:
+
+```bash
+npm run dev
+```
+
+La aplicación estará disponible en `http://localhost:5173` (o el puerto que Vite asigne). Toda la lógica de autenticación y datos se maneja en el lado del cliente, por lo que no es necesario un backend adicional.
 
 ---
 
-### 🧪 Usuarios de Demostración
+### 🧪 Testing y Entorno de Vista Previa (Preview)
 
-Para facilitar las pruebas, se han habilitado usuarios de demostración que no requieren una base de datos de Airtable:
+Para facilitar las pruebas en entornos donde el backend no está disponible (como la vista previa de AI Studio o un despliegue estático), se han habilitado usuarios de demostración:
 
 -   **Usuario Administrador de Pruebas:**
     -   **Legajo:** `testing`
     -   **Contraseña:** `testing`
-    -   Acceso a un panel de administrador con datos simulados.
+    -   Este usuario te dará acceso a un panel de administrador con datos simulados.
 
 -   **Usuario Estudiante de Demostración:**
     -   **Legajo:** `12345`
     -   **Contraseña:** `12345`
-    -   Acceso a un panel de estudiante con datos simulados.
+    -   Este usuario te permitirá iniciar sesión como un estudiante de prueba y ver un panel con datos simulados.
 
 -   **Usuario Reportero de Demostración:**
     -   **Legajo:** `reportero`
     -   **Contraseña:** `reportero`
-    -   Acceso de solo lectura al panel de métricas y reportes.
+    -   Este usuario otorga acceso de solo lectura al panel de métricas y reportes.
 
 Estos inicios de sesión no realizan llamadas a la API y funcionan de manera local en el navegador.

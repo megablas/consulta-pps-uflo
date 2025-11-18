@@ -1,3 +1,5 @@
+// FIX: Imported '@testing-library/jest-dom' to provide custom matchers like 'toBeInTheDocument' and resolve TypeScript errors.
+import '@testing-library/jest-dom';
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import React from 'react';
 import { render, screen, waitFor, within } from '@testing-library/react';

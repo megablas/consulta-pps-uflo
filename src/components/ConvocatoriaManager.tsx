@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useGestionConvocatorias } from '../hooks/useGestionConvocatorias';
-import type { LanzamientoPPS, LanzamientoPPSFields } from '../types';
+import type { LanzamientoPPS } from '../types';
 import {
   FIELD_NOMBRE_PPS_LANZAMIENTOS,
   FIELD_FECHA_FIN_LANZAMIENTOS,
@@ -13,6 +13,7 @@ import {
 import Loader from './Loader';
 import EmptyState from './EmptyState';
 import Toast from './Toast';
+// FIX: Import 'normalizeStringForComparison' to resolve 'Cannot find name' errors.
 import { getEspecialidadClasses, formatDate, parseToUTCDate, normalizeStringForComparison } from '../utils/formatters';
 import { ALL_ORIENTACIONES } from '../types';
 import Select from './Select';
@@ -280,9 +281,10 @@ const CollapsibleSection: React.FC<{ title: string; count: number; children: Rea
 
 interface ConvocatoriaManagerProps {
   forcedOrientations?: string[];
+  isTestingMode?: boolean;
 }
 
-const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrientations }) => {
+const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrientations, isTestingMode = false }) => {
     const {
         institutionsMap,
         loadingState,
@@ -299,12 +301,13 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
         handleUpdateInstitutionPhone,
         handleSync,
         filteredData,
-    } = useGestionConvocatorias({ forcedOrientations });
+    } = useGestionConvocatorias({ forcedOrientations, isTestingMode });
 
     const renderContent = () => {
         if (loadingState === 'loading' || loadingState === 'initial') return <Loader />;
         if (loadingState === 'error') return <EmptyState icon="error" title="Error" message={error!} />;
         
+        // FIX: Explicitly cast array to ensure length property is accessible and resolve TypeScript error.
         const noResults = Object.values(filteredData).every(arr => (arr as LanzamientoPPS[]).length === 0);
         if (noResults) {
              return <EmptyState icon="search_off" title="Sin Resultados" message="No se encontraron convocatorias que coincidan con los filtros seleccionados." />;
@@ -418,8 +421,9 @@ const ConvocatoriaManager: React.FC<ConvocatoriaManagerProps> = ({ forcedOrienta
                     </div>
                      <button
                         onClick={handleSync}
-                        disabled={isSyncing}
+                        disabled={isSyncing || isTestingMode}
                         className="bg-rose-600 text-white font-bold py-2.5 px-6 rounded-lg text-sm transition-colors shadow-md disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-rose-700"
+                        title={isTestingMode ? "Deshabilitado en modo de prueba" : ""}
                     >
                         <span className="material-icons">{isSyncing ? 'sync' : 'history'}</span>
                         <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>

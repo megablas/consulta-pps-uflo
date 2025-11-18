@@ -21,7 +21,7 @@ import {
 } from '../constants';
 import { fetchAllAirtableData } from '../services/airtableService';
 import { parseToUTCDate, formatDate, normalizeStringForComparison } from '../utils/formatters';
-import type { EstudianteFields, PracticaFields, LanzamientoPPSFields, InstitucionFields, AirtableRecord, StudentInfo, TimelineMonthData, AnyReportData, ExecutiveReportData, ComparativeExecutiveReportData, ReportType } from '../types';
+import type { EstudianteFields, PracticaFields, LanzamientoPPSFields, InstitucionFields, AirtableRecord, StudentInfo, TimelineMonthData } from '../types';
 import { estudianteArraySchema, institucionArraySchema, lanzamientoPPSArraySchema, practicaArraySchema } from '../schemas';
 
 const getGroupName = (name: string | undefined): string => {
@@ -122,144 +122,6 @@ const fetchAllDataForReport = async () => {
     };
 };
 
-const getMetricsSnapshot = (
-    snapshotDate: Date,
-    allEstudiantes: AirtableRecord<EstudianteFields>[],
-    allPracticas: AirtableRecord<PracticaFields>[]
-) => {
-    const snapshotDay = new Date(snapshotDate);
-    snapshotDay.setUTCHours(23, 59, 59, 999);
-
-    const activeStudentRecords = allEstudiantes.filter(student => {
-        const creationDate = parseToUTCDate(student.fields['Creada']);
-        if (!creationDate || creationDate > snapshotDay) {
-            return false;
-        }
-
-        const finalizationDate = parseToUTCDate(student.fields['Fecha de Finalización']);
-        if (finalizationDate && student.fields['Finalizaron']) {
-             if (finalizationDate < snapshotDay) {
-                return false;
-            }
-        }
-        return true;
-    });
-
-    const activeStudentIds = new Set(activeStudentRecords.map(s => s.id));
-
-    const studentPracticeTypes = new Map<string, { hasRelevamiento: boolean; hasOther: boolean }>();
-    allPracticas.forEach(p => {
-        const studentIds = (p.fields[FIELD_ESTUDIANTE_LINK_PRACTICAS] as any) || [];
-        const institucionRaw = (p.fields[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS] as any);
-        const institucion = String((Array.isArray(institucionRaw) ? institucionRaw[0] : institucionRaw) || '');
-        const isRelevamiento = normalizeStringForComparison(institucion).includes('relevamiento');
-
-        studentIds.forEach((id: string) => {
-            if (!activeStudentIds.has(id)) return;
-            if (!studentPracticeTypes.has(id)) {
-                studentPracticeTypes.set(id, { hasRelevamiento: false, hasOther: false });
-            }
-            const types = studentPracticeTypes.get(id)!;
-            if (isRelevamiento) types.hasRelevamiento = true;
-            else types.hasOther = true;
-        });
-    });
-
-    const studentIdsWithAnyPractice = new Set(studentPracticeTypes.keys());
-    const studentsWithoutAnyPps = activeStudentRecords.filter(student => !studentIdsWithAnyPractice.has(student.id)).length;
-
-    return {
-        activeStudents: activeStudentRecords.length,
-        studentsWithoutAnyPps,
-    };
-};
-
-const calculateFlowMetrics = (
-    snapshotEndDate: Date,
-    yearStartDate: Date,
-    allEstudiantes: AirtableRecord<EstudianteFields>[],
-    allInstituciones: AirtableRecord<InstitucionFields>[],
-    allLanzamientos: AirtableRecord<LanzamientoPPSFields>[]
-) => {
-    const newStudents = allEstudiantes.filter(s => {
-        const creationDate = parseToUTCDate(s.fields['Creada']);
-        return creationDate && creationDate >= yearStartDate && creationDate <= snapshotEndDate;
-    }).length;
-
-    const finishedStudents = allEstudiantes.filter(s => {
-        const finalizationDate = parseToUTCDate(s.fields['Fecha de Finalización']);
-        return s.fields['Finalizaron'] &&
-               finalizationDate &&
-               finalizationDate >= yearStartDate &&
-               finalizationDate <= snapshotEndDate;
-    }).length;
-    
-    const newAgreements = allInstituciones.filter(i => {
-        const isMarkedAsNew = i.fields[FIELD_CONVENIO_NUEVO_INSTITUCIONES];
-        if (!isMarkedAsNew) return false;
-        
-        const firstLaunchDate = allLanzamientos
-            .filter(l => {
-                const launchDate = parseToUTCDate(l.fields[FIELD_FECHA_INICIO_LANZAMIENTOS]);
-                return launchDate && launchDate.getUTCFullYear() === yearStartDate.getUTCFullYear() && normalizeStringForComparison(l.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS] || '').startsWith(normalizeStringForComparison(i.fields[FIELD_NOMBRE_INSTITUCIONES]));
-            })
-            .map(l => parseToUTCDate(l.fields[FIELD_FECHA_INICIO_LANZAMIENTOS]))
-            .filter((d): d is Date => d !== null)
-            .sort((a, b) => a.getTime() - b.getTime())[0];
-            
-        return firstLaunchDate && firstLaunchDate >= yearStartDate && firstLaunchDate <= snapshotEndDate;
-    });
-    
-    return {
-        newStudents,
-        finishedStudents,
-        newAgreements: newAgreements.length,
-    };
-};
-
-const MOCK_REPORT_DATA: ExecutiveReportData = {
-    reportType: 'singleYear',
-    year: new Date().getFullYear(),
-    period: {
-        current: { start: '01/01/2024', end: '31/12/2024' },
-        previous: { start: '', end: '31/12/2023' },
-    },
-    summary: '<p>This is a mock summary for the test environment.</p>',
-    kpis: {
-        activeStudents: { current: 150, previous: 140 },
-        studentsWithoutAnyPps: { current: 10, previous: 15 },
-        newStudents: { current: 30, previous: 0 },
-        finishedStudents: { current: 25, previous: 0 },
-        newPpsLaunches: { current: 40, previous: 0 },
-        totalOfferedSpots: { current: 120, previous: 0 },
-        newAgreements: { current: 5, previous: 0 },
-    },
-    launchesByMonth: [],
-    newAgreementsList: ['Mock Institution A', 'Mock Institution B'],
-};
-
-const MOCK_COMPARATIVE_REPORT_DATA: ComparativeExecutiveReportData = {
-    reportType: 'comparative',
-    summary: '<p>This is a mock comparative summary for the test environment.</p>',
-    kpis: {
-        activeStudents: { year2024: 140, year2025: 150 },
-        studentsWithoutAnyPps: { year2024: 15, year2025: 10 },
-        finishedStudents: { year2024: 20, year2025: 25 },
-        newStudents: { year2024: 28, year2025: 30 },
-        newPpsLaunches: { year2024: 35, year2025: 40 },
-        totalOfferedSpots: { year2024: 110, year2025: 120 },
-        newAgreements: { year2024: 4, year2025: 5 },
-    },
-    launchesByMonth: {
-        year2024: [],
-        year2025: [],
-    },
-    newAgreements: {
-        year2024: ['Mock Old Agreement'],
-        year2025: ['Mock New Agreement'],
-    },
-};
-
 export const useMetricsData = ({ targetYear, isTestingMode = false }: { targetYear: number; isTestingMode?: boolean; }) => {
     return useQuery({
         queryKey: ['metricsData', targetYear, isTestingMode],
@@ -287,7 +149,6 @@ export const useMetricsData = ({ targetYear, isTestingMode = false }: { targetYe
             
             // --- Calculos ---
             const today = new Date();
-            today.setUTCHours(0, 0, 0, 0);
             
             // FILTROS
             const activeStudentRecords = estudiantes.filter(student => {
@@ -367,17 +228,8 @@ export const useMetricsData = ({ targetYear, isTestingMode = false }: { targetYe
             activeStudentRecords.forEach(s => {
                 const practices = studentPractices.get(s.id) || [];
                 const activePractice = practices.find(p => {
-                    const startDate = parseToUTCDate(p.fields[FIELD_FECHA_INICIO_PRACTICAS]);
                     const endDate = parseToUTCDate(p.fields[FIELD_FECHA_FIN_PRACTICAS]);
-                    // Es activa si tiene fecha de fin en el futuro
-                    if (endDate && endDate >= today) {
-                        return true;
-                    }
-                    // También es activa si NO tiene fecha de fin, pero ya comenzó
-                    if (!endDate && startDate && startDate <= today) {
-                        return true;
-                    }
-                    return false;
+                    return endDate && endDate >= today;
                 });
                 if (activePractice) {
                     const institucionRaw = activePractice.fields[FIELD_NOMBRE_INSTITUCION_LOOKUP_PRACTICAS];
@@ -474,6 +326,7 @@ export const useMetricsData = ({ targetYear, isTestingMode = false }: { targetYe
                     })
                     .reduce((sum, l) => sum + (l.fields[FIELD_CUPOS_DISPONIBLES_LANZAMIENTOS] || 0), 0);
                 
+                // FIX: Added 'legajo' property to satisfy the StudentInfo type for modal display.
                 return { nombre: institutionName, cupos, legajo: '' };
             });
             const nuevosConvenios = {

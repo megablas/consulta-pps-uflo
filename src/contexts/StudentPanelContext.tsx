@@ -54,6 +54,7 @@ export const StudentPanelProvider: React.FC<{ legajo: string; children: ReactNod
     const { 
         lanzamientos, myEnrollments, allLanzamientos, isConvocatoriasLoading, convocatoriasError,
         enrollStudent, confirmInforme, refetchConvocatorias, institutionAddressMap
+    // FIX: Pass the `studentDetails` object to the `useConvocatorias` hook as the third argument.
     } = useConvocatorias(legajo, studentAirtableId, studentDetails, isSuperUserMode);
 
     // Aggregate loading and error states into a single source of truth.

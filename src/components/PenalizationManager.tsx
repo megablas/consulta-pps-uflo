@@ -85,12 +85,8 @@ const AddPenaltyModal: React.FC<{
             practicasRes.records.forEach(p => (p.fields[FIELD_LANZAMIENTO_VINCULADO_PRACTICAS] || []).forEach(id => lanzamientoIds.add(id)));
             if (lanzamientoIds.size === 0) return [];
             const lanzamientosFormula = `OR(${Array.from(lanzamientoIds).map(id => `RECORD_ID()='${id}'`).join(',')})`;
-            const { records: lanzamientosRes } = await fetchAllAirtableData<LanzamientoPPSFields>(
-                AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
-                lanzamientoPPSArraySchema,
-                [FIELD_NOMBRE_PPS_LANZAMIENTOS, FIELD_FECHA_INICIO_LANZAMIENTOS],
-                lanzamientosFormula
-            );
+// FIX: Expected 2-5 arguments, but got 6.
+            const { records: lanzamientosRes } = await fetchAllAirtableData<LanzamientoPPSFields>(AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS, lanzamientoPPSArraySchema, [FIELD_NOMBRE_PPS_LANZAMIENTOS, FIELD_FECHA_INICIO_LANZAMIENTOS], lanzamientosFormula);
             return lanzamientosRes.map(r => ({ id: r.id, name: `${r.fields[FIELD_NOMBRE_PPS_LANZAMIENTOS]} (${formatDate(r.fields[FIELD_FECHA_INICIO_LANZAMIENTOS])})` }));
         },
         enabled: isOpen,
@@ -196,7 +192,7 @@ const AddPenaltyModal: React.FC<{
                     <div>
                         <label htmlFor="pps-select-modal" className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-1 block">PPS Afectada (Opcional)</label>
                         {isLoadingPPS ? <p>Cargando PPS...</p> : (
-                            <select id="pps-select-modal" value={selectedPpsId} onChange={e => setSelectedPpsId(e.target.value)} className="w-full text-sm rounded-lg border border-slate-300 dark:border-slate-600 p-2.5 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100">
+                            <select id="pps-select-modal" value={selectedPpsId} onChange={e => setSelectedPpsId(e.target.value)} className="w-full text-sm rounded-lg border border-slate-300 dark:border-slate-600 p-2.5 bg-white dark:bg-slate-700">
                                 <option value="">Seleccionar una PPS...</option>
                                 {relevantPPS?.map(pps => <option key={pps.id} value={pps.id}>{pps.name}</option>)}
                             </select>

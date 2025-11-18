@@ -72,7 +72,7 @@ const JefeView: React.FC = () => {
                     <>
                         <SubTabs tabs={metricsSubTabs} activeTabId={activeMetricsTabId} onTabChange={setActiveMetricsTabId} />
                         <div className="mt-6">
-                            {activeMetricsTabId === 'dashboard' && <MetricsDashboard onStudentSelect={(student) => openStudentPanel({ id: '', createdTime: '', fields: { Legajo: student.legajo, Nombre: student.nombre }})} />}
+                            {activeMetricsTabId === 'dashboard' && <MetricsDashboard />}
                             {activeMetricsTabId === 'timeline' && <TimelineView />}
                         </div>
                     </>

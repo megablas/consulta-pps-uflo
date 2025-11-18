@@ -1,14 +1,14 @@
+// FIX: Import 'process' explicitly to resolve type errors in environments where Node.js globals are not automatically recognized.
+import { process } from 'node:process';
 import fs from 'fs/promises';
 import path from 'path';
 import dotenv from 'dotenv';
-// FIX: Import `cwd` and `exit` from `node:process` to resolve TypeScript errors.
-import { cwd, exit } from 'node:process';
 
 // Cargar variables de entorno desde .env
 dotenv.config();
 
 const { VITE_AIRTABLE_PAT, VITE_AIRTABLE_BASE_ID } = process.env;
-const OUTPUT_FILE = path.resolve(cwd(), 'src', 'airtable.schema.json');
+const OUTPUT_FILE = path.resolve(process.cwd(), 'src', 'airtable.schema.json');
 
 async function fetchAirtableSchema() {
   if (!VITE_AIRTABLE_PAT || !VITE_AIRTABLE_BASE_ID) {
@@ -33,7 +33,7 @@ async function fetchAirtableSchema() {
     console.log(`✅ Schema de Airtable guardado en ${OUTPUT_FILE}`);
   } catch (error) {
     console.error('❌ Falló la obtención del schema:', error);
-    exit(1);
+    process.exit(1);
   }
 }
 

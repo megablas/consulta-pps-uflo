@@ -95,15 +95,17 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
   const studentDataTabs = useMemo(() => {
     const tabs: { id: TabId; label: string; icon: string; content: React.ReactNode; badge?: number }[] = [
       { id: 'inicio', label: 'Inicio', icon: 'home', content: homeContent },
-      { id: 'informes', label: `Informes`, icon: 'assignment_turned_in', content: informesContent, badge: informeTasks.length > 0 ? informeTasks.length : undefined },
       { id: 'solicitudes', label: `Mis Solicitudes`, icon: 'list_alt', content: solicitudesContent, badge: solicitudes.length > 0 ? solicitudes.length : undefined },
       { id: 'practicas', label: `Mis Prácticas`, icon: 'work_history', content: practicasContent, badge: practicas.length > 0 ? practicas.length : undefined }
     ];
 
     if (showExportButton) {
-      return tabs.filter(tab => tab.id === 'informes' || tab.id === 'solicitudes' || tab.id === 'practicas');
+      // Admin/Jefe view of a student panel
+      // The 'informes' tab is intentionally removed for consistency.
+      return tabs.filter(tab => tab.id === 'solicitudes' || tab.id === 'practicas');
     }
     
+    // Normal student view
     tabs.push({
         id: 'profile' as TabId,
         label: 'Mi Perfil',
@@ -114,8 +116,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, activeTab, on
     return tabs;
 
   }, [
-      informeTasks.length, solicitudes.length, practicas.length, showExportButton,
-      homeContent, informesContent, solicitudesContent, practicasContent, profileContent
+      solicitudes.length, practicas.length, showExportButton,
+      homeContent, solicitudesContent, practicasContent, profileContent
   ]);
   
   useEffect(() => {
