@@ -100,7 +100,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             role: authRecord.fields.Role,
             orientaciones: authRecord.fields.Orientaciones ? authRecord.fields.Orientaciones.split(',').map((o: string) => o.trim()) : [],
         };
-        const token = jwt.sign(userPayload, JWT_SECRET, { expiresIn: '7d' });
+        const token = jwt.sign(userPayload, JWT_SECRET!, { expiresIn: '7d' });
 
         res.setHeader('Set-Cookie', cookie.serialize('auth', token, {
             httpOnly: true,

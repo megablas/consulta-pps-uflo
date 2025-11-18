@@ -192,6 +192,7 @@ export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: 
 
 export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<GroupedSeleccionados | null> => {
     const ppsName = lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS];
+    // The date from Airtable is already in 'YYYY-MM-DD' format
     const ppsStartDate = lanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS];
 
     if (!ppsName || !ppsStartDate) {
@@ -199,14 +200,16 @@ export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<G
         return null;
     }
     
+    // Escape double quotes in the name for the formula
     const escapedPpsName = ppsName.replace(/"/g, '\\"');
     
-    // The `Convocatorias` table has lookup fields for both the name and the start date.
-    // Filtering on these looked-up values is robust and reliable.
+    // The fields `Nombre PPS` and `Fecha Inicio` in the `Convocatorias` table are lookups
+    // from the `Lanzamientos` table. Lookups return arrays, which cannot be compared directly with `=`.
+    // We must use ARRAYJOIN to convert them to strings and then SEARCH to find a match.
     const formula = `
       AND(
-        {${FIELD_NOMBRE_PPS_CONVOCATORIAS}} = "${escapedPpsName}",
-        {${FIELD_FECHA_INICIO_CONVOCATORIAS}} = '${ppsStartDate}',
+        SEARCH("${escapedPpsName}", ARRAYJOIN({${FIELD_NOMBRE_PPS_CONVOCATORIAS}})),
+        SEARCH('${ppsStartDate}', ARRAYJOIN({${FIELD_FECHA_INICIO_CONVOCATORIAS}})),
         LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = "seleccionado"
       )
     `;
