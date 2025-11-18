@@ -199,15 +199,14 @@ export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<G
         return null;
     }
     
-    // Escape single quotes in the name for the formula
     const escapedPpsName = ppsNameToMatch.replace(/'/g, "\\'");
 
-    // Airtable's {Nombre PPS} in Convocatorias is a lookup, so it's an array. 
-    // We must use a function like SEARCH() that can operate on arrays/strings.
+    // REVERTED DATE COMPARISON: Using SEARCH on ARRAYJOIN for the date lookup field.
+    // This is necessary as IS_SAME fails on lookup fields (arrays).
     const formula = `
       AND(
         SEARCH('${escapedPpsName}', ARRAYJOIN({${FIELD_NOMBRE_PPS_CONVOCATORIAS}})),
-        IS_SAME({${FIELD_FECHA_INICIO_CONVOCATORIAS}}, DATETIME_PARSE('${ppsStartDateToMatch}', 'YYYY-MM-DD'), 'day'),
+        SEARCH('${ppsStartDateToMatch}', ARRAYJOIN({${FIELD_FECHA_INICIO_CONVOCATORIAS}})),
         LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = "seleccionado"
       )
     `;
