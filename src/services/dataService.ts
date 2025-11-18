@@ -206,19 +206,29 @@ export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<G
 
     const escapedPpsName = ppsName.replace(/'/g, "\\'");
     
-    // This robust formula uses simple string comparison on the date part, which is safer across environments.
+    // --- INICIO: CÓDIGO DE DIAGNÓSTICO ---
+    // 1. Hemos eliminado temporalmente el filtro de fecha.
+    // 2. Hemos añadido 'Fecha Inicio' a la lista de campos que queremos ver.
     const formula = `AND(
         LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = "seleccionado",
-        SEARCH('${escapedPpsName}', ARRAYJOIN({${FIELD_NOMBRE_PPS_CONVOCATORIAS}})),
-        LEFT(ARRAYJOIN({${FIELD_FECHA_INICIO_CONVOCATORIAS}}), 10) = '${startDate}'
+        SEARCH('${escapedPpsName}', ARRAYJOIN({${FIELD_NOMBRE_PPS_CONVOCATORIAS}}))
     )`;
     
     const { records: convocatorias, error: convError } = await fetchAllAirtableData<ConvocatoriaFields>(
         AIRTABLE_TABLE_NAME_CONVOCATORIAS, 
         convocatoriaArraySchema,
-        [FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, FIELD_HORARIO_FORMULA_CONVOCATORIAS],
+        [
+            FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, 
+            FIELD_HORARIO_FORMULA_CONVOCATORIAS,
+            FIELD_FECHA_INICIO_CONVOCATORIAS // <--- Campo añadido para diagnóstico
+        ],
         formula
     );
+    
+    // 3. Imprimimos el resultado en la consola para analizarlo.
+    console.log('Respuesta de Airtable para diagnóstico (sin filtro de fecha):', JSON.stringify(convocatorias, null, 2));
+    // --- FIN: CÓDIGO DE DIAGNÓSTICO ---
+
 
     if (convError || convocatorias.length === 0) {
         return null;
