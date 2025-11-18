@@ -199,11 +199,11 @@ export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<G
     }
 
     // This is the robust way to filter. It finds records in 'Convocatorias'
-    // where the 'Lanzamiento Vinculado' field (which is an array of record IDs)
-    // contains our specific 'lanzamiento.id'. FIND is used for safety with array fields.
+    // where the 'Lanzamiento Vinculado' field (an array of record IDs)
+    // contains our specific 'lanzamiento.id'. SEARCH is more flexible than FIND.
     const formula = `
       AND(
-        FIND('${lanzamientoId}', ARRAYJOIN({${FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS}})),
+        SEARCH('${lanzamientoId}', ARRAYJOIN({${FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS}})),
         LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = "seleccionado"
       )
     `;
