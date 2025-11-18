@@ -261,7 +261,6 @@ const CorreccionPanel: React.FC = () => {
             }
         }
         
-        // FIX: Iterate over an array created from the Map iterator to avoid type inference issues.
         for (const [lanzamientoId, ppsGroup] of Array.from(allPpsGroups.entries())) {
             if (ppsGroup.students.some((s: InformeCorreccionStudent) => s.practicaId === practicaId)) {
                 if (!newSelection.has(lanzamientoId)) {
@@ -280,7 +279,6 @@ const CorreccionPanel: React.FC = () => {
     const firstPracticaId = practicaIds[0];
     let lanzamientoIdForGroup: string | null = null;
     
-    // FIX: Iterate over an array created from the Map iterator to avoid type inference issues.
     for (const [lanzamientoId, ppsGroup] of Array.from(allPpsGroups.entries())) {
         if (ppsGroup.students.some((s: InformeCorreccionStudent) => s.practicaId === firstPracticaId)) {
             lanzamientoIdForGroup = lanzamientoId;

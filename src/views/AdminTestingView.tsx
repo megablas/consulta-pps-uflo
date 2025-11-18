@@ -10,7 +10,6 @@ import { StudentPanelProvider } from '../contexts/StudentPanelContext';
 const AdminTestingView: React.FC = () => {
     const [activeTabId, setActiveTabId] = useState('admin');
     
-    // FIX: Changed role to a valid value from AuthUser type.
     const testingUser: AuthUser = { legajo: '99999', nombre: 'Usuario de Prueba', role: 'SuperUser' };
 
     const tabs = [

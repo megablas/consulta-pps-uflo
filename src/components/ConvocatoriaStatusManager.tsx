@@ -140,7 +140,6 @@ const ConvocatoriaStatusManager: React.FC<ConvocatoriaStatusManagerProps> = ({ i
             return;
         }
         
-        // FIX: Added zod schema and corrected argument order for fetchAllAirtableData
         const { records, error: fetchError } = await fetchAllAirtableData(
             AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
             lanzamientoPPSArraySchema,
@@ -159,7 +158,6 @@ const ConvocatoriaStatusManager: React.FC<ConvocatoriaStatusManagerProps> = ({ i
             setError('No se pudieron cargar las convocatorias. ' + (typeof fetchError.error === 'string' ? fetchError.error : fetchError.error.message));
             setLoadingState('error');
         } else {
-            // FIX: Spread types may only be created from object types.
             const mappedRecords = records.map(r => ({ ...(r.fields as any), id: r.id }));
             setLanzamientos(mappedRecords);
             setLoadingState('loaded');

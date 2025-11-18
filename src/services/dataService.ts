@@ -8,7 +8,6 @@ import type {
   AirtableRecord,
 } from '../types';
 import {
-// FIX: Import missing table name constants.
   AIRTABLE_TABLE_NAME_CONVOCATORIAS,
   AIRTABLE_TABLE_NAME_ESTUDIANTES,
   FIELD_ESTADO_CONVOCATORIA_LANZAMIENTOS, FIELD_LANZAMIENTO_VINCULADO_CONVOCATORIAS,
@@ -102,8 +101,6 @@ export const fetchPracticas = async (legajo: string): Promise<Practica[]> => {
 
     // For real users, fetch from Airtable
     const filterByFormula = `SEARCH('${legajo}', {${FIELD_NOMBRE_BUSQUEDA_PRACTICAS}} & '')`;
-    // FIX: The `db.practicas.getAll` method returns records directly or throws on error.
-    // It does not return an object with `records` and `error` properties.
     try {
         const records = await db.practicas.getAll({ filterByFormula });
         return records.map(r => ({ ...(r.fields as any), id: r.id }));
@@ -119,8 +116,6 @@ export const fetchSolicitudes = async (legajo: string, studentAirtableId: string
     }
     // For real users, fetch from Airtable
     const filterByFormula = `{${FIELD_LEGAJO_PPS}} = '${legajo}'`;
-    // FIX: The `db.solicitudes.getAll` method returns records directly or throws on error.
-    // It does not return an object with `records` and `error` properties.
     try {
         const records = await db.solicitudes.getAll({ 
             filterByFormula,
@@ -196,18 +191,8 @@ export const fetchConvocatoriasData = async (legajo: string, studentAirtableId: 
 
 
 export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<GroupedSeleccionados | null> => {
-    // We keep these for context, but they are not used in the diagnostic formula
-    const ppsName = lanzamiento[FIELD_NOMBRE_PPS_LANZAMIENTOS];
-    const startDate = lanzamiento[FIELD_FECHA_INICIO_LANZAMIENTOS];
-
-    if (!ppsName || !startDate) {
-        console.warn('fetchSeleccionados called without a PPS name or start date in the lanzamiento object.');
-        return null;
-    }
-
-    // --- INICIO: CÓDIGO DE DIAGNÓSTICO FINAL ---
-    // Simplificamos la fórmula al máximo para ver qué registros devuelve Airtable
-    // que estén marcados como "seleccionado", sin importar la fecha o el nombre.
+    // --- DIAGNOSTIC CODE ---
+    // The formula is simplified to find all "seleccionado" records for debugging.
     const formula = `LOWER({${FIELD_ESTADO_INSCRIPCION_CONVOCATORIAS}}) = "seleccionado"`;
     
     const { records: convocatorias, error: convError } = await fetchAllAirtableData<ConvocatoriaFields>(
@@ -216,15 +201,14 @@ export const fetchSeleccionados = async (lanzamiento: LanzamientoPPS): Promise<G
         [
             FIELD_ESTUDIANTE_INSCRIPTO_CONVOCATORIAS, 
             FIELD_HORARIO_FORMULA_CONVOCATORIAS,
-            FIELD_NOMBRE_PPS_CONVOCATORIAS, // <--- Campo añadido para diagnóstico
-            FIELD_FECHA_INICIO_CONVOCATORIAS // <--- Campo añadido para diagnóstico
+            FIELD_NOMBRE_PPS_CONVOCATORIAS, // Added for diagnostic
+            FIELD_FECHA_INICIO_CONVOCATORIAS // Added for diagnostic
         ],
         formula
     );
     
-    // Imprimimos el resultado en la consola para analizarlo.
+    // Log the raw response from Airtable to the console for analysis.
     console.log('Respuesta de Airtable para diagnóstico (solo con filtro de estado):', JSON.stringify(convocatorias, null, 2));
-    // --- FIN: CÓDIGO DE DIAGNÓSTICO ---
 
 
     if (convError || convocatorias.length === 0) {

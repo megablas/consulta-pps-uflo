@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-// FIX: Imported `fetchAllAirtableData` to resolve 'Cannot find name' errors.
 import { fetchAllAirtableData } from '../services/airtableService';
 import { formatDate, normalizeStringForComparison, simpleNameSplit } from '../utils/formatters';
 import type { Convocatoria, ConvocatoriaFields, EstudianteFields, LanzamientoPPSFields } from '../types';

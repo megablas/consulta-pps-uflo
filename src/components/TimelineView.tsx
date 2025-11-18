@@ -22,7 +22,6 @@ const mockTimelineData: LanzamientoPPS[] = [
 ];
 
 const fetchTimelineData = async (): Promise<LanzamientoPPS[]> => {
-  // FIX: Added zod schema and corrected argument order for fetchAllAirtableData
   const { records, error } = await fetchAllAirtableData<LanzamientoPPSFields>(
     AIRTABLE_TABLE_NAME_LANZAMIENTOS_PPS,
     lanzamientoPPSArraySchema,
@@ -47,7 +46,6 @@ const fetchTimelineData = async (): Promise<LanzamientoPPS[]> => {
       throw new Error('Error de validación de datos para la línea de tiempo.');
   }
 
-  // FIX: Cast r.fields to the correct type to allow spreading
   return validationResult.data.map(r => ({ ...(r.fields as LanzamientoPPSFields), id: r.id }));
 };
 
@@ -68,7 +66,6 @@ const TimelineView: React.FC<TimelineViewProps> = ({ isTestingMode = false }) =>
 
     const { data: launches, isLoading, error } = useQuery({
         queryKey: ['timelineData', isTestingMode],
-        // FIX: Corrected typo from MOCK_TIMELINE_DATA to mockTimelineData.
         queryFn: () => isTestingMode ? Promise.resolve(mockTimelineData) : fetchTimelineData(),
     });
     

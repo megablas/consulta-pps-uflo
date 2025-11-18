@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, lazy } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useAuth, type AuthUser } from '../contexts/AuthContext';
 import type { AirtableRecord, EstudianteFields } from '../types';
 import StudentDashboard from './StudentDashboard';
@@ -9,11 +9,8 @@ import { StudentPanelProvider } from '../contexts/StudentPanelContext';
 
 // Lazy load views to improve initial load time
 const MetricsView = React.lazy(() => import('./admin/MetricsView'));
-// FIX: Changed `lazy` to `React.lazy` to resolve reference error.
 const GestionView = React.lazy(() => import('./admin/GestionView'));
-// FIX: Changed `lazy` to `React.lazy` to resolve reference error.
 const CorreccionView = React.lazy(() => import('./admin/CorreccionView'));
-// FIX: Changed `lazy` to `React.lazy` to resolve reference error.
 const HerramientasView = React.lazy(() => import('./admin/HerramientasView'));
 
 
@@ -23,7 +20,6 @@ interface StudentTabInfo {
     nombre: string;
 }
 
-// FIX: Updated component to accept `isTestingMode` prop.
 const AdminView: React.FC<{ isTestingMode?: boolean }> = ({ isTestingMode = false }) => {
     const { authenticatedUser } = useAuth();
     const [studentTabs, setStudentTabs] = useState<StudentTabInfo[]>([]);
